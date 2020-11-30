@@ -14,6 +14,7 @@
 """TaskQueue Implementation"""
 
 import random
+import statistics
 import threading
 import time
 
@@ -111,6 +112,7 @@ class TaskManager(object):
 
         self._batch_size = args.minibatch_size
         self._num_epochs = args.num_epochs
+        self.support_fault_tolerance = args.task_fault_tolerance
         self._epoch = 0
         self._max_step = args.max_step
         self._completed_steps = 0
@@ -143,6 +145,13 @@ class TaskManager(object):
         self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
         if not args.custom_training_loop:
             self._add_deferred_callback_create_train_end_task()
+
+        self._task_completed_times = {
+            elasticdl_pb2.EVALUATION: [],
+            elasticdl_pb2.TRAINING: [],
+        }
+        self._worker_start_task_time = {}
+        self._task_timeout_callbacks = []
 
     def _load_data_reader_fn(self, args):
         self._create_data_reader_fn = create_data_reader
@@ -266,6 +275,13 @@ class TaskManager(object):
             )
         )
 
+    def create_evaluation_tasks(self, model_version):
+        """ Create evaluation tasks and return the number of
+        evaluation tasks.
+        """
+        self.create_tasks(elasticdl_pb2.EVALUATION, model_version)
+        return len(self._eval_todo)
+
     def get_eval_task(self, worker_id):
         """Return next evaluation (task_id, Task) tuple"""
         with self._lock:
@@ -273,7 +289,8 @@ class TaskManager(object):
                 return -1, None
             self._task_id += 1
             task = self._eval_todo.pop()
-            self._doing[self._task_id] = (worker_id, task, time.time())
+            if self.support_fault_tolerance:
+                self._doing[self._task_id] = (worker_id, task, time.time())
             return self._task_id, task
 
     def _create_train_end_callback_task(self):
@@ -349,8 +366,8 @@ class TaskManager(object):
 
             self._task_id += 1
             task = self._todo.pop()
-            # TODO: Handle timeout of tasks.
-            self._doing[self._task_id] = (worker_id, task, time.time())
+            if self.support_fault_tolerance:
+                self._doing[self._task_id] = (worker_id, task, time.time())
 
             return self._task_id, task
 
@@ -427,7 +444,9 @@ class TaskManager(object):
         return all([not self._todo, not self._doing])
 
     def recover_tasks(self, worker_id):
-        """Recover doing tasks for a dead worker"""
+        """Recover doing tasks for a dead worker if needed"""
+        if not self.support_fault_tolerance:
+            return
 
         with self._lock:
             ids = [
@@ -448,5 +467,76 @@ class TaskManager(object):
                 evaluation_service.init_eval_only_job(len(self._eval_todo))
 
     def start(self):
-        # TODO: start a thread to monitor the task execution time
-        pass
+        if self.support_fault_tolerance:
+            threading.Thread(
+                target=self._check_and_reassign_timeout_tasks,
+                name="check_timeout_tasks",
+                daemon=True,
+            ).start()
+
+    def reset_worker_start_task_time(self, worker_id):
+        self._worker_start_task_time[worker_id] = time.time()
+
+    def record_task_completed_time(self, task_type, completed_time):
+        self._task_completed_times[task_type].append(completed_time)
+
+    def set_task_timeout_callback(self, callback_fn):
+        self._task_timeout_callbacks.append(callback_fn)
+
+    def _invoke_task_timeout_callback(self, worker_id):
+        for callback_fn in self._task_timeout_callbacks:
+            callback_fn(worker_id)
+
+    def _check_and_reassign_timeout_tasks(self):
+        """Check whether there are timeout tasks periodically.
+        """
+        while True:
+            doing_tasks = self._doing.copy()
+            cur_time = time.time()
+            avg_time = self._get_average_task_completed_time()
+            for _, (worker_id, task, start_time) in doing_tasks.items():
+                if task.type == elasticdl_pb2.TRAINING:
+                    start_time = self._worker_start_task_time[worker_id]
+                if task.type in [
+                    elasticdl_pb2.TRAINING,
+                    elasticdl_pb2.EVALUATION,
+                ]:
+                    if (cur_time - start_time) > 3 * avg_time[task.type]:
+                        logger.info(
+                            "worker %d timeout, relaunch it" % worker_id
+                        )
+                        self.recover_tasks(worker_id)
+                        # TODO: save worker logs before remove it
+                        self._invoke_task_timeout_callback(worker_id)
+                        break
+            time.sleep(30)
+
+    def _get_average_task_completed_time(self):
+        """Get the average completed time of tasks. If the number of
+        the completed tasks, the average time is 300s. Otherwise, the function
+        will return the average execution time.
+
+        Returns:
+            A dict: It contains containing the average time
+            for TRAINING and EVALUATION tasks.
+        """
+        average_task_completed_time = {}
+
+        if len(self._task_completed_times[elasticdl_pb2.TRAINING]) < 20:
+            average_task_completed_time[elasticdl_pb2.TRAINING] = 300
+        else:
+            average_task_completed_time[
+                elasticdl_pb2.TRAINING
+            ] = statistics.mean(
+                self._task_completed_times[elasticdl_pb2.TRAINING]
+            )
+
+        if len(self._task_completed_times[elasticdl_pb2.EVALUATION]) < 20:
+            average_task_completed_time[elasticdl_pb2.EVALUATION] = 300
+        else:
+            average_task_completed_time[
+                elasticdl_pb2.EVALUATION
+            ] = statistics.mean(
+                self._task_completed_times[elasticdl_pb2.EVALUATION]
+            )
+        return average_task_completed_time

@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+import time
 import unittest
 
 from elasticdl.proto import elasticdl_pb2
@@ -131,6 +133,36 @@ class TaskManagerTest(unittest.TestCase):
         self.assertEqual(
             task_d._todo[0].type, elasticdl_pb2.TRAIN_END_CALLBACK
         )
+
+    def test_check_and_reassign_timeout_tasks(self):
+        task_manager = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
+        task_manager.create_tasks(elasticdl_pb2.TRAINING)
+        task_count = len(task_manager._todo)
+        task_start_time = time.time() - 1000
+        task_manager._worker_start_task_time[0] = task_start_time
+        task_manager._doing[0] = (0, task_manager._todo[0], task_start_time)
+        task_manager._todo.pop()
+
+        threading.Thread(
+            target=task_manager._check_and_reassign_timeout_tasks,
+            name="check_timeout_tasks",
+            daemon=True,
+        ).start()
+        time.sleep(1)  # Sleep 1s to reassgin checkout the timeout task
+        self.assertEqual(len(task_manager._todo), task_count)
+
+    def test_get_average_task_completed_time(self):
+        task_manager = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
+        average_task_completed_time = (
+            task_manager._get_average_task_completed_time()
+        )
+        self.assertEqual(average_task_completed_time, {0: 300, 1: 300})
+        task_manager._task_completed_times[0] = [10] * 21
+        task_manager._task_completed_times[1] = [5] * 21
+        average_task_completed_time = (
+            task_manager._get_average_task_completed_time()
+        )
+        self.assertEqual(average_task_completed_time, {0: 10, 1: 5})
 
 
 if __name__ == "__main__":

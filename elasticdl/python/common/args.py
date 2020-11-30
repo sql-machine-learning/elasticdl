@@ -214,13 +214,9 @@ def _build_worker_args_parser():
     add_common_args_between_master_and_worker(parser)
     add_train_params(parser)
     parser.add_argument(
-        "--worker_id", help="ID unique to the worker", type=int, required=True
-    )
-    parser.add_argument(
         "--num_workers", help="The number of workers", type=int, required=False
     )
     parser.add_argument("--job_type", help="Job type", required=True)
-    parser.add_argument("--master_addr", help="Master ip:port", default="")
     parser.add_argument(
         "--prediction_outputs_processor",
         help="The name of the prediction output processor class "

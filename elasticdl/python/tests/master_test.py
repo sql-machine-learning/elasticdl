@@ -17,16 +17,12 @@ import unittest
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_master_args
-from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
-from elasticdl.python.tests.test_utils import (
-    DatasetName,
-    TaskManager,
-    create_recordio_file,
-)
+from elasticdl.python.master.master import Master
+from elasticdl.python.tests.test_utils import DatasetName, create_recordio_file
 from elasticdl_client.common.constants import DistributionStrategy
 
 
-class ElasticdlJobServiceTest(unittest.TestCase):
+class MasterTest(unittest.TestCase):
     def setUp(self):
         self._model_zoo_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
@@ -50,30 +46,10 @@ class ElasticdlJobServiceTest(unittest.TestCase):
             args.append(value)
         return args
 
-    def test_create_master_for_allreduce(self):
+    def test_master_run_and_stop(self):
         self.arguments[
             "distribution_strategy"
-        ] = DistributionStrategy.ALLREDUCE
-        with tempfile.TemporaryDirectory() as temp_dir_name:
-            create_recordio_file(
-                self._num_records,
-                DatasetName.TEST_MODULE,
-                1,
-                temp_dir=temp_dir_name,
-            )
-            self.arguments["training_data"] = temp_dir_name
-            self.arguments["custom_training_loop"] = "true"
-            args = self._get_args()
-            args = parse_master_args(args)
-            master = ElasticdlJobService(args, TaskManager(args))
-            self.assertIsNotNone(master)
-
-    def test_create_master_without_eval(self):
-        self.arguments[
-            "distribution_strategy"
-        ] = DistributionStrategy.ALLREDUCE
-        self.arguments["custom_training_loop"] = "true"
-        self.arguments["model_def"] = "mnist.mnist_train_tfv2.train"
+        ] = DistributionStrategy.PARAMETER_SERVER
         with tempfile.TemporaryDirectory() as temp_dir_name:
             create_recordio_file(
                 self._num_records,
@@ -84,9 +60,38 @@ class ElasticdlJobServiceTest(unittest.TestCase):
             self.arguments["training_data"] = temp_dir_name
             args = self._get_args()
             args = parse_master_args(args)
-            master = ElasticdlJobService(args, TaskManager(args))
-            self.assertIsNone(master.evaluation_service)
+            master = Master(args)
+            master.task_manager._todo.clear()
+            exit_code = master.run()
+            master.stop()
+            self.assertEqual(exit_code, 0)
 
+    def test_master_validate(self):
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            create_recordio_file(
+                self._num_records,
+                DatasetName.TEST_MODULE,
+                1,
+                temp_dir=temp_dir_name,
+            )
+            self.arguments["training_data"] = temp_dir_name
+            self.arguments["task_fault_tolerance"] = "False"
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            with self.assertRaises(Exception):
+                master.validate()
 
-if __name__ == "__main__":
-    unittest.main()
+            self.arguments["need_elasticdl_job_service"] = "False"
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            master.validate()
+
+            self.arguments["task_fault_tolerance"] = "True"
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            master.pod_manager = None
+            with self.assertRaises(Exception):
+                master.validate()
