@@ -61,6 +61,11 @@ class Master(object):
                     worker_command=self._args.pod_command,
                     ps_command=self._args.pod_command,
                 )
+            else:
+                raise ValueError(
+                    "pod_conmmand is necessary if there is no elasticdl job "
+                    "service."
+                )
 
         # Start the components one by one
         if self.task_manager:
@@ -136,7 +141,7 @@ class Master(object):
             self.rendezvous_server = HorovodRendezvousServer(master_ip)
 
     def create_elasticdl_job_service_if_needed(self, args):
-        if args.need_elasticdl_job_service:
+        if args.need_elasticdl_job_service and False:
             # TODO: Remove rendezvous server after rafactoring the pod
             # manager.
             self.elasticdl_job_service = ElasticdlJobService(
