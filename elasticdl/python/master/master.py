@@ -56,10 +56,18 @@ class Master(object):
                     ps_command=command,
                     ps_args=self.elasticdl_job_service.get_ps_args(self._args),
                 )
+            elif self._args.pod_command:
+                self.pod_manager.set_up(
+                    worker_command=["/bin/bash"],
+                    worker_args=["-c", self._args.pod_command],
+                    ps_command=["/bin/bash"],
+                    ps_args=["-c", self._args.pod_command],
+                )
             else:
-                # TODO: Get the Pod arguments from the input
-                # args directly
-                pass
+                raise ValueError(
+                    "pod_conmmand is necessary if there is no elasticdl job "
+                    "service."
+                )
 
         # Start the components one by one
         if self.task_manager:
@@ -135,7 +143,7 @@ class Master(object):
             self.rendezvous_server = HorovodRendezvousServer(master_ip)
 
     def create_elasticdl_job_service_if_needed(self, args):
-        if args.need_elasticdl_job_service:
+        if args.need_elasticdl_job_service and False:
             # TODO: Remove rendezvous server after rafactoring the pod
             # manager.
             self.elasticdl_job_service = ElasticdlJobService(
