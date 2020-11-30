@@ -512,8 +512,6 @@ class TaskManager(object):
             time.sleep(30)
 
     def _get_average_task_completed_time(self):
-<<<<<<< HEAD
-=======
         """Get the average completed time of tasks. If the number of
         the completed tasks, the average time is 300s. Otherwise, the function
         will return the average execution time.
@@ -522,7 +520,6 @@ class TaskManager(object):
             A dict: It contains containing the average time
             for TRAINING and EVALUATION tasks.
         """
->>>>>>> develop
         average_task_completed_time = {}
 
         if len(self._task_completed_times[elasticdl_pb2.TRAINING]) < 20:
