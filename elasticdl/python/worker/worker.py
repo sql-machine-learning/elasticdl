@@ -28,10 +28,6 @@ from elasticdl.python.common.model_utils import (
 )
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
-from elasticdl.python.worker.allreduce_controller import (
-    PyTorchAllReduceController,
-    TensorFlowV2AllReduceController,
-)
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
 from elasticdl.python.worker.data_shard_service import DataShardService
 from elasticdl.python.worker.ps_trainer import ParameterServerTrainer
@@ -85,9 +81,7 @@ class Worker(object):
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
         self._log_loss_count = 0
         self._var_created = False
-        self._master_addr = args.master_addr.split(":")[0]
         self._custom_training_loop = args.custom_training_loop
-        self._worker_id = args.worker_id
         self._job_type = args.job_type
         self._minibatch_size = args.minibatch_size
         self._data_shard_service = DataShardService(
@@ -166,9 +160,7 @@ class Worker(object):
 
     def _init_trainer(self, args):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            self._trainer = AllReduceTrainer(
-                self._mc, self._master_addr, self._model_inst
-            )
+            self._trainer = AllReduceTrainer(self._mc, self._model_inst)
         elif (
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
@@ -178,7 +170,6 @@ class Worker(object):
             )
 
     def _init_training_func_from_args(self, args):
-        self._worker_id = args.worker_id
         self._job_type = args.job_type
         (
             self._training_func,
@@ -477,12 +468,20 @@ class Worker(object):
         Train and evaluate the model on the worker
         """
         if os.getenv("USE_TORCH", None):
+            from elasticdl.python.allreduce.pytorch_controller import (
+                PyTorchAllReduceController,
+            )
+
             elastic_controller = PyTorchAllReduceController(
-                self._mc, self._master_addr, self._data_shard_service
+                self._mc, self._data_shard_service
             )
         else:
+            from elasticdl.python.allreduce.tensorflow_controller import (
+                TensorFlowV2AllReduceController,
+            )
+
             elastic_controller = TensorFlowV2AllReduceController(
-                self._mc, self._master_addr, self._data_shard_service
+                self._mc, self._data_shard_service
             )
         # Initialize Horovod locally to generate varibles of the model
         # and optimizer.

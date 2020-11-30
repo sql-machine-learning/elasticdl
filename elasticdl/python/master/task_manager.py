@@ -112,6 +112,7 @@ class TaskManager(object):
 
         self._batch_size = args.minibatch_size
         self._num_epochs = args.num_epochs
+        self.support_fault_tolerance = args.task_fault_tolerance
         self._epoch = 0
         self._max_step = args.max_step
         self._completed_steps = 0
@@ -288,7 +289,8 @@ class TaskManager(object):
                 return -1, None
             self._task_id += 1
             task = self._eval_todo.pop()
-            self._doing[self._task_id] = (worker_id, task, time.time())
+            if self.support_fault_tolerance:
+                self._doing[self._task_id] = (worker_id, task, time.time())
             return self._task_id, task
 
     def _create_train_end_callback_task(self):
@@ -364,8 +366,8 @@ class TaskManager(object):
 
             self._task_id += 1
             task = self._todo.pop()
-            # TODO: Handle timeout of tasks.
-            self._doing[self._task_id] = (worker_id, task, time.time())
+            if self.support_fault_tolerance:
+                self._doing[self._task_id] = (worker_id, task, time.time())
 
             return self._task_id, task
 
@@ -442,7 +444,9 @@ class TaskManager(object):
         return all([not self._todo, not self._doing])
 
     def recover_tasks(self, worker_id):
-        """Recover doing tasks for a dead worker"""
+        """Recover doing tasks for a dead worker if needed"""
+        if not self.support_fault_tolerance:
+            return
 
         with self._lock:
             ids = [
@@ -463,11 +467,12 @@ class TaskManager(object):
                 evaluation_service.init_eval_only_job(len(self._eval_todo))
 
     def start(self):
-        threading.Thread(
-            target=self._check_and_reassign_timeout_tasks,
-            name="check_timeout_tasks",
-            daemon=True,
-        ).start()
+        if self.support_fault_tolerance:
+            threading.Thread(
+                target=self._check_and_reassign_timeout_tasks,
+                name="check_timeout_tasks",
+                daemon=True,
+            ).start()
 
     def reset_worker_start_task_time(self, worker_id):
         self._worker_start_task_time[worker_id] = time.time()
@@ -483,6 +488,8 @@ class TaskManager(object):
             callback_fn(worker_id)
 
     def _check_and_reassign_timeout_tasks(self):
+        """Check whether there are timeout tasks periodically.
+        """
         while True:
             doing_tasks = self._doing.copy()
             cur_time = time.time()
@@ -505,6 +512,17 @@ class TaskManager(object):
             time.sleep(30)
 
     def _get_average_task_completed_time(self):
+<<<<<<< HEAD
+=======
+        """Get the average completed time of tasks. If the number of
+        the completed tasks, the average time is 300s. Otherwise, the function
+        will return the average execution time.
+
+        Returns:
+            A dict: It contains containing the average time
+            for TRAINING and EVALUATION tasks.
+        """
+>>>>>>> develop
         average_task_completed_time = {}
 
         if len(self._task_completed_times[elasticdl_pb2.TRAINING]) < 20:

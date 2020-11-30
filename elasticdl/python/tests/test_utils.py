@@ -108,6 +108,7 @@ class TaskManagerArgs(object):
         custom_data_reader="custom_data_reader",
         checkpoint_dir_for_init="",
         custom_training_loop=False,
+        task_fault_tolerance=True,
     ):
         self.training_data = training_data
         self.validation_data = validation_data
@@ -121,6 +122,7 @@ class TaskManagerArgs(object):
         self.custom_data_reader = custom_data_reader
         self.checkpoint_dir_for_init = checkpoint_dir_for_init
         self.custom_training_loop = custom_training_loop
+        self.task_fault_tolerance = task_fault_tolerance
 
 
 class DatasetName(object):
@@ -133,12 +135,12 @@ class DatasetName(object):
 
 def create_task_manager(training_shards, evaluation_shards, num_epochs=1):
     args = TaskManagerArgs(num_minibatches_per_task=3, num_epochs=num_epochs)
-    task_d = TaskManager(args)
-    task_d._training_shards = training_shards
-    task_d._evaluation_shards = evaluation_shards
-    if task_d._training_shards:
-        task_d.create_tasks(elasticdl_pb2.TRAINING)
-    return task_d
+    task_manager = TaskManager(args)
+    task_manager._training_shards = training_shards
+    task_manager._evaluation_shards = evaluation_shards
+    if task_manager._training_shards:
+        task_manager.create_tasks(elasticdl_pb2.TRAINING)
+    return task_manager
 
 
 def create_recordio_file(size, dataset_name, shape, temp_dir=None):
@@ -445,7 +447,7 @@ def distributed_train_and_evaluate(
 
     def master_creator():
         return MasterServicer(
-            batch_size, evaluation_service=evaluation_service, master=master,
+            master.task_d, master.instance_manager, None, evaluation_service
         )
 
     svc, port = _server(master_creator)

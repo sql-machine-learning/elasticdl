@@ -100,14 +100,14 @@ class EvaluationServiceTest(unittest.TestCase):
 
         # Evaluation metrics will not be accepted if no evaluation ongoing
         evaluation_service = EvaluationService(
-            task_d, 0, False, _eval_metrics_fn,
+            task_d.create_evaluation_tasks, 0, False, _eval_metrics_fn,
         )
 
         master = Mock(
             task_d=task_d, instance_manager=None, distribution_strategy=None,
         )
         _ = MasterServicer(
-            2, evaluation_service=evaluation_service, master=master
+            master.task_d, master.instance_manager, None, evaluation_service
         )
 
         # No checkpoint available
@@ -130,7 +130,7 @@ class EvaluationServiceTest(unittest.TestCase):
         task_d.create_tasks(elasticdl_pb2.EVALUATION)
 
         evaluation_service = EvaluationService(
-            task_d, 0, True, _eval_metrics_fn
+            task_d.create_evaluation_tasks, 0, True, _eval_metrics_fn
         )
         task_d.set_evaluation_service(evaluation_service)
 
@@ -139,7 +139,7 @@ class EvaluationServiceTest(unittest.TestCase):
         )
 
         _ = MasterServicer(
-            2, evaluation_service=evaluation_service, master=master,
+            master.task_d, master.instance_manager, None, evaluation_service,
         )
 
         self.assertEqual(8, len(task_d._eval_todo))
@@ -154,7 +154,7 @@ class EvaluationServiceTest(unittest.TestCase):
         )
 
         evaluation_service = EvaluationService(
-            task_d, 10, False, _eval_metrics_fn,
+            task_d.create_evaluation_tasks, 10, False, _eval_metrics_fn,
         )
 
         # Should add evaluation task and create eval job

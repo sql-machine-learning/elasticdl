@@ -13,36 +13,66 @@
 
 
 import threading
+from concurrent import futures
 
+import grpc
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl_client.common.constants import DistributionStrategy
+
+
+def create_master_service(
+    port, task_manager, pod_manager, rendezvous_server, evaluation_service,
+):
+    """Create GRPC server
+    """
+    logger.info("Creating master service")
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=64),
+        options=[
+            ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
+            (
+                "grpc.max_receive_message_length",
+                GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
+            ),
+        ],
+    )
+    master_servicer = MasterServicer(
+        evaluation_service=evaluation_service,
+        task_manager=task_manager,
+        instance_manager=pod_manager,
+        rendezvous_server=rendezvous_server,
+    )
+    elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
+    server.add_insecure_port("[::]:{}".format(port))
+    logger.info("The port of the master server is: %d", port)
+
+    return server
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
     def __init__(
-        self, minibatch_size, evaluation_service, master,
+        self,
+        task_manager,
+        instance_manager,
+        rendezvous_server=None,
+        evaluation_service=None,
     ):
         # TODO: group params together into a single object.
-        self._task_manager = master.task_manager
-        self._instance_manager = master.instance_manager
-        self._distribution_strategy = master.distribution_strategy
-        self._rendezvous_server = master.rendezvous_server
-        self._lock = threading.Lock()
-        self._minibatch_size = minibatch_size
-        self._version = 0
-
+        self._task_manager = task_manager
+        self._instance_manager = instance_manager
+        self._rendezvous_server = rendezvous_server
         self._evaluation_service = evaluation_service
-        self._task_complete_times = {
-            elasticdl_pb2.EVALUATION: [],
-            elasticdl_pb2.TRAINING: [],
-        }
-        if evaluation_service:
-            evaluation_service.set_master_servicer(self)
+        if self._evaluation_service:
+            self._evaluation_service.set_model_version_fn(
+                self.get_model_version
+            )
+        self._lock = threading.Lock()
+        self._version = 0
 
     @staticmethod
     def var_name_encode(name):
@@ -80,7 +110,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # we are trying to pop and invoke the callback.
             # Then the master tells the worker to wait
             # in case of new tasks later.
-            if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
+            if self._rendezvous_server:
                 # If there is no more task, master only send wait task to
                 # the last worker and other workers exit.
                 if len(self._instance_manager.get_alive_workers()) == 1:
@@ -92,23 +122,26 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def report_task_result(self, request, _):
-        if request.err_message:
-            logger.warning("Worker reported error: " + request.err_message)
-            self._task_manager.report(request, False)
-        else:
-            complete_time, task, worker_id = self._task_manager.report(
-                request, True
-            )
-            if task:
-                with self._lock:
-                    self._task_manager.reset_worker_start_task_time(worker_id)
-                    if task.type in [
-                        elasticdl_pb2.TRAINING,
-                        elasticdl_pb2.EVALUATION,
-                    ]:
-                        self._task_manager.record_task_completed_time(
-                            task.type, complete_time
+        if self._task_manager.support_fault_tolerance:
+            if request.err_message:
+                logger.warning("Worker reported error: " + request.err_message)
+                self._task_manager.report(request, False)
+            else:
+                complete_time, task, worker_id = self._task_manager.report(
+                    request, True
+                )
+                if task:
+                    with self._lock:
+                        self._task_manager.reset_worker_start_task_time(
+                            worker_id
                         )
+                        if task.type in [
+                            elasticdl_pb2.TRAINING,
+                            elasticdl_pb2.EVALUATION,
+                        ]:
+                            self._task_manager.record_task_completed_time(
+                                task.type, complete_time
+                            )
         return empty_pb2.Empty()
 
     def report_evaluation_metrics(self, request, _):

@@ -95,3 +95,8 @@ class HorovodEnv(object):
     CPU_OPERATIONS = "HOROVOD_CPU_OPERATIONS"
     HOSTNAME = "HOROVOD_HOSTNAME"
     ELASTIC = "HOROVOD_ELASTIC"
+
+
+class WorkerEnv(object):
+    MASTER_ADDR = "MASTER_ADDR"
+    WORKER_ID = "WORKER_ID"
