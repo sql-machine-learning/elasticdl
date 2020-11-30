@@ -40,7 +40,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             worker_command=["/bin/bash"], worker_args=["-c", "echo"],
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
 
         pod_manager.start_workers()
         max_check_num = 20
@@ -83,7 +83,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             worker_command=["/bin/bash"], worker_args=["-c", "sleep 5 #"],
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
 
         pod_manager.start_workers()
         max_check_num = 20
@@ -122,7 +122,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.add_pod_event_callback(
             TaskRescheduleCallback(task_manager=task_manager)
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
         pod_manager.start_workers()
         max_check_num = 20
         for _ in range(max_check_num):
@@ -158,7 +158,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             worker_command=["/bin/bash"], worker_args=["-c", "sleep 10 #"],
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
         pod_manager.start_workers()
 
         max_check_num = 60
@@ -214,7 +214,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             ps_command=["/bin/bash"], ps_args=["-c", "sleep 10 #"],
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
         pod_manager.start_parameter_servers()
 
         # Check we also have ps services started

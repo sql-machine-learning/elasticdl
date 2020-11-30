@@ -22,7 +22,11 @@ from collections import Counter
 from kubernetes.client import V1EnvVar
 
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.constants import PodStatus, WorkerEnv
+from elasticdl.python.common.constants import (
+    InstanceManagerStatus,
+    PodStatus,
+    WorkerEnv,
+)
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import get_dict_from_params_str
@@ -216,6 +220,12 @@ class PodManager(object):
 
     def start(self):
         self._k8s_client.start_watch_events()
+        self.update_status(InstanceManagerStatus.PENDING)
+        if self._num_ps > 0:
+            logger.info("num ps pods : {}".format(self._num_ps))
+            self.start_parameter_servers()
+        self.start_workers()
+        self.update_status(InstanceManagerStatus.RUNNING)
 
     def add_pod_event_callback(self, pod_event_callback):
         self._pod_event_callbacks.append(pod_event_callback)
