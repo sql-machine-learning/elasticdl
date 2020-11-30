@@ -229,9 +229,6 @@ class PodManager(object):
         self._ps_args = ps_args
 
     def start(self):
-        """
-        Start the components one by one. Make sure that it is ready to run.
-        """
         self._k8s_client.start_watch_events()
         self.update_status(InstanceManagerStatus.PENDING)
         if self._num_ps > 0:
