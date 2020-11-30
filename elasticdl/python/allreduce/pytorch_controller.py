@@ -58,7 +58,6 @@ def get_elastic_controller(batch_size):
     ontroller.set_broadcast_optimizer(optimizer)
     model.train()
     for batch_idx, (data, target) in enumerate(data_loader):
-
         # Use the elastic function to wrap the training function with a batch.
         elastic_train_one_batch = allreduce_controller.elastic_run(
             train_one_batch
