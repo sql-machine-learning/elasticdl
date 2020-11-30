@@ -110,11 +110,11 @@ def train():
         pass a torch.utils.data.DataLoader.
         elastic_controller: The controller for elastic training.
     """
-    allreduce_controller = get_elastic_controller()
+    allreduce_controller = get_elastic_controller(batch_size=64)
     dataset = ImageDataset(
         allreduce_controller.data_shard_service, shuffle=True
     )
-    data_loader = DataLoader(dataset=dataset, batch_size=32)
+    data_loader = DataLoader(dataset=dataset, batch_size=64)
     model = Net()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     optimizer = hvd.DistributedOptimizer(optimizer)
