@@ -141,7 +141,6 @@ class Master(object):
             self.elasticdl_job_service = ElasticdlJobService(
                 args=args,
                 task_manager=self.task_manager,
-                pod_manager=self.pod_manager,
                 rendezvous_server=self.rendezvous_server,
             )
         else:
