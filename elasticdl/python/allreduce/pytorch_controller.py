@@ -36,7 +36,7 @@ except ImportError:
     hvd = None
 
 
-def get_elastic_controller(batch_size):
+def create_elastic_controller(batch_size):
     """Create an elastic AllReduce controller with data shard service.
     Users can use the `controller.data_shard_service` to get data
     shards like:
@@ -72,7 +72,7 @@ def get_elastic_controller(batch_size):
         return loss
     ```
     """
-    master_addr = os.getenv("MASTER_ADDR", " localhost:12345")
+    master_addr = os.getenv("MASTER_ADDR", "localhost:12345")
     worker_id = int(os.getenv("WORKER_ID", 0))
 
     master_client = MasterClient(build_channel(master_addr), worker_id)
