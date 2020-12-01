@@ -20,17 +20,14 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.save_utils import (
     save_checkpoint_without_embedding,
 )
 from elasticdl.python.elasticdl.callbacks import (
     LearningRateScheduler,
-    MaxStepsStopping,
     SavedModelExporter,
 )
-from elasticdl.python.master.task_dispatcher import _Task
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -57,9 +54,7 @@ class SavedModelExporterTest(unittest.TestCase):
 
     def test_on_train_end(self):
         worker = MockWorker()
-        task_data_service = TaskDataService(
-            worker, JobType.TRAINING_WITH_EVALUATION
-        )
+        task_data_service = TaskDataService(worker)
         dataset = tf.data.Dataset.from_tensor_slices(
             np.array([[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]])
         )
@@ -93,25 +88,6 @@ class SavedModelExporterTest(unittest.TestCase):
                     os.path.join(saved_model_path, "saved_model.pb")
                 )
             )
-
-
-class MaxStepsStoppingTest(unittest.TestCase):
-    def test_on_task_end(self):
-        max_steps_stopping = MaxStepsStopping(max_steps=20)
-        max_steps_stopping.set_model(tf.keras.Model())
-        max_steps_stopping.model.stop_training = False
-        max_steps_stopping.set_params({"batch_size": 128})
-        for i in range(6):
-            start = i * 512
-            end = (i + 1) * 512
-            task = _Task(
-                shard_name="test",
-                start=start,
-                end=end,
-                type=elasticdl_pb2.TRAINING,
-            )
-            max_steps_stopping.on_task_end(task)
-        self.assertTrue(max_steps_stopping.model.stop_training)
 
 
 class LearningRateSchedulerTest(unittest.TestCase):

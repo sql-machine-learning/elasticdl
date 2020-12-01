@@ -77,6 +77,8 @@ class Client(BaseClient):
         )
         self._event_cb = event_callback
         self._periodic_call_func = periodic_call_func
+
+    def start_watch_events(self):
         if self._event_cb:
             threading.Thread(
                 target=self._watch, name="event_watcher", daemon=True

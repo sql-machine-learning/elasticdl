@@ -13,13 +13,10 @@
 import os
 import socket
 import time
-import traceback
 from abc import abstractmethod
 from functools import wraps
 
-from tensorflow.python.framework.errors_impl import UnknownError
-
-from elasticdl.python.common.constants import HorovodEnv
+from elasticdl.python.common.constants import HorovodEnv, WorkerEnv
 from elasticdl.python.common.log_utils import default_logger as logger
 
 try:
@@ -27,12 +24,6 @@ try:
         import horovod.torch as hvd
     else:
         import horovod.tensorflow as hvd
-    from horovod.tensorflow.functions import broadcast_variables
-    from horovod.common.exceptions import HorovodInternalError
-    from horovod.torch.functions import (
-        broadcast_optimizer_state,
-        broadcast_parameters,
-    )
 
 except ImportError:
     hvd = None
@@ -45,10 +36,9 @@ DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
 
 
 class RendevousManager(object):
-    def __init__(self, master_client, master_addr):
+    def __init__(self, master_client):
         self.need_broadcast = True
         self._master_client = master_client
-        self._rendezvous_addr = master_addr
         self._rendezvous_id = None
 
     def init_horovod_if_needed(self):
@@ -84,8 +74,10 @@ class RendevousManager(object):
             self.need_broadcast = True
 
     def _set_horovod_env(self):
-        if self._rendezvous_addr:
-            os.environ[HorovodEnv.RENDEZVOUS_ADDR] = self._rendezvous_addr
+        master_addr_port = os.getenv(WorkerEnv.MASTER_ADDR, None)
+        if master_addr_port:
+            master_addr = master_addr_port.split(":")[0]
+            os.environ[HorovodEnv.RENDEZVOUS_ADDR] = master_addr
         os.environ[HorovodEnv.CONTROLLER] = "gloo"
         os.environ[HorovodEnv.CPU_OPERATIONS] = "gloo"
         domain_ip = socket.gethostbyname(socket.gethostname())
@@ -100,11 +92,12 @@ class AllReduceController(object):
     the variables and retry to call those functions.
     """
 
-    def __init__(self, master_client, master_addr):
+    def __init__(self, master_client, data_shard_service):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
 
-        self._rendezvous_manager = RendevousManager(master_client, master_addr)
+        self._rendezvous_manager = RendevousManager(master_client)
+        self.data_shard_service = data_shard_service
         self._step = 0
         self._first_call = True
         self._need_broadcast = True
@@ -120,7 +113,7 @@ class AllReduceController(object):
 
         return wrapper
 
-    def init_horvod_locally(self):
+    def init_horovod_locally(self):
         hvd.init()
 
     def _init_variables_before_first_calling(self, func, *args, **kwargs):
@@ -149,92 +142,3 @@ class AllReduceController(object):
     @abstractmethod
     def broadcast(self):
         pass
-
-
-class TensorFlowV2AllReduceController(AllReduceController):
-    """The controller is responsible for elastic training of
-    TensorFlow eager execution using AllReduce.
-    """
-
-    def __init__(self, master_client, master_addr):
-        super(TensorFlowV2AllReduceController, self).__init__(
-            master_client, master_addr
-        )
-        self._model = None
-        self._optimizer = None
-
-    def set_broadcast_model(self, model):
-        self._model = model
-
-    def set_broadcast_optimizer(self, optimizer):
-        self._optimizer = optimizer
-
-    def broadcast(self):
-        broadcast_variables(self._model.variables, root_rank=0)
-        broadcast_variables(self._optimizer.variables(), root_rank=0)
-
-    def train_one_batch_with_retries(self, func, *args, **kwargs):
-        for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
-            try:
-                self._broadcast_if_needed()
-                result = func(*args, **kwargs)
-                return result
-            except UnknownError as e:
-                logger.warning(
-                    "Failed to perform allreduce operation on "
-                    "the gradients. Retrying..."
-                )
-                # Those error message show that the communication
-                # to merge gradient fails and we can rebuild the
-                # communication.
-                if (
-                    "HorovodAllreduce" in e.message
-                    or "HorovodAllgather" in e.message
-                    or "HorovodBroadcast" in e.message
-                ):
-                    time.sleep(3)
-                    self._rendezvous_manager.init_horovod_if_needed()
-
-
-class PyTorchAllReduceController(AllReduceController):
-    def __init__(self, master_client, master_addr):
-        super(PyTorchAllReduceController, self).__init__(
-            master_client, master_addr
-        )
-        self._model = None
-        self._optimizer = None
-
-    def set_broadcast_model(self, model):
-        self._model = model
-
-    def set_broadcast_optimizer(self, optimizer):
-        self._optimizer = optimizer
-
-    def broadcast(self):
-        broadcast_parameters(self._model.state_dict(), root_rank=0)
-        broadcast_optimizer_state(self._optimizer, root_rank=0)
-
-    def train_one_batch_with_retries(self, func, *args, **kwargs):
-        for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
-            try:
-                self._broadcast_if_needed()
-                result = func(*args, **kwargs)
-                return result
-            except HorovodInternalError:
-                logger.warning(
-                    "Failed to perform allreduce operation on "
-                    "the gradients. Retrying..."
-                )
-                # Those error message show that the communication
-                # to merge gradient fails and we can rebuild the
-                # communication.
-                self.restore()
-            except RuntimeError:
-                traceback.print_exc()
-                self.restore()
-
-    def restore(self):
-        time.sleep(3)
-        # Call `load_state_dict` to reset the state of Horovod optimizer
-        self._optimizer.load_state_dict(self._optimizer.state_dict())
-        self._rendezvous_manager.init_horovod_if_needed()

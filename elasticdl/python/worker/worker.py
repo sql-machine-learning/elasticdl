@@ -28,11 +28,8 @@ from elasticdl.python.common.model_utils import (
 )
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
-from elasticdl.python.worker.allreduce_controller import (
-    PyTorchAllReduceController,
-    TensorFlowV2AllReduceController,
-)
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
+from elasticdl.python.worker.data_shard_service import DataShardService
 from elasticdl.python.worker.ps_trainer import ParameterServerTrainer
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
@@ -84,21 +81,27 @@ class Worker(object):
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
         self._log_loss_count = 0
         self._var_created = False
-        self._master_addr = args.master_addr.split(":")[0]
-        self.custom_training_loop = args.custom_training_loop
-        if self.custom_training_loop:
+        self._custom_training_loop = args.custom_training_loop
+        self._job_type = args.job_type
+        self._minibatch_size = args.minibatch_size
+        self._data_shard_service = DataShardService(
+            self._minibatch_size, self._mc
+        )
+        if self._custom_training_loop:
             self._init_training_func_from_args(args)
         else:
-            self._init_from_args(args)
+            self._init_model_from_args(args)
+        self._init_task_data_service(args)
+        self._init_default_feed_if_needed()
+        if not self._custom_training_loop:
+            self._init_callbacks(args)
+            self._init_trainer(args)
 
-    def _init_from_args(self, args):
+    def _init_model_from_args(self, args):
         """
         Please refer to elastic/python/common/args.py for more
         details about arguments of a worker.
         """
-        self._worker_id = args.worker_id
-        self._job_type = args.job_type
-        self._minibatch_size = args.minibatch_size
         self._log_loss_steps = args.log_loss_steps
         (
             model_inst,
@@ -121,38 +124,32 @@ class Worker(object):
             callbacks=args.callbacks,
         )
 
-        model_handler = ModelHandler.get_model_handler(
+        self._model_handler = ModelHandler.get_model_handler(
             self._distribution_strategy, checkpoint_dir=args.checkpoint_dir
         )
-        model_inst = model_handler.get_model_to_train(model_inst)
-        model_inst.optimizer = opt_fn()
-        model_inst.loss = loss
-
+        self._model_inst = self._model_handler.get_model_to_train(model_inst)
+        self._model_inst.optimizer = opt_fn()
+        self._model_inst.loss = loss
         self._model_version = -1
+        self._get_model_steps = args.get_model_steps
+
+    def _init_task_data_service(self, args):
         self._task_data_service = TaskDataService(
-            self._mc,
-            self._job_type == JobType.TRAINING_WITH_EVALUATION,
+            self._data_shard_service,
             custom_data_reader=self._custom_data_reader,
             data_reader_params=get_dict_from_params_str(
                 args.data_reader_params
             ),
             data_origin=args.training_data,
         )
-        if self._feed is None:
-            if hasattr(self._task_data_service.data_reader, "default_feed"):
-                self._feed = self._task_data_service.data_reader.default_feed()
-            else:
-                raise ValueError(
-                    "feed is required if the data_reader used does "
-                    "not provide default implementation of feed"
-                )
-        self._get_model_steps = args.get_model_steps
+
+    def _init_callbacks(self, args):
         saved_model_exporter = SavedModelExporter(
-            self._task_data_service, self._feed, model_handler
+            self._task_data_service, self._feed, self._model_handler
         )
         # Place default callbacks at the head to execute them firstly
         self._callbacks_list.callbacks.insert(0, saved_model_exporter)
-        self._callbacks_list.set_model(model_inst)
+        self._callbacks_list.set_model(self._model_inst)
         set_callback_parameters(
             self._callbacks_list,
             batch_size=args.minibatch_size,
@@ -161,22 +158,19 @@ class Worker(object):
         )
         self._saved_model_path = args.output
 
+    def _init_trainer(self, args):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            self._trainer = AllReduceTrainer(
-                self._mc, self._master_addr, model_inst
-            )
+            self._trainer = AllReduceTrainer(self._mc, self._model_inst)
         elif (
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
         ):
             self._trainer = ParameterServerTrainer(
-                model_inst, self._ps_client, self._timing, args
+                self._model_inst, self._ps_client, self._timing, args
             )
 
     def _init_training_func_from_args(self, args):
-        self._worker_id = args.worker_id
         self._job_type = args.job_type
-        self._minibatch_size = args.minibatch_size
         (
             self._training_func,
             self._feed,
@@ -187,15 +181,8 @@ class Worker(object):
             feed=args.feed,
             custom_data_reader=args.custom_data_reader,
         )
-        self._task_data_service = TaskDataService(
-            self._mc,
-            self._job_type == JobType.TRAINING_WITH_EVALUATION,
-            custom_data_reader=self._custom_data_reader,
-            data_reader_params=get_dict_from_params_str(
-                args.data_reader_params
-            ),
-            data_origin=args.training_data,
-        )
+
+    def _init_default_feed_if_needed(self):
         if self._feed is None:
             if hasattr(self._task_data_service.data_reader, "default_feed"):
                 self._feed = (
@@ -262,51 +249,33 @@ class Worker(object):
         self._timing.end_record_time("batch_process")
         return min_model_version
 
-    def _process_eval_task(self, task):
+    def _process_evaluation_if_exist(self, dataset):
         """
         Check if there are evaluation tasks and process the tasks if any.
         Return:
             A python bool indicating whether worker processed some evaluation
             tasks.
         """
-        self.logger.info("the evaluation task_id: %d" % task.task_id)
-
-        gen = self._task_data_service.get_dataset_gen(task)
-        if not gen:
-            return None
-
-        def create_dataset():
-            eval_dataset = tf.data.Dataset.from_generator(
-                gen, self._task_data_service.data_reader.records_output_types
-            )
-            eval_dataset = self._feed(
-                eval_dataset,
-                Mode.EVALUATION,
-                self._task_data_service.data_reader.metadata,
-            )
-            eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
-            return eval_dataset
-
-        with tf.device("/device:cpu:0"):
-            eval_dataset = create_dataset()
-        model_version = task.model_version
-        task_id = task.task_id
+        evaluation_exist = False
         err_msg = ""
-        for dataset_batch in eval_dataset:
+        for dataset_batch in dataset:
+            evaluation_exist = True
             data_err_msg = self._safe_process_minibatch(
-                dataset_batch, elasticdl_pb2.EVALUATION, model_version
+                dataset_batch, elasticdl_pb2.EVALUATION, None
             )
             if data_err_msg:
                 err_msg = data_err_msg
                 break
-        del eval_dataset
-        evaluation_result = self._trainer.get_evaluation_result()
-        self._mc.report_evaluation_metrics(
-            model_outputs=evaluation_result[MetricsDictKey.MODEL_OUTPUT],
-            labels=evaluation_result[MetricsDictKey.LABEL],
-        )
-        self._mc.report_task_result(task_id, err_msg)
-        self._trainer.reset_evaluation_result()
+        if evaluation_exist:
+            evaluation_result = self._trainer.get_evaluation_result()
+            self._mc.report_evaluation_metrics(
+                model_outputs=evaluation_result[MetricsDictKey.MODEL_OUTPUT],
+                labels=evaluation_result[MetricsDictKey.LABEL],
+            )
+            task_id = self._task_data_service.current_eval_task.task_id
+            self._mc.report_task_result(task_id, err_msg)
+            self._trainer.reset_evaluation_result()
+        return evaluation_exist
 
     def _process_train_end_callback_task_if_needed(self):
         train_end_task = self._task_data_service.get_train_end_callback_task()
@@ -372,83 +341,86 @@ class Worker(object):
         local_update_count = self._get_model_steps
         last_training_minibatch_failed = False
         evaluation_task_executed = False
-        while True:
-            dataset = self._task_data_service.get_dataset()
-            if not dataset:
-                self._process_train_end_callback_task_if_needed()
-                break
-            dataset = self._feed(
-                dataset,
-                Mode.TRAINING,
-                self._task_data_service.data_reader.metadata,
-            )
-            dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            self._timing.start_record_time("task_process")
-            for dataset_batch in dataset:
-                if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                    # Give the worker a chance to process an evaluation task
-                    # during training if the task exists
-                    evaluation_task_executed = (
-                        True
-                        if self._evaluate_only()
-                        else evaluation_task_executed
-                    )
+        dataset = self._task_data_service.get_dataset()
 
-                task = self._task_data_service.get_current_task()
-                if (
-                    evaluation_task_executed
-                    or last_training_minibatch_failed
-                    or local_update_count >= self._get_model_steps
-                ):
-                    local_update_count = 0
-                    train_with_local_model = False
-                else:
-                    train_with_local_model = True
-
-                err_msg = self._safe_process_minibatch(
-                    dataset_batch,
-                    task.type,
-                    task.model_version,
-                    train_with_local_model,
+        dataset = self._feed(
+            dataset,
+            Mode.TRAINING,
+            self._task_data_service.data_reader.metadata,
+        )
+        dataset = dataset.batch(self._minibatch_size).prefetch(1)
+        self._timing.start_record_time("task_process")
+        for dataset_batch in dataset:
+            if self._job_type == JobType.TRAINING_WITH_EVALUATION:
+                # Give the worker a chance to process an evaluation task
+                # during training if the task exists
+                evaluation_task_executed = (
+                    True if self._evaluate_only() else evaluation_task_executed
                 )
 
-                local_update_count += 1
-                if err_msg:
-                    last_training_minibatch_failed = True
-                else:
-                    last_training_minibatch_failed = False
-                    if local_update_count < self._get_model_steps:
-                        self._update_local_model()
-                if self._task_data_service.report_record_done(
-                    self._minibatch_size, err_msg
-                ):
-                    self._timing.end_record_time("task_process")
-                    self._timing.report_timing(reset=True)
-                    self._timing.start_record_time("task_process")
+            task = self._task_data_service.get_current_task()
+            if (
+                evaluation_task_executed
+                or last_training_minibatch_failed
+                or local_update_count >= self._get_model_steps
+            ):
+                local_update_count = 0
+                train_with_local_model = False
+            else:
+                train_with_local_model = True
 
-            del dataset
-            # New evaluation tasks may be created after this worker's
-            # training tasks are done, as other workers' may still
-            # have pending training tasks.
-            if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                evaluation_task_executed = self._evaluate_only()
+            err_msg = self._safe_process_minibatch(
+                dataset_batch,
+                task.type,
+                task.model_version,
+                train_with_local_model,
+            )
 
-            self._process_train_end_callback_task_if_needed()
+            local_update_count += 1
+            if err_msg:
+                last_training_minibatch_failed = True
+            else:
+                last_training_minibatch_failed = False
+                if local_update_count < self._get_model_steps:
+                    self._update_local_model()
+            if self._task_data_service.report_record_done(
+                self._minibatch_size, err_msg
+            ):
+                self._timing.end_record_time("task_process")
+                self._timing.report_timing(reset=True)
+                self._timing.start_record_time("task_process")
+
+        del dataset
+        # New evaluation tasks may be created after this worker's
+        # training tasks are done, as other workers' may still
+        # have pending training tasks.
+        if self._job_type == JobType.TRAINING_WITH_EVALUATION:
+            evaluation_task_executed = self._evaluate_only()
+
+        self._process_train_end_callback_task_if_needed()
 
     def _evaluate_only(self):
         """
         Only evaluate the model on the worker.
         """
         evaluation_task_executed = False
-        # should not get model before finishing some training tasks, because
-        # variables of subclass models are not created.
+        with tf.device("/device:cpu:0"):
+            dataset = self._task_data_service.get_eval_dataset()
+
+        dataset = self._feed(
+            dataset,
+            Mode.EVALUATION,
+            self._task_data_service.data_reader.metadata,
+        )
+        dataset = dataset.batch(self._minibatch_size).prefetch(1)
         while True:
-            task = self._mc.get_task(elasticdl_pb2.EVALUATION)
-            # no evaluation task in eval_todo of master
-            if not task.shard_name:
+            # The dataset will re-call generator each time when
+            # calling iterator of the dataset.
+            evaluation_exist = self._process_evaluation_if_exist(dataset)
+            if not evaluation_exist:
                 break
-            self._process_eval_task(task)
-            evaluation_task_executed = True
+        del dataset
+        evaluation_task_executed = True
         return evaluation_task_executed
 
     def _predict_only(self):
@@ -486,7 +458,7 @@ class Worker(object):
         elif self._job_type == JobType.EVALUATION_ONLY:
             self._evaluate_only()
         else:
-            if self.custom_training_loop:
+            if self._custom_training_loop:
                 self._elastic_allreduce_train()
             else:
                 self._train_and_evaluate()
@@ -496,26 +468,30 @@ class Worker(object):
         Train and evaluate the model on the worker
         """
         if os.getenv("USE_TORCH", None):
+            from elasticdl.python.allreduce.pytorch_controller import (
+                PyTorchAllReduceController,
+            )
+
             elastic_controller = PyTorchAllReduceController(
-                self._mc, self._master_addr
+                self._mc, self._data_shard_service
             )
         else:
+            from elasticdl.python.allreduce.tensorflow_controller import (
+                TensorFlowV2AllReduceController,
+            )
+
             elastic_controller = TensorFlowV2AllReduceController(
-                self._mc, self._master_addr
+                self._mc, self._data_shard_service
             )
         # Initialize Horovod locally to generate varibles of the model
         # and optimizer.
-        elastic_controller.init_horvod_locally()
-        while True:
-            dataset = self._task_data_service.get_dataset()
-            if not dataset:
-                self._process_train_end_callback_task_if_needed()
-                break
-            dataset = self._feed(
-                dataset,
-                Mode.TRAINING,
-                self._task_data_service.data_reader.metadata,
-            )
-            dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            self._training_func(dataset, elastic_controller)
-            del dataset
+        elastic_controller.init_horovod_locally()
+        dataset = self._task_data_service.get_dataset()
+        dataset = self._feed(
+            dataset,
+            Mode.TRAINING,
+            self._task_data_service.data_reader.metadata,
+        )
+        dataset = dataset.batch(self._minibatch_size).prefetch(1)
+        self._training_func(dataset, elastic_controller)
+        del dataset

@@ -20,8 +20,11 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
-from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.master.servicer import (
+    MasterServicer,
+    create_master_service,
+)
+from elasticdl.python.tests.test_utils import create_task_manager
 
 
 def _get_variable_names(model_pb):
@@ -57,12 +60,14 @@ class ServicerTest(unittest.TestCase):
             task_d=None, instance_manager=None, distribution_strategy=None,
         )
 
+    def test_create_master_service(self):
+        server = create_master_service(8080, None, None, None, None)
+        self.assertIsNotNone(server)
+
     def test_get_empty_task(self):
-        self.master.task_d = _TaskDispatcher(
-            {}, {}, {}, records_per_task=3, num_epochs=2
-        )
+        self.master.task_manager = create_task_manager({}, {})
         master_servicer = MasterServicer(
-            3, evaluation_service=None, master=self.master,
+            self.master.task_manager, self.master.instance_manager, None, None,
         )
 
         req = elasticdl_pb2.GetTaskRequest()
@@ -70,23 +75,21 @@ class ServicerTest(unittest.TestCase):
         # No task yet, make sure the returned versions are as expected.
         req.worker_id = 1
         task = master_servicer.get_task(req, None)
-        self.assertEqual("", task.shard_name)
+        self.assertEqual("", task.shard.name)
         self.assertEqual(0, task.model_version)
 
         master_servicer._version = 1
         task = master_servicer.get_task(req, None)
-        self.assertEqual("", task.shard_name)
+        self.assertEqual("", task.shard.name)
         self.assertEqual(1, task.model_version)
 
     def test_report_task_result(self):
-        self.master.task_d = _TaskDispatcher(
-            {"shard_1": (0, 10), "shard_2": (0, 9)},
-            {},
-            {},
-            records_per_task=3,
-            num_epochs=2,
+        self.master.task_manager = create_task_manager(
+            {"shard_1": (0, 10), "shard_2": (0, 9)}, {}, 2
         )
-        master = MasterServicer(3, evaluation_service=None, master=self.master)
+        master = MasterServicer(
+            self.master.task_manager, self.master.instance_manager, None, None,
+        )
 
         # task to number of runs.
         tasks = defaultdict(int)
@@ -94,16 +97,16 @@ class ServicerTest(unittest.TestCase):
             req = elasticdl_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
             task = master.get_task(req, None)
-            if not task.shard_name:
+            if not task.shard.name:
                 break
             self.assertEqual(
-                self.master.task_d._doing[task.task_id][0], req.worker_id
+                self.master.task_manager._doing[task.task_id][0], req.worker_id
             )
-            task_key = (task.shard_name, task.start, task.end)
+            task_key = (task.shard.name, task.shard.start, task.shard.end)
             tasks[task_key] += 1
             report = elasticdl_pb2.ReportTaskResultRequest()
             report.task_id = task.task_id
-            if task.start == 0 and tasks[task_key] == 1:
+            if task.shard.start == 0 and tasks[task_key] == 1:
                 # Simulate error reports.
                 report.err_message = "Worker error"
             master.report_task_result(report, None)
@@ -136,7 +139,10 @@ class ServicerTest(unittest.TestCase):
         )
         self.master.instance_manager = mock_instance_manager
         master_servicer = MasterServicer(
-            3, evaluation_service=None, master=self.master
+            self.master.task_manager,
+            self.master.instance_manager,
+            self.master.rendezvous_server,
+            None,
         )
         request = elasticdl_pb2.GetCommRankRequest()
         request.worker_id = 0

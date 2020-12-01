@@ -11,67 +11,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import grpc
+import os
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
+from elasticdl.python.common.constants import WorkerEnv
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.master_client import MasterClient
-from elasticdl.python.worker.ps_client import PSClient
+from elasticdl.python.worker.ps_client import build_ps_client
 from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
-CONNECT_PS_MAX_RETRIES = 3
-CONNECT_PS_TIMEOUT = 300
+
+def get_worker_id():
+    worker_id = os.getenv(WorkerEnv.WORKER_ID, None)
+    if worker_id is None:
+        raise ValueError("worker_id is missing for worker")
+    return int(worker_id)
+
+
+def get_master_addr():
+    master_addr = os.getenv(WorkerEnv.MASTER_ADDR, None)
+    if master_addr is None:
+        raise ValueError("master_addr is missing for worker")
+    return master_addr
 
 
 def main():
     args = parse_worker_args()
     logger = log_utils.get_logger(__name__)
-    logger.info("Starting worker %d", args.worker_id)
-    if args.master_addr is None:
-        raise ValueError("master_addr is missing for worker")
+    master_addr = get_master_addr()
+    worker_id = get_worker_id()
 
-    master_client = MasterClient(
-        build_channel(args.master_addr), args.worker_id
+    logger.info("Starting worker %d", worker_id)
+
+    master_client = MasterClient(build_channel(master_addr), worker_id)
+
+    ps_client = (
+        build_ps_client(args.ps_addrs, logger)
+        if args.distribution_strategy == DistributionStrategy.PARAMETER_SERVER
+        else None
     )
-
-    ps_client = None
-    if (
-        args.distribution_strategy == DistributionStrategy.PARAMETER_SERVER
-        and args.ps_addrs
-    ):
-        ps_channels = []
-        ps_addrs = args.ps_addrs.split(",")
-
-        for addr in ps_addrs:
-            # addr is in the form as "ps-pod-name.namespace.svc:port"
-            channel = build_channel(addr)
-
-            succeeded = False
-            for i in range(CONNECT_PS_MAX_RETRIES):
-                try:
-                    grpc.channel_ready_future(channel).result(
-                        timeout=CONNECT_PS_TIMEOUT
-                    )
-                    logger.info(
-                        "grpc channel %s to connect pod %s is ready"
-                        % (addr, addr.split(".")[0])
-                    )
-                    ps_channels.append(channel)
-                    succeeded = True
-                    break
-                except grpc.FutureTimeoutError:
-                    logger.warning(
-                        "Failed to connect pod %s with %d retry"
-                        % (addr.split(".")[0], i)
-                    )
-            if not succeeded:
-                raise TimeoutError(
-                    "Time out to connect pod %s with 3 retries"
-                    % addr.split(".")[0]
-                )
-        ps_client = PSClient(ps_channels)
 
     worker = Worker(
         args,

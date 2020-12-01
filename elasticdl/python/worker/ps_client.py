@@ -11,9 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import grpc
 import numpy as np
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.hash_utils import (
     int_to_id,
     scatter_embedding_vector,
@@ -27,6 +29,59 @@ from elasticdl.python.common.tensor_utils import (
     serialize_indexed_slices,
     serialize_ndarray,
 )
+
+CONNECT_PS_MAX_RETRIES = 3
+CONNECT_PS_TIMEOUT = 300
+
+
+def build_ps_client(ps_addrs, logger):
+    """
+    Build a PSClient from the address list.
+    Args:
+        ps_addrs: a string of common separated format that stands for a list
+            of address for parameter servers
+        logger: a logger object
+    Returns:
+        A PS Client.
+    """
+    if not ps_addrs:
+        return None
+
+    ps_channels = []
+    ps_addrs = ps_addrs.split(",")
+
+    for addr in ps_addrs:
+        # addr is in the form as "ps-pod-name.namespace.svc:port"
+        channel = build_channel(addr)
+
+        succeeded = False
+        for i in range(CONNECT_PS_MAX_RETRIES):
+            try:
+                grpc.channel_ready_future(channel).result(
+                    timeout=CONNECT_PS_TIMEOUT
+                )
+                logger.info(
+                    "grpc channel %s to connect pod %s is ready"
+                    % (addr, addr.split(".")[0])
+                )
+                ps_channels.append(channel)
+                succeeded = True
+                break
+            except grpc.FutureTimeoutError:
+                logger.warning(
+                    "Failed to connect pod %s with %d retry"
+                    % (addr.split(".")[0], i)
+                )
+
+        if not succeeded:
+            raise TimeoutError(
+                "Time out to connect pod %s with 3 retries"
+                % addr.split(".")[0]
+            )
+
+    ps_client = PSClient(ps_channels)
+
+    return ps_client
 
 
 class PSClient(object):
