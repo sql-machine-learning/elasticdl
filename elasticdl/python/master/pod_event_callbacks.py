@@ -85,11 +85,11 @@ class TaskRescheduleCallback(PodEventCallback):
         pass
 
     def on_pod_failed(self, pod_info, cluster_context):
-        if pod_info.id:
+        if pod_info.id is not None:
             self._task_manager.recover_tasks(pod_info.id)
 
     def on_pod_deleted(self, pod_info, cluster_context):
-        if pod_info.id:
+        if pod_info.id is not None:
             self._task_manager.recover_tasks(pod_info.id)
 
 
