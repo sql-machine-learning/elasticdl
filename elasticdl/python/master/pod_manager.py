@@ -430,22 +430,6 @@ class PodManager(object):
             if pod_name in self._failed_pods:
                 return
 
-            # Notify each PodEventCallback that PodStarted is fired
-            if evt_type in ["ADDED", "MODIFIED"] and phase == "Running":
-                for callback in self._pod_event_callbacks:
-                    callback.on_pod_started(
-                        PodInfo(type=None, id=None, name=pod_name),
-                        ClusterContext(pod_manager=self),
-                    )
-
-            # Notify each PodEventCallback that PodSucceeded is fired
-            if evt_type == "MODIFIED" and phase == "Succeeded":
-                for callback in self._pod_event_callbacks:
-                    callback.on_pod_succeeded(
-                        PodInfo(type=None, id=None, name=pod_name),
-                        ClusterContext(pod_manager=self),
-                    )
-
             # For the failed worker, reassign the its tasks to others.
             # Check whether to relaunch the worker.
             relaunch_failed_pod = False
@@ -511,6 +495,22 @@ class PodManager(object):
             else:
                 logger.error("Unknown pod name: %s" % pod_name)
                 return
+
+            # Notify each PodEventCallback that PodStarted is fired
+            if evt_type in ["ADDED", "MODIFIED"] and phase == "Running":
+                for callback in self._pod_event_callbacks:
+                    callback.on_pod_started(
+                        PodInfo(type=None, id=None, name=pod_name),
+                        ClusterContext(pod_manager=self),
+                    )
+
+            # Notify each PodEventCallback that PodSucceeded is fired
+            if evt_type == "MODIFIED" and phase == "Succeeded":
+                for callback in self._pod_event_callbacks:
+                    callback.on_pod_succeeded(
+                        PodInfo(type=None, id=None, name=pod_name),
+                        ClusterContext(pod_manager=self),
+                    )
 
         if relaunch_worker and worker_id >= 0:
             logger.info("Relaunching worker.")
