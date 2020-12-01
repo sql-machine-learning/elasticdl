@@ -438,6 +438,14 @@ class PodManager(object):
                         ClusterContext(pod_manager=self),
                     )
 
+            # Notify each PodEventCallback that PodSucceeded is fired
+            if evt_type == "MODIFIED" and phase == "Succeeded":
+                for callback in self._pod_event_callbacks:
+                    callback.on_pod_succeeded(
+                        PodInfo(type=None, id=None, name=pod_name),
+                        ClusterContext(pod_manager=self),
+                    )
+
             # For the failed worker, reassign the its tasks to others.
             # Check whether to relaunch the worker.
             relaunch_failed_pod = False
