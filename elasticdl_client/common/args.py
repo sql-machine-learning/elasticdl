@@ -177,6 +177,11 @@ def add_train_params(parser):
         help="If true, task manager supports fault tolerance, otherwise "
         "no fault tolerance.",
     )
+    parser.add_argument(
+        "--job_command",
+        help="The command executed in the pod launched by the master",
+        default="",
+    )
 
 
 def add_evaluate_params(parser):
@@ -403,7 +408,7 @@ def add_common_args_between_master_and_worker(parser):
         "or a specific model file. If set `image_base`, the path should"
         "be accessed by ElasticDL client. If set `image_name`, it is"
         "the path inside this pre-built image.",
-        required=True,
+        default="",
     )
     parser.add_argument(
         "--log_level",
@@ -453,7 +458,7 @@ def add_common_args_between_master_and_worker(parser):
     parser.add_argument(
         "--model_def",
         type=str,
-        required=True,
+        default="",
         help="The import path to the model definition function/class in the "
         'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
     )
