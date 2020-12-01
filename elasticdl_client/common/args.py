@@ -178,9 +178,9 @@ def add_train_params(parser):
         "no fault tolerance.",
     )
     parser.add_argument(
-        "--pod_command",
+        "--job_command",
         help="The command executed in the pod launched by the master",
-        default=None,
+        default="",
     )
 
 
