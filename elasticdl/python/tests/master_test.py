@@ -95,3 +95,33 @@ class MasterTest(unittest.TestCase):
             master.pod_manager = None
             with self.assertRaises(Exception):
                 master.validate()
+
+    def test_master_prepare(self):
+        self.arguments[
+            "distribution_strategy"
+        ] = DistributionStrategy.PARAMETER_SERVER
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            create_recordio_file(
+                self._num_records,
+                DatasetName.TEST_MODULE,
+                1,
+                temp_dir=temp_dir_name,
+            )
+            self.arguments["training_data"] = temp_dir_name
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            master._set_command_in_pod_manager()
+            self.assertListEqual(
+                master.pod_manager._worker_command, ["/bin/bash"]
+            )
+
+            self.arguments["need_elasticdl_job_service"] = "False"
+            self.arguments["job_command"] = "python --version"
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            master._set_command_in_pod_manager()
+            self.assertListEqual(
+                master.pod_manager._worker_args, ["-c", "python --version"]
+            )

@@ -46,20 +46,7 @@ class Master(object):
                 self.pod_manager._remove_worker
             )
         if self.pod_manager:
-            if self.elasticdl_job_service:
-                command = self.elasticdl_job_service.get_ps_worker_command()
-                self.pod_manager.set_up(
-                    worker_command=command,
-                    worker_args=self.elasticdl_job_service.get_worker_args(
-                        self._args
-                    ),
-                    ps_command=command,
-                    ps_args=self.elasticdl_job_service.get_ps_args(self._args),
-                )
-            else:
-                # TODO: Get the Pod arguments from the input
-                # args directly
-                pass
+            self._set_command_in_pod_manager()
 
         # Start the components one by one
         if self.task_manager:
@@ -75,6 +62,30 @@ class Master(object):
         logger.info("Starting master RPC server")
         self._master_server.start()
         logger.info("Master RPC server started")
+
+    def _set_command_in_pod_manager(self):
+        if self.elasticdl_job_service:
+            command = self.elasticdl_job_service.get_ps_worker_command()
+            self.pod_manager.set_up(
+                worker_command=command,
+                worker_args=self.elasticdl_job_service.get_worker_args(
+                    self._args
+                ),
+                ps_command=command,
+                ps_args=self.elasticdl_job_service.get_ps_args(self._args),
+            )
+        elif self._args.job_command:
+            self.pod_manager.set_up(
+                worker_command=["/bin/bash"],
+                worker_args=["-c", self._args.job_command],
+                ps_command=["/bin/bash"],
+                ps_args=["-c", self._args.job_command],
+            )
+        else:
+            raise ValueError(
+                "pod_conmmand is necessary if there is no elasticdl job "
+                "service."
+            )
 
     def run(self):
         """
