@@ -46,7 +46,7 @@ class Master(object):
                 self.pod_manager._remove_worker
             )
         if self.pod_manager:
-            self._set_pod_manager()
+            self._set_command_in_pod_manager()
 
         # Start the components one by one
         if self.task_manager:
@@ -63,7 +63,7 @@ class Master(object):
         self._master_server.start()
         logger.info("Master RPC server started")
 
-    def _set_pod_manager(self):
+    def _set_command_in_pod_manager(self):
         if self.elasticdl_job_service:
             command = self.elasticdl_job_service.get_ps_worker_command()
             self.pod_manager.set_up(

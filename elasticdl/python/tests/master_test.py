@@ -111,7 +111,7 @@ class MasterTest(unittest.TestCase):
             args = self._get_args()
             args = parse_master_args(args)
             master = Master(args)
-            master._set_pod_manager()
+            master._set_command_in_pod_manager()
             self.assertListEqual(
                 master.pod_manager._worker_command, ["/bin/bash"]
             )
@@ -121,7 +121,7 @@ class MasterTest(unittest.TestCase):
             args = self._get_args()
             args = parse_master_args(args)
             master = Master(args)
-            master._set_pod_manager()
+            master._set_command_in_pod_manager()
             self.assertListEqual(
                 master.pod_manager._worker_args, ["-c", "python --version"]
             )
