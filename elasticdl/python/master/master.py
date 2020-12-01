@@ -83,7 +83,7 @@ class Master(object):
             )
         else:
             raise ValueError(
-                "pod_conmmand is necessary if there is no elasticdl job "
+                "job_command is necessary if there is no elasticdl job "
                 "service."
             )
 
