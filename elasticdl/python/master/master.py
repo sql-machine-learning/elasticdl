@@ -14,7 +14,7 @@
 import os
 import time
 
-from elasticdl.python.common.constants import InstanceManagerStatus
+from elasticdl.python.common.constants import PodManagerStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
 from elasticdl.python.master.pod_manager import create_pod_manager
@@ -77,9 +77,9 @@ class Master(object):
         elif self._args.job_command:
             self.pod_manager.set_up(
                 worker_command=["/bin/bash"],
-                worker_args=["-c " + self._args.job_command],
+                worker_args=["-c", self._args.job_command],
                 ps_command=["/bin/bash"],
-                ps_args=["-c " + self._args.job_command],
+                ps_args=["-c", self._args.job_command],
             )
         else:
             raise ValueError(
@@ -97,7 +97,7 @@ class Master(object):
                 if self.task_manager and self.task_manager.finished():
                     if self.pod_manager:
                         self.pod_manager.update_status(
-                            InstanceManagerStatus.FINISHED
+                            PodManagerStatus.FINISHED
                         )
                     break
                 if self.pod_manager and self.pod_manager.all_workers_exited:
