@@ -77,9 +77,9 @@ class Master(object):
         elif self._args.job_command:
             self.pod_manager.set_up(
                 worker_command=["/bin/bash"],
-                worker_args=["-c", self._args.job_command],
+                worker_args=["-c " + self._args.job_command],
                 ps_command=["/bin/bash"],
-                ps_args=["-c", self._args.job_command],
+                ps_args=["-c " + self._args.job_command],
             )
         else:
             raise ValueError(
