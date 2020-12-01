@@ -174,10 +174,31 @@ POD_STATE_FLOWS = [
     ),
     PodStateFlow(
         from_state=PodStatus.RUNNING,
-        to_state=PodStatus.SUCCEEDED,
+        to_state=PodStatus.FAILED,
         event_type="MODIFIED",
-        phase="Succeeded",
+        phase="Failed",
         should_relaunch=True,
+    ),
+    PodStateFlow(
+        from_state=PodStatus.RUNNING,
+        to_state=PodStatus.FINAL,
+        event_type="DELETED",
+        phase=None,
+        should_relaunch=True,
+    ),
+    PodStateFlow(
+        from_state=PodStatus.SUCCEEDED,
+        to_state=PodStatus.FINAL,
+        event_type="DELETED",
+        phase=None,
+        should_relaunch=False,
+    ),
+    PodStateFlow(
+        from_state=PodStatus.FAILED,
+        to_state=PodStatus.FINAL,
+        event_type="DELETED",
+        phase=None,
+        should_relaunch=False,
     ),
 ]
 
