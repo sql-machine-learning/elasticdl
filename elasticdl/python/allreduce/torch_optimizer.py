@@ -20,7 +20,8 @@ from horovod.torch.mpi_ops import Average, allreduce_async_, size, synchronize
 
 
 class _ElasticDistributedOptimizer(torch.optim.Optimizer):
-    """ ElasticDistributedOptimizer refers to _DistributedOptimizer in Horovod.
+    """ ElasticDistributedOptimizer refers to _DistributedOptimizer in Horovod
+    (https://github.com/horovod/horovod/blob/v0.20.0/horovod/torch/optimizer.py).
     But it modifies the `step`, `zero_grad` and `_allreduce_grad_async` to
     be able to keep the fixed global batch size when the worker number changes.
     """
