@@ -28,14 +28,15 @@ class TextDataReader(AbstractDataReader):
     read records from the shard.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, filename, records_per_task, **kwargs):
         """
         Args:
             kwargs should contains "filename" and "records_per_task".
         """
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
-        self._filename = self._kwargs["filename"]
+        self._filename = filename
+        self._records_per_task = records_per_task
 
     def read_records(self, task, shuffle=False):
         records = linecache.getlines(task.shard.name)[
@@ -48,19 +49,18 @@ class TextDataReader(AbstractDataReader):
             yield record
 
     def create_shards(self):
-        shard_name_prefix = self._kwargs["filename"] + ":shard_"
+        shard_name_prefix = self._filename + ":shard_"
         size = self.get_size()
-        records_per_task = self._kwargs["records_per_task"]
         shards = {}
-        num_shards = size // records_per_task
+        num_shards = size // self._records_per_task
         start_ind = 0
         for shard_id in range(num_shards):
             shards[shard_name_prefix + str(shard_id)] = (
                 start_ind,
-                records_per_task,
+                self._records_per_task,
             )
-            start_ind += records_per_task
-        num_records_left = size % records_per_task
+            start_ind += self._records_per_task
+        num_records_left = size % self._records_per_task
         if num_records_left != 0:
             shards[shard_name_prefix + str(num_shards)] = (
                 start_ind,
