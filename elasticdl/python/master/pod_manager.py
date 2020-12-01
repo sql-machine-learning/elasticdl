@@ -17,7 +17,7 @@ import itertools
 import os
 import threading
 import time
-from collections import Counter
+from collections import Counter, namedtuple
 
 from kubernetes.client import V1EnvVar
 
@@ -143,6 +143,43 @@ def create_pod_manager(args):
         )
 
     return pod_manager
+
+
+PodStateFlow = namedtuple(
+    "PodStateFlow",
+    ("from_state", "to_state", "event_type", "phase", "should_relaunch"),
+)
+
+POD_STATE_FLOWS = [
+    PodStateFlow(
+        from_state=PodStatus.INITIAL,
+        to_state=PodStatus.RUNNING,
+        event_type="ADDED",
+        phase="Running",
+        should_relaunch=False,
+    ),
+    PodStateFlow(
+        from_state=PodStatus.INITIAL,
+        to_state=PodStatus.RUNNING,
+        event_type="MODIFIED",
+        phase="Running",
+        should_relaunch=False,
+    ),
+    PodStateFlow(
+        from_state=PodStatus.RUNNING,
+        to_state=PodStatus.SUCCEEDED,
+        event_type="MODIFIED",
+        phase="Succeeded",
+        should_relaunch=False,
+    ),
+    PodStateFlow(
+        from_state=PodStatus.RUNNING,
+        to_state=PodStatus.SUCCEEDED,
+        event_type="MODIFIED",
+        phase="Succeeded",
+        should_relaunch=True,
+    ),
+]
 
 
 class PodManager(object):
