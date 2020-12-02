@@ -303,31 +303,13 @@ class PodManager(object):
         self._pod_event_callbacks.append(pod_event_callback)
 
     def _init_job_pod_status(self):
-        # worker id to (pod name, ip, phase) mapping
-        # phase: None/Pending/Running/Succeeded/Failed/Unknown
-        #   None: worker was just launched, haven't received event yet.
-        #   Pending: worker pod not started yet
-        #   Running: worker pod is running
-        #   Succeeded: worker pod finishes all tasks and terminates with
-        #       no issue.
-        #   Failed: worker pod is killed for some reason
-        #   Unknown: unknown
-        self._worker_pods_ip_phase = {}
-        # pod name to worker id mapping
-        self._worker_pod_name_to_id = {}
+        self._pod_info_cache = {PodType.PS: {}, PodType.WORKER: {}}
+
         # worker ids whose pods are not created
         self._not_created_worker_id = []
 
-        self._relaunch_deleted_live_worker = True
-
-        self._ps_pods_phase = {}
-        self._ps_pod_name_to_id = {}
-        self._relaunch_deleted_live_ps = True
-
-        self._failed_pods = []
-        self.all_workers_exited = False
-
-        self._pod_name_to_state = {PodType.PS: {}, PodType.WORKER: {}}
+        self._relaunch_worker = True
+        self._relaunch_ps = True
 
     def _process_worker(self):
         need_process = True
@@ -365,14 +347,11 @@ class PodManager(object):
                 ps_addrs=self._ps_addrs,
                 envs=envs,
             )
-            if pod:
-                name = pod.metadata.name
-                self._worker_pod_name_to_id[name] = worker_id
-                self._worker_pods_ip_phase[worker_id] = (name, None, None)
-                return True
-            else:
+            if pod is None:
                 self._not_created_worker_id.append(worker_id)
                 return False
+
+            return True
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
@@ -395,9 +374,6 @@ class PodManager(object):
                     "ps_id: {}, ps_args: {}.".format(ps_id, ps_args)
                 )
                 time.sleep(15)
-            name = pod.metadata.name
-            self._ps_pod_name_to_id[name] = ps_id
-            self._ps_pods_phase[ps_id] = (name, None)
             self._k8s_client.create_ps_service(ps_id)
 
     def _create_ps_pod(self, ps_id, ps_args):
@@ -431,7 +407,10 @@ class PodManager(object):
     def _remove_worker(self, worker_id):
         logger.info("Removing worker: %d", worker_id)
         with self._lock:
-            if worker_id not in self._worker_pods_ip_phase:
+            if worker_id not in [
+                pod_info.ip
+                for pod_info in self._pod_info_cache[PodType.WORKER].values()
+            ]:
                 logger.error("Unknown worker id: %s" % worker_id)
                 return
 
@@ -441,39 +420,32 @@ class PodManager(object):
     def _remove_parameter_server(self, ps_id):
         logger.info("Removing PS: %d", ps_id)
         with self._lock:
-            if ps_id not in self._ps_pods_phase:
+            if ps_id not in [
+                pod_info.ip
+                for pod_info in self._pod_info_cache[PodType.PS].values()
+            ]:
                 logger.error("Unknown PS id: %s" % ps_id)
                 return
 
         self._k8s_client.delete_ps(ps_id)
 
     def stop_relaunch_and_remove_pods(self, pod_type):
-        ids = []
         if pod_type == PodType.WORKER:
-            self._relaunch_deleted_live_worker = False
-            ids = self._worker_pods_ip_phase
-            delete_func = self._k8s_client.delete_worker
+            self._relaunch_worker = False
         elif pod_type == PodType.PS:
-            self._relaunch_deleted_live_ps = False
-            ids = self._ps_pods_phase
-            delete_func = self._k8s_client.delete_ps
+            self._relaunch_ps = False
         with self._lock:
-            for id in ids:
-                delete_func(id)
+            for pod_name in self._pod_info_cache[pod_type]:
+                self._k8s_client.delete_pod(pod_name)
 
     def get_pod_counter(self, pod_type):
         with self._lock:
-            worker_counter = Counter(
-                [v for _, _, v in self._worker_pods_ip_phase.values()]
+            return Counter(
+                [
+                    pod_info.status
+                    for pod_info in self._pod_info_cache[pod_type].values()
+                ]
             )
-            ps_counter = Counter([v for _, v in self._ps_pods_phase.values()])
-
-        if pod_type == PodType.WORKER:
-            return worker_counter
-        elif pod_type == PodType.PS:
-            return ps_counter
-        else:
-            return None
 
     def _event_cb_new(self, event):
         evt_obj = event.get("object")
@@ -505,9 +477,9 @@ class PodManager(object):
 
         # For the given worker id, check whether it meet
         # the state change condition
-        pod_state = self._pod_name_to_state[pod_type].get(
-            pod_name, PodStatus.INITIAL
-        )
+        pod_state = PodStatus.INITIAL
+        if pod_name in self._pod_info_cache[pod_type]:
+            pod_state = self._pod_info_cache[pod_type][pod_name].status
         matched_pod_state_flow = PodManager.get_pod_state_flow(
             pod_state, evt_type, phase
         )
@@ -522,13 +494,22 @@ class PodManager(object):
         )
 
         # Update the pod status in cache
-        self._pod_name_to_state[pod_type][
-            pod_name
-        ] = matched_pod_state_flow.to_state
+        new_state = matched_pod_state_flow.to_state
+        pod_info = PodInfo(
+            type=pod_type,
+            id=pod_index,
+            name=pod_name,
+            ip=pod_ip,
+            status=new_state,
+        )
+        self._pod_info_cache[pod_type][pod_name] = pod_info
 
-        pod_info = PodInfo(type=pod_type, id=pod_index, name=pod_name)
         cluster_context = ClusterContext(pod_manager=self)
-        should_relaunch = matched_pod_state_flow.should_relaunch
+        should_relaunch = (
+            pod_type == PodType.WORKER
+            and matched_pod_state_flow.should_relaunch
+            and self._relaunch_worker
+        )
 
         if matched_pod_state_flow.to_state == PodStatus.RUNNING:
             [
@@ -545,15 +526,17 @@ class PodManager(object):
                 callback.on_pod_failed(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
             ]
-            should_relaunch = _should_relaunch_killed_pod(evt_obj=evt_obj)
+            should_relaunch = should_relaunch and _should_relaunch_killed_pod(
+                evt_obj=evt_obj
+            )
         elif matched_pod_state_flow.to_state == PodStatus.DELETED:
             [
                 callback.on_pod_deleted(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
             ]
 
-        if should_relaunch and pod_type == PodType.WORKER:
-            logger.info("Need relaunch the worker:{}".format(pod_name))
+        if should_relaunch:
+            logger.info("Relaunch the worker: {}".format(pod_name))
 
             new_worker_id = self._next_worker_id_fn()
             with self._lock:
@@ -577,172 +560,44 @@ class PodManager(object):
 
         return None
 
-    # TODO: Refactor the process of _event_cb to publish
-    # PodStarted / PodSucceded / PodFailed / PodDeleted
-    # events and invoke the corresponding callbacks.
-    def _event_cb(self, event):
-        evt_obj = event.get("object")
-        evt_type = event.get("type")
-        if not evt_obj or not evt_type:
-            logger.error("Event doesn't have object or type: %s" % event)
-            return
-
-        if evt_obj.kind != "Pod":
-            # We only care about pod related events
-            return
-
-        pod_name = evt_obj.metadata.name
-        pod_ip = evt_obj.status.pod_ip
-        phase = evt_obj.status.phase
-        if pod_name == self._k8s_client.get_master_pod_name():
-            # No need to care about master pod
-            return
-
-        # logger.info("Kubernetes Event: {}".format(event))
-
-        relaunch_worker = False
-        relaunch_ps = False
-        worker_id = -1
-        ps_id = -1
+    @property
+    def all_workers_exited(self):
         with self._lock:
-            if pod_name in self._failed_pods:
-                return
-
-            # For the failed worker, reassign the its tasks to others.
-            # Check whether to relaunch the worker.
-            relaunch_failed_pod = False
-            if evt_type == "MODIFIED" and phase == "Failed":
-                self._failed_pods.append(pod_name)
-                worker_id = self._worker_pod_name_to_id.get(pod_name, None)
-                # Notify each PodEventCallback that PodFailed is fired
-                for callback in self._pod_event_callbacks:
-                    callback.on_pod_failed(
-                        PodInfo(
-                            type=PodType.WORKER, id=worker_id, name=pod_name
-                        ),
-                        ClusterContext(pod_manager=self),
-                    )
-
-                if _should_relaunch_killed_pod(evt_obj):
-                    relaunch_failed_pod = True
-                    logger.info(
-                        "Pod %s is killed with reason %s."
-                        % (
-                            pod_name,
-                            evt_obj.status.container_statuses[
-                                0
-                            ].state.terminated.reason,
-                        )
-                    )
-
-            if pod_name in self._worker_pod_name_to_id:
-                # If the pod related with the event is a worker
-                worker_id = self._worker_pod_name_to_id.get(pod_name)
-                self._worker_pods_ip_phase[worker_id] = (
-                    pod_name,
-                    pod_ip,
-                    phase,
-                )
-                if evt_type == "DELETED" or relaunch_failed_pod:
-                    del self._worker_pods_ip_phase[worker_id]
-                    del self._worker_pod_name_to_id[pod_name]
-
-                    # If a deleted pod was not "Succeeded", relaunch a worker.
-                    relaunch_worker = (
-                        self._relaunch_deleted_live_worker
-                        and phase != "Succeeded"
-                    )
-                else:
-                    self.check_all_workers_exited()
-
-                if evt_type == "DELETED":
-                    # Notify each PodEventCallback that PodDeleted is fired
-                    for callback in self._pod_event_callbacks:
-                        callback.on_pod_deleted(
-                            PodInfo(type=None, id=worker_id, name=pod_name),
-                            ClusterContext(pod_manager=self),
-                        )
-            elif pod_name in self._ps_pod_name_to_id:
-                # If the pod related with the event is a PS
-                ps_id = self._ps_pod_name_to_id.get(pod_name)
-                self._ps_pods_phase[ps_id] = (pod_name, phase)
-                if evt_type == "DELETED" or relaunch_failed_pod:
-                    del self._ps_pods_phase[ps_id]
-                    del self._ps_pod_name_to_id[pod_name]
-                    relaunch_ps = self._relaunch_deleted_live_ps
-            else:
-                logger.error("Unknown pod name: %s" % pod_name)
-                return
-
-            # Notify each PodEventCallback that PodStarted is fired
-            if evt_type in ["ADDED", "MODIFIED"] and phase == "Running":
-                for callback in self._pod_event_callbacks:
-                    callback.on_pod_started(
-                        PodInfo(type=None, id=None, name=pod_name),
-                        ClusterContext(pod_manager=self),
-                    )
-
-            # Notify each PodEventCallback that PodSucceeded is fired
-            if evt_type == "MODIFIED" and phase == "Succeeded":
-                for callback in self._pod_event_callbacks:
-                    callback.on_pod_succeeded(
-                        PodInfo(type=None, id=None, name=pod_name),
-                        ClusterContext(pod_manager=self),
-                    )
-
-        if relaunch_worker and worker_id >= 0:
-            logger.info("Relaunching worker.")
-            new_worker_id = self._next_worker_id_fn()
-            with self._lock:
-                self._worker_pod_priority[
-                    new_worker_id
-                ] = self._worker_pod_priority[worker_id]
-            self._start_worker(new_worker_id)
-        elif relaunch_ps:
-            logger.info("Relaunching ps.")
-            # Note: the ID and service address for relaunched parameter
-            # server are intentionally left unchanged to support fault
-            # tolerance.
-            self._start_ps(ps_id)
-
-    def check_all_workers_exited(self):
-        workers_exited = []
-        for (_, _, phase,) in self._worker_pods_ip_phase.values():
-            workers_exited.append(
-                phase == PodStatus.FAILED or phase == PodStatus.SUCCEEDED
+            all_exited = all(
+                [
+                    pod_info.status
+                    in [
+                        PodStatus.SUCCEEDED,
+                        PodStatus.FAILED,
+                        PodStatus.DELETED,
+                    ]
+                    for pod_info in self._pod_info_cache[
+                        PodType.WORKER
+                    ].values()
+                ]
             )
-        self.all_workers_exited = all(workers_exited)
+
+        return all_exited
 
     def get_alive_workers(self):
-        alive_workers = []
-        for pod_name, _, phase in self._worker_pods_ip_phase.values():
-            if phase == PodStatus.RUNNING:
-                alive_workers.append(pod_name)
-        return alive_workers
-
-    def get_worker_pod_ip(self, worker_id):
-        if worker_id not in self._worker_pods_ip_phase:
-            return None
-        _, pod_ip, _ = self._worker_pods_ip_phase[worker_id]
-        return pod_ip
+        return [
+            pod_info
+            for pod_info in self._pod_info_cache[PodType.WORKER].values()
+            if pod_info.status == PodStatus.RUNNING
+        ]
 
     def get_alive_worker_addr(self):
         alive_workers = self.get_alive_workers()
-        worker_addrs = []
-        worker_start_times = []
-        for pod_name in alive_workers:
-            pod = self._k8s_client.get_pod(pod_name)
-            worker_start_times.append(pod.status.start_time)
-            worker_id = self._worker_pod_name_to_id[pod_name]
-            pod_ip = self.get_worker_pod_ip(worker_id)
-            worker_addrs.append((pod_name, pod_ip))
+        alive_workers.sort(lambda tup: tup.id)
 
-        # Sort worker addrs by start time. Then the master will assign
-        # the rank according to the order in addrs list.
-        worker_addrs = [
-            x for _, x in sorted(zip(worker_start_times, worker_addrs))
-        ]
-        return worker_addrs
+        return [info.ip for info in alive_workers]
+
+    def get_worker_pod_ip(self, worker_id):
+        for pod_info in self._pod_info_cache[PodType.WORKER].values():
+            if pod_info.id == worker_id:
+                return pod_info.ip
+
+        return None
 
     @property
     def ps_addrs(self):
