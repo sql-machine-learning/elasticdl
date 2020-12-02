@@ -12,9 +12,7 @@
 # limitations under the License.
 
 import csv
-import linecache
 
-import numpy as np
 import tensorflow as tf
 
 from elasticdl.python.data.reader.data_reader import (
@@ -38,16 +36,6 @@ class TextDataReader(AbstractDataReader):
         self._filename = filename
         self._records_per_task = records_per_task
 
-    def read_records(self, task, shuffle=False):
-        records = linecache.getlines(task.shard.name)[
-            task.shard.start : task.shard.end
-        ]
-        if shuffle:
-            np.random.shuffle(records)
-
-        for record in records:
-            yield record
-
     def create_shards(self):
         shard_name_prefix = self._filename + ":shard_"
         size = self.get_size()
@@ -60,6 +48,7 @@ class TextDataReader(AbstractDataReader):
                 self._records_per_task,
             )
             start_ind += self._records_per_task
+        # Create a shard with the last records
         num_records_left = size % self._records_per_task
         if num_records_left != 0:
             shards[shard_name_prefix + str(num_shards)] = (
