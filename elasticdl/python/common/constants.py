@@ -74,6 +74,8 @@ class PodStatus(object):
     RUNNING = "Running"
     FINISHED = "Finished"
     PENDING = "Pending"
+    INITIAL = "Initial"
+    DELETED = "Deleted"
 
 
 class ReaderType(object):

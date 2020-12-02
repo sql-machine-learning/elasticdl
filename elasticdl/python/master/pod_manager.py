@@ -153,6 +153,13 @@ PodStateFlow = namedtuple(
 POD_STATE_FLOWS = [
     PodStateFlow(
         from_state=PodStatus.INITIAL,
+        to_state=PodStatus.PENDING,
+        event_type="ADDED",
+        phase="Pending",
+        should_relaunch=False,
+    ),
+    PodStateFlow(
+        from_state=PodStatus.INITIAL,
         to_state=PodStatus.RUNNING,
         event_type="ADDED",
         phase="Running",
@@ -180,22 +187,29 @@ POD_STATE_FLOWS = [
         should_relaunch=True,
     ),
     PodStateFlow(
+        from_state=PodStatus.PENDING,
+        to_state=PodStatus.DELETED,
+        event_type="DELETED",
+        phase=None,
+        should_relaunch=True,
+    ),
+    PodStateFlow(
         from_state=PodStatus.RUNNING,
-        to_state=PodStatus.FINAL,
+        to_state=PodStatus.DELETED,
         event_type="DELETED",
         phase=None,
         should_relaunch=True,
     ),
     PodStateFlow(
         from_state=PodStatus.SUCCEEDED,
-        to_state=PodStatus.FINAL,
+        to_state=PodStatus.DELETED,
         event_type="DELETED",
         phase=None,
         should_relaunch=False,
     ),
     PodStateFlow(
         from_state=PodStatus.FAILED,
-        to_state=PodStatus.FINAL,
+        to_state=PodStatus.DELETED,
         event_type="DELETED",
         phase=None,
         should_relaunch=False,
@@ -250,7 +264,7 @@ class PodManager(object):
             self._k8s_client = k8s.Client(**kwargs)
         else:
             self._k8s_client = k8s.Client(
-                event_callback=self._event_cb,
+                event_callback=self._event_cb_new,
                 periodic_call_func=self._process_worker,
                 **kwargs
             )
@@ -312,6 +326,8 @@ class PodManager(object):
 
         self._failed_pods = []
         self.all_workers_exited = False
+
+        self._pod_name_to_state = {PodType.PS: {}, PodType.WORKER: {}}
 
     def _process_worker(self):
         need_process = True
@@ -459,6 +475,106 @@ class PodManager(object):
         else:
             return None
 
+    def _event_cb_new(self, event):
+        evt_obj = event.get("object")
+        evt_type = event.get("type")
+        if not evt_obj or not evt_type:
+            logger.error("Event doesn't have object or type: %s" % event)
+            return
+
+        if evt_obj.kind != "Pod":
+            # We only care about pod related events
+            return
+
+        pod_name = evt_obj.metadata.name
+        pod_ip = evt_obj.status.pod_ip
+        phase = evt_obj.status.phase
+        pod_type = evt_obj.metadata.labels["elasticdl-replica-type"]
+
+        if pod_type == PodType.MASTER:
+            # No need to care about master pod
+            return
+
+        pod_index = int(evt_obj.metadata.labels["elasticdl-replica-index"])
+        logger.info(
+            """Kubernetes Event. name: {}, type: {}, id: {},"""
+            """ ip: {}, event_type: {} phase: {}""".format(
+                pod_name, pod_type, pod_index, pod_ip, evt_type, phase
+            )
+        )
+
+        # For the given worker id, check whether it meet
+        # the state change condition
+        pod_state = self._pod_name_to_state[pod_type].get(
+            pod_name, PodStatus.INITIAL
+        )
+        matched_pod_state_flow = PodManager.get_pod_state_flow(
+            pod_state, evt_type, phase
+        )
+        # If there is no matched state change, return directly
+        if matched_pod_state_flow is None:
+            return
+
+        logger.info(
+            "Meet the requirements of the state change: {}".format(
+                matched_pod_state_flow
+            )
+        )
+
+        # Update the pod status in cache
+        self._pod_name_to_state[pod_type][
+            pod_name
+        ] = matched_pod_state_flow.to_state
+
+        pod_info = PodInfo(type=pod_type, id=pod_index, name=pod_name)
+        cluster_context = ClusterContext(pod_manager=self)
+
+        if matched_pod_state_flow.to_state == PodStatus.RUNNING:
+            [
+                callback.on_pod_started(pod_info, cluster_context)
+                for callback in self._pod_event_callbacks
+            ]
+        elif matched_pod_state_flow.to_state == PodStatus.SUCCEEDED:
+            [
+                callback.on_pod_succeeded(pod_info, cluster_context)
+                for callback in self._pod_event_callbacks
+            ]
+        elif matched_pod_state_flow.to_state == PodStatus.FAILED:
+            [
+                callback.on_pod_failed(pod_info, cluster_context)
+                for callback in self._pod_event_callbacks
+            ]
+        elif matched_pod_state_flow.to_state == PodStatus.DELETED:
+            [
+                callback.on_pod_deleted(pod_info, cluster_context)
+                for callback in self._pod_event_callbacks
+            ]
+
+        if (
+            matched_pod_state_flow.should_relaunch
+            and pod_type == PodType.WORKER
+        ):
+            logger.info("Need relaunch the worker:{}".format(pod_name))
+
+            new_worker_id = self._next_worker_id_fn()
+            with self._lock:
+                self._worker_pod_priority[
+                    new_worker_id
+                ] = self._worker_pod_priority[pod_index]
+            self._start_worker(new_worker_id)
+
+    @staticmethod
+    def get_pod_state_flow(from_state, event_type, phase):
+        for pod_state_flow in POD_STATE_FLOWS:
+            if (
+                from_state == pod_state_flow.from_state
+                and event_type == pod_state_flow.event_type
+                and phase == pod_state_flow.phase
+            ):
+                return pod_state_flow
+
+        return None
+
     # TODO: Refactor the process of _event_cb to publish
     # PodStarted / PodSucceded / PodFailed / PodDeleted
     # events and invoke the corresponding callbacks.
@@ -479,6 +595,8 @@ class PodManager(object):
         if pod_name == self._k8s_client.get_master_pod_name():
             # No need to care about master pod
             return
+
+        # logger.info("Kubernetes Event: {}".format(event))
 
         relaunch_worker = False
         relaunch_ps = False
