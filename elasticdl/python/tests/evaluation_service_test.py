@@ -95,7 +95,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
     def testEvaluationService(self):
         task_d = create_task_manager(
-            {"f1": (0, 10), "f2": (0, 10)}, {"f1": (0, 10), "f2": (0, 10)}
+            [("f1", 0, 10), ("f2", 0, 10)], [("f1", 0, 10), ("f2", 0, 10)]
         )
 
         # Evaluation metrics will not be accepted if no evaluation ongoing
@@ -126,7 +126,7 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertFalse(evaluation_service.try_to_create_new_job())
 
     def testEvaluationOnly(self):
-        task_d = create_task_manager({}, {"f1": (0, 10), "f2": (0, 10)})
+        task_d = create_task_manager([], [("f1", 0, 10), ("f2", 0, 10)])
         task_d.create_tasks(elasticdl_pb2.EVALUATION)
 
         evaluation_service = EvaluationService(
@@ -150,7 +150,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
     def testNeedEvaluation(self):
         task_d = create_task_manager(
-            {"f1": (0, 10), "f2": (0, 10)}, {"f1": (0, 10), "f2": (0, 10)}
+            [("f1", 0, 10), ("f2", 0, 10)], [("f1", 0, 10), ("f2", 0, 10)]
         )
 
         evaluation_service = EvaluationService(

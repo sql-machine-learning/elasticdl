@@ -231,8 +231,9 @@ class TaskManager(object):
         # Note that a shard may contain records for multiple tasks.
         for (
             shard_name,
-            (start_ind_this_shard, num_records_this_shard),
-        ) in shards.items():
+            start_ind_this_shard,
+            num_records_this_shard,
+        ) in shards:
             max_ind_this_shard = start_ind_this_shard + num_records_this_shard
             self._job_counters[
                 task_type
@@ -307,8 +308,8 @@ class TaskManager(object):
         shards = self._training_shards
         assert shards is not None
 
-        (shard_name, (start_ind_this_shard, num_records_this_shard)) = next(
-            iter(shards.items())
+        (shard_name, start_ind_this_shard, num_records_this_shard) = next(
+            iter(shards)
         )
         start_ind_this_task = start_ind_this_shard
         end_ind_this_task = start_ind_this_shard + min(

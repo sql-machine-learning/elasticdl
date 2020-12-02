@@ -48,11 +48,11 @@ class RecordIODataReader(AbstractDataReader):
     def create_shards(self):
         data_dir = self._kwargs["data_dir"]
         start_ind = 0
-        f_records = {}
+        f_records = []
         for f in os.listdir(data_dir):
             p = os.path.join(data_dir, f)
             with closing(recordio.Index(p)) as rio:
-                f_records[p] = (start_ind, rio.num_records())
+                f_records.append((p, start_ind, rio.num_records()))
         return f_records
 
     @property

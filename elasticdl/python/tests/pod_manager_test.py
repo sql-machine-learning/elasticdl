@@ -105,7 +105,7 @@ class PodManagerTest(unittest.TestCase):
         Start a pod running a python program destined to fail with
         restart_policy="Never" to test failed_worker_count
         """
-        task_manager = create_task_manager({"f": (0, 10)}, {})
+        task_manager = create_task_manager([("f", 0, 10)], [])
         task_manager.recover_tasks = MagicMock()
         pod_manager = PodManager(
             job_name="test-failed-worker-pod-%d-%d"
