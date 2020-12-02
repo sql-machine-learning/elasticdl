@@ -264,7 +264,7 @@ class PodManager(object):
             self._k8s_client = k8s.Client(**kwargs)
         else:
             self._k8s_client = k8s.Client(
-                event_callback=self._event_cb_new,
+                event_callback=self._event_cb,
                 periodic_call_func=self._process_worker,
                 **kwargs
             )
@@ -447,7 +447,7 @@ class PodManager(object):
                 ]
             )
 
-    def _event_cb_new(self, event):
+    def _event_cb(self, event):
         evt_obj = event.get("object")
         evt_type = event.get("type")
         if not evt_obj or not evt_type:
