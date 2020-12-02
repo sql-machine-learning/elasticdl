@@ -166,7 +166,7 @@ POD_STATE_FLOWS = [
         should_relaunch=False,
     ),
     PodStateFlow(
-        from_state=PodStatus.INITIAL,
+        from_state=PodStatus.PENDING,
         to_state=PodStatus.RUNNING,
         event_type="MODIFIED",
         phase="Running",
@@ -498,7 +498,7 @@ class PodManager(object):
         pod_index = int(evt_obj.metadata.labels["elasticdl-replica-index"])
         logger.info(
             """Kubernetes Event. name: {}, type: {}, id: {},"""
-            """ ip: {}, event_type: {} phase: {}""".format(
+            """ ip: {}, event_type: {}, phase: {}.""".format(
                 pod_name, pod_type, pod_index, pod_ip, evt_type, phase
             )
         )
@@ -528,6 +528,7 @@ class PodManager(object):
 
         pod_info = PodInfo(type=pod_type, id=pod_index, name=pod_name)
         cluster_context = ClusterContext(pod_manager=self)
+        should_relaunch = matched_pod_state_flow.should_relaunch
 
         if matched_pod_state_flow.to_state == PodStatus.RUNNING:
             [
@@ -544,16 +545,14 @@ class PodManager(object):
                 callback.on_pod_failed(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
             ]
+            should_relaunch = _should_relaunch_killed_pod(evt_obj=evt_obj)
         elif matched_pod_state_flow.to_state == PodStatus.DELETED:
             [
                 callback.on_pod_deleted(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
             ]
 
-        if (
-            matched_pod_state_flow.should_relaunch
-            and pod_type == PodType.WORKER
-        ):
+        if should_relaunch and pod_type == PodType.WORKER:
             logger.info("Need relaunch the worker:{}".format(pod_name))
 
             new_worker_id = self._next_worker_id_fn()
@@ -569,7 +568,10 @@ class PodManager(object):
             if (
                 from_state == pod_state_flow.from_state
                 and event_type == pod_state_flow.event_type
-                and phase == pod_state_flow.phase
+                and (
+                    phase == pod_state_flow.phase
+                    or pod_state_flow.phase is None
+                )
             ):
                 return pod_state_flow
 
