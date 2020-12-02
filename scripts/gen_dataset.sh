@@ -16,7 +16,7 @@
 DATA_PATH=$1
 
 python /scripts/image_label.py --dataset mnist \
-        --records_per_shard 4096 --fraction 0.1 "$DATA_PATH"
+        --records_per_shard 4096 "$DATA_PATH"
 
 # Generate frappe dataset
 python /scripts/frappe_recordio_gen.py --data /root/.keras/datasets \
