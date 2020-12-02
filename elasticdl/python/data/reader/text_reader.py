@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import csv
+import linecache
 
 import tensorflow as tf
 
@@ -35,6 +36,12 @@ class TextDataReader(AbstractDataReader):
         self._kwargs = kwargs
         self._filename = filename
         self._records_per_task = records_per_task
+
+    def read_records(self, task):
+        records = linecache.getlines(task.shard.name)[
+            task.shard.start : task.shard.end
+        ]
+        return records
 
     def create_shards(self):
         shard_name_prefix = self._filename + ":shard_"
