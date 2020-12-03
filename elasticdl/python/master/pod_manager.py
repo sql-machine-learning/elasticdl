@@ -57,6 +57,8 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
         try:
             fraction = float(worker_pod_priority.split("=")[1])
             high_count = int(num_workers * fraction)
+            # At least 1 worker has high priority
+            high_count = 1 if high_count < 1 else high_count
             for i in range(num_workers):
                 if i < high_count:
                     res[i] = "high"
