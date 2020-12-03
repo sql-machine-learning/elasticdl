@@ -147,69 +147,69 @@ def create_pod_manager(args):
 
 PodStateFlow = namedtuple(
     "PodStateFlow",
-    ("from_state", "to_state", "event_type", "phase", "should_relaunch"),
+    ("from_status", "to_status", "event_type", "phase", "should_relaunch"),
 )
 
 POD_STATE_FLOWS = [
     PodStateFlow(
-        from_state=PodStatus.INITIAL,
-        to_state=PodStatus.PENDING,
+        from_status=PodStatus.INITIAL,
+        to_status=PodStatus.PENDING,
         event_type="ADDED",
         phase="Pending",
         should_relaunch=False,
     ),
     PodStateFlow(
-        from_state=PodStatus.INITIAL,
-        to_state=PodStatus.RUNNING,
+        from_status=PodStatus.INITIAL,
+        to_status=PodStatus.RUNNING,
         event_type="ADDED",
         phase="Running",
         should_relaunch=False,
     ),
     PodStateFlow(
-        from_state=PodStatus.PENDING,
-        to_state=PodStatus.RUNNING,
+        from_status=PodStatus.PENDING,
+        to_status=PodStatus.RUNNING,
         event_type="MODIFIED",
         phase="Running",
         should_relaunch=False,
     ),
     PodStateFlow(
-        from_state=PodStatus.RUNNING,
-        to_state=PodStatus.SUCCEEDED,
+        from_status=PodStatus.RUNNING,
+        to_status=PodStatus.SUCCEEDED,
         event_type="MODIFIED",
         phase="Succeeded",
         should_relaunch=False,
     ),
     PodStateFlow(
-        from_state=PodStatus.RUNNING,
-        to_state=PodStatus.FAILED,
+        from_status=PodStatus.RUNNING,
+        to_status=PodStatus.FAILED,
         event_type="MODIFIED",
         phase="Failed",
         should_relaunch=True,
     ),
     PodStateFlow(
-        from_state=PodStatus.PENDING,
-        to_state=PodStatus.DELETED,
+        from_status=PodStatus.PENDING,
+        to_status=PodStatus.DELETED,
         event_type="DELETED",
         phase=None,
         should_relaunch=True,
     ),
     PodStateFlow(
-        from_state=PodStatus.RUNNING,
-        to_state=PodStatus.DELETED,
+        from_status=PodStatus.RUNNING,
+        to_status=PodStatus.DELETED,
         event_type="DELETED",
         phase=None,
         should_relaunch=True,
     ),
     PodStateFlow(
-        from_state=PodStatus.SUCCEEDED,
-        to_state=PodStatus.DELETED,
+        from_status=PodStatus.SUCCEEDED,
+        to_status=PodStatus.DELETED,
         event_type="DELETED",
         phase=None,
         should_relaunch=False,
     ),
     PodStateFlow(
-        from_state=PodStatus.FAILED,
-        to_state=PodStatus.DELETED,
+        from_status=PodStatus.FAILED,
+        to_status=PodStatus.DELETED,
         event_type="DELETED",
         phase=None,
         should_relaunch=False,
@@ -500,7 +500,7 @@ class PodManager(object):
             )
 
             # Update the pod status in cache
-            new_state = matched_pod_state_flow.to_state
+            new_state = matched_pod_state_flow.to_status
             pod_info = PodInfo(
                 type=pod_type,
                 id=pod_id,
@@ -517,17 +517,17 @@ class PodManager(object):
             and self._relaunch_worker
         )
 
-        if matched_pod_state_flow.to_state == PodStatus.RUNNING:
+        if matched_pod_state_flow.to_status == PodStatus.RUNNING:
             [
                 callback.on_pod_started(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
             ]
-        elif matched_pod_state_flow.to_state == PodStatus.SUCCEEDED:
+        elif matched_pod_state_flow.to_status == PodStatus.SUCCEEDED:
             [
                 callback.on_pod_succeeded(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
             ]
-        elif matched_pod_state_flow.to_state == PodStatus.FAILED:
+        elif matched_pod_state_flow.to_status == PodStatus.FAILED:
             [
                 callback.on_pod_failed(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
@@ -535,7 +535,7 @@ class PodManager(object):
             should_relaunch = should_relaunch and _should_relaunch_killed_pod(
                 evt_obj=evt_obj
             )
-        elif matched_pod_state_flow.to_state == PodStatus.DELETED:
+        elif matched_pod_state_flow.to_status == PodStatus.DELETED:
             [
                 callback.on_pod_deleted(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
@@ -552,10 +552,10 @@ class PodManager(object):
             self._start_worker(new_worker_id)
 
     @staticmethod
-    def get_pod_state_flow(from_state, event_type, phase):
+    def get_pod_state_flow(from_status, event_type, phase):
         for pod_state_flow in POD_STATE_FLOWS:
             if (
-                from_state == pod_state_flow.from_state
+                from_status == pod_state_flow.from_status
                 and event_type == pod_state_flow.event_type
                 and (
                     phase == pod_state_flow.phase
