@@ -446,8 +446,9 @@ class PodManager(object):
         elif pod_type == PodType.PS:
             self._relaunch_ps = False
         with self._lock:
-            for pod_name in self._pod_info_cache[pod_type]:
-                self._k8s_client.delete_pod(pod_name)
+            for pod_info in self._pod_info_cache[pod_type].values():
+                if pod_info.status != PodStatus.DELETED:
+                    self._k8s_client.delete_pod(pod_info.name)
 
     def get_pod_counter(self, pod_type):
         with self._lock:
