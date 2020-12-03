@@ -36,6 +36,10 @@ from elasticdl_client.common.constants import (
     BashCommandTemplate,
     ClusterSpecConfig,
 )
+from elasticdl_client.common.k8s_client import (
+    ELASTICDL_REPLICA_INDEX_KEY,
+    ELASTICDL_REPLICA_TYPE_KEY,
+)
 
 _SERVICE_ADDR_SEP = ","
 
@@ -413,7 +417,7 @@ class PodManager(object):
         logger.info("Removing worker: %d", worker_id)
         with self._lock:
             if worker_id not in [
-                pod_info.ip
+                pod_info.id
                 for pod_info in self._pod_info_cache[PodType.WORKER].values()
             ]:
                 logger.error("Unknown worker id: %s" % worker_id)
@@ -426,7 +430,7 @@ class PodManager(object):
         logger.info("Removing PS: %d", ps_id)
         with self._lock:
             if ps_id not in [
-                pod_info.ip
+                pod_info.id
                 for pod_info in self._pod_info_cache[PodType.PS].values()
             ]:
                 logger.error("Unknown PS id: %s" % ps_id)
@@ -466,13 +470,13 @@ class PodManager(object):
         pod_name = evt_obj.metadata.name
         pod_ip = evt_obj.status.pod_ip
         phase = evt_obj.status.phase
-        pod_type = evt_obj.metadata.labels["elasticdl-replica-type"]
+        pod_type = evt_obj.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY]
 
         if pod_type == PodType.MASTER:
             # No need to care about master pod
             return
 
-        pod_id = int(evt_obj.metadata.labels["elasticdl-replica-index"])
+        pod_id = int(evt_obj.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY])
         logger.info(
             """Kubernetes Event. name: {}, type: {}, id: {},"""
             """ ip: {}, event_type: {}, phase: {}.""".format(
