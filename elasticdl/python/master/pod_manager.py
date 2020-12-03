@@ -154,6 +154,10 @@ PodStateFlow = namedtuple(
     ("from_status", "to_status", "event_type", "phase", "should_relaunch"),
 )
 
+"""
+The DAG for the state machine is in the issue
+https://github.com/sql-machine-learning/elasticdl/issues/2395#issue-753964852
+"""
 POD_STATE_FLOWS = [
     PodStateFlow(
         from_status=PodStatus.INITIAL,
@@ -318,7 +322,6 @@ class PodManager(object):
         self._not_created_worker_id = []
 
         self._relaunch_worker = True
-        self._relaunch_ps = True
 
     def _process_worker(self):
         need_process = True
@@ -443,8 +446,6 @@ class PodManager(object):
     def stop_relaunch_and_remove_pods(self, pod_type):
         if pod_type == PodType.WORKER:
             self._relaunch_worker = False
-        elif pod_type == PodType.PS:
-            self._relaunch_ps = False
         with self._lock:
             for pod_info in self._pod_info_cache[pod_type].values():
                 if pod_info.status != PodStatus.DELETED:
