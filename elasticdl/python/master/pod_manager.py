@@ -258,7 +258,7 @@ class PodManager(object):
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
 
-        self._init_job_pod_status()
+        self._init_pod_status()
 
         if disable_relaunch:
             self._k8s_client = k8s.Client(**kwargs)
@@ -302,10 +302,15 @@ class PodManager(object):
     def add_pod_event_callback(self, pod_event_callback):
         self._pod_event_callbacks.append(pod_event_callback)
 
-    def _init_job_pod_status(self):
+    def _init_pod_status(self):
+        # _pod_info_cache is a dict. The key is the PodType. The value
+        # is also a dict. The value is a dict mapping pod_name to PodInfo
+        # object.
         self._pod_info_cache = {PodType.PS: {}, PodType.WORKER: {}}
 
-        # worker ids whose pods are not created
+        # worker ids for the pods which are not created.
+        # We will try multiple times in the background to create the pod
+        # using the id in the list until success.
         self._not_created_worker_id = []
 
         self._relaunch_worker = True
@@ -467,11 +472,11 @@ class PodManager(object):
             # No need to care about master pod
             return
 
-        pod_index = int(evt_obj.metadata.labels["elasticdl-replica-index"])
+        pod_id = int(evt_obj.metadata.labels["elasticdl-replica-index"])
         logger.info(
             """Kubernetes Event. name: {}, type: {}, id: {},"""
             """ ip: {}, event_type: {}, phase: {}.""".format(
-                pod_name, pod_type, pod_index, pod_ip, evt_type, phase
+                pod_name, pod_type, pod_id, pod_ip, evt_type, phase
             )
         )
 
@@ -498,7 +503,7 @@ class PodManager(object):
             new_state = matched_pod_state_flow.to_state
             pod_info = PodInfo(
                 type=pod_type,
-                id=pod_index,
+                id=pod_id,
                 name=pod_name,
                 ip=pod_ip,
                 status=new_state,
@@ -543,7 +548,7 @@ class PodManager(object):
             with self._lock:
                 self._worker_pod_priority[
                     new_worker_id
-                ] = self._worker_pod_priority[pod_index]
+                ] = self._worker_pod_priority[pod_id]
             self._start_worker(new_worker_id)
 
     @staticmethod
