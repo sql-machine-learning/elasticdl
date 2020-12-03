@@ -480,12 +480,6 @@ class PodManager(object):
             return
 
         pod_id = int(evt_obj.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY])
-        logger.info(
-            """Kubernetes Event. name: {}, type: {}, id: {},"""
-            """ ip: {}, event_type: {}, phase: {}.""".format(
-                pod_name, pod_type, pod_id, pod_ip, evt_type, phase
-            )
-        )
 
         # For the given worker id, check whether it meet
         # the state change condition
@@ -499,12 +493,6 @@ class PodManager(object):
             # If there is no matched state change, return directly
             if matched_pod_state_flow is None:
                 return
-
-            logger.info(
-                "Meet the requirements of the state change: {}".format(
-                    matched_pod_state_flow
-                )
-            )
 
             # Update the pod status in cache
             new_state = matched_pod_state_flow.to_status
@@ -565,8 +553,8 @@ class PodManager(object):
                 from_status == pod_state_flow.from_status
                 and event_type == pod_state_flow.event_type
                 and (
-                    phase == pod_state_flow.phase
-                    or pod_state_flow.phase is None
+                    pod_state_flow.phase is None
+                    or phase == pod_state_flow.phase
                 )
             ):
                 return pod_state_flow

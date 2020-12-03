@@ -49,7 +49,6 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            print("Counters: {}".format(counters))
             if counters[PodStatus.SUCCEEDED] == 2:
                 break
 
@@ -134,7 +133,6 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            print("Counters: {}".format(counters))
             if counters[PodStatus.FAILED] == 3:
                 break
 
@@ -189,7 +187,6 @@ class PodManagerTest(unittest.TestCase):
             current_alive_workers = pod_manager.get_pod_infos(
                 PodType.WORKER, [PodStatus.RUNNING, PodStatus.PENDING]
             )
-            print("Current alive workers: {}".format(current_alive_workers))
             # The former worker id is from 0 ~ num_workers - 1
             # If a new worker is launched, the worker id is >= num_workers
             new_launched_workers = [
