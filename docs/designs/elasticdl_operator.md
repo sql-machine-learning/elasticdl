@@ -70,7 +70,7 @@ spec:
       '' --image_name 'elasticdl:test' --job_name 'test-mnist' --master_resource_request
       'cpu=1,memory=1024Mi' --master_resource_limit 'cpu=1,memory=2048Mi' --num_workers
       '8' --worker_resource_request 'cpu=2,gpu=1,memory=2048Mi' --worker_resource_limit
-      'cpu=2,gpu=1,memory=2048Mi' --master_pod_priority '' --worker_pod_priority 'high=0.5' --num_ps_pods
+      'cpu=2,gpu=1,memory=2048Mi' --master_pod_priority '' --worker_pod_priority '0.5' --num_ps_pods
       '1' --ps_resource_request 'cpu=2,memory=1024Mi' --ps_resource_limit 'cpu=2,memory=2048Mi'
       --ps_pod_priority 'high' --volume 'host_path=/data,mount_path=/data' --image_pull_policy
       'Never' --restart_policy 'Never' --envs '' --extra_pypi_index 'https://pypi.org/simple'
@@ -138,7 +138,7 @@ spec:
     resource_request: "cpu=1,memory=1024Mi"
   worker:
     count: 10
-    priority: high=0.5
+    priority: 0.5
     image: elasticdl-worker
     resource_request: "cpu=4,gpu=1,memory=2048Mi"
     volume: "host_path=/host_data,mount_path=/data"

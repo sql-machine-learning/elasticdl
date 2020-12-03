@@ -52,6 +52,8 @@ def _get_addrs(num_addrs, addr_get_fn):
 
 
 def _is_float_str(str_number):
+    if not str_number:
+        return False
     try:
         float(str_number)
         return True
