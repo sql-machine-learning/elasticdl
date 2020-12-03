@@ -51,8 +51,6 @@ class PodManagerTest(unittest.TestCase):
             print("Counters: {}".format(counters))
             if counters[PodStatus.SUCCEEDED] == 2:
                 break
-        else:
-            self.fail("Cannot get expected 2 succeeded pods.")
 
         pod_manager._not_created_worker_id = [2]
         pod_manager._worker_pod_priority[2] = None
@@ -62,8 +60,6 @@ class PodManagerTest(unittest.TestCase):
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
             if counters[PodStatus.SUCCEEDED] == 3:
                 break
-        else:
-            self.fail("Cannot get expected 3 succeeded pods.")
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
         for _ in range(max_check_num):
@@ -137,10 +133,9 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
+            print("Counters: {}".format(counters))
             if counters[PodStatus.FAILED] == 3:
                 break
-        else:
-            self.fail("Cannot get 3 failed worker pod as expected.")
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
         for _ in range(max_check_num):
@@ -178,17 +173,21 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(1)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            if counters[PodStatus.RUNNING] > 0:
+            if counters[PodStatus.RUNNING] + counters[PodStatus.PENDING] > 0:
                 break
         # Note: There is a slight chance of race condition.
         # Hack to find a worker to remove
-        alive_workers = pod_manager.get_alive_workers()
+        alive_workers = pod_manager.get_pod_infos(
+            PodType.WORKER, [PodStatus.RUNNING, PodStatus.PENDING]
+        )
         self.assertTrue(alive_workers)
 
         pod_manager._remove_worker(alive_workers.pop().id)
         # verify a new worker get launched
         for _ in range(max_check_num):
-            current_alive_workers = pod_manager.get_alive_workers()
+            current_alive_workers = pod_manager.get_pod_infos(
+                PodType.WORKER, [PodStatus.RUNNING, PodStatus.PENDING]
+            )
             print("Current alive workers: {}".format(current_alive_workers))
             # The former worker id is from 0 ~ num_workers - 1
             # If a new worker is launched, the worker id is >= num_workers
@@ -200,7 +199,7 @@ class PodManagerTest(unittest.TestCase):
             if new_launched_workers:
                 break
         else:
-            self.fail("Failed to find a newly launched worker.")
+            self.fail("Cannot to find any newly launched worker.")
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
 
@@ -237,7 +236,7 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(1)
             counters = pod_manager.get_pod_counter(pod_type=PodType.PS)
-            if counters[PodStatus.RUNNING] > 0:
+            if counters[PodStatus.RUNNING] + counters[PodStatus.PENDING] > 0:
                 break
         else:
             self.fail("PS pod cannot start within the time limit.")

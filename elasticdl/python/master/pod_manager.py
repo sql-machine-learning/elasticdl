@@ -602,6 +602,14 @@ class PodManager(object):
 
         return None
 
+    def get_pod_infos(self, pod_type, pod_statuses):
+        with self._lock:
+            return [
+                pod_info
+                for pod_info in self._pod_info_cache[pod_type].values()
+                if pod_info.status in pod_statuses
+            ]
+
     @property
     def ps_addrs(self):
         return self._ps_addrs
