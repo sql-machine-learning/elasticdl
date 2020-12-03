@@ -48,6 +48,7 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
+            print("Counters: {}".format(counters))
             if counters[PodStatus.SUCCEEDED] == 2:
                 break
         else:
@@ -138,13 +139,17 @@ class PodManagerTest(unittest.TestCase):
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
             if counters[PodStatus.FAILED] == 3:
                 break
+        else:
+            self.fail("Cannot get 3 failed worker pod as expected.")
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            if not counters:
+            if counters[PodStatus.DELETED] == 3:
                 break
+        else:
+            self.fail("Cannot get 3 deleted worker pods as expected.")
         task_manager.recover_tasks.assert_has_calls(
             [call(0), call(1), call(2)], any_order=True
         )
@@ -184,6 +189,7 @@ class PodManagerTest(unittest.TestCase):
         # verify a new worker get launched
         for _ in range(max_check_num):
             current_alive_workers = pod_manager.get_alive_workers()
+            print("Current alive workers: {}".format(current_alive_workers))
             # The former worker id is from 0 ~ num_workers - 1
             # If a new worker is launched, the worker id is >= num_workers
             new_launched_workers = [
