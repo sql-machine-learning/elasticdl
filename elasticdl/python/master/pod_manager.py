@@ -419,8 +419,9 @@ class PodManager(object):
             if worker_id not in [
                 pod_info.id
                 for pod_info in self._pod_info_cache[PodType.WORKER].values()
+                if pod_info.status != PodStatus.DELETED
             ]:
-                logger.error("Unknown worker id: %s" % worker_id)
+                logger.error("Unknown deletable worker id: %s" % worker_id)
                 return
 
         # TODO: change _k8s_client to accept pod name instead of worker id.
@@ -432,8 +433,9 @@ class PodManager(object):
             if ps_id not in [
                 pod_info.id
                 for pod_info in self._pod_info_cache[PodType.PS].values()
+                if pod_info.status != PodStatus.DELETED
             ]:
-                logger.error("Unknown PS id: %s" % ps_id)
+                logger.error("Unknown deletable PS id: %s" % ps_id)
                 return
 
         self._k8s_client.delete_ps(ps_id)
