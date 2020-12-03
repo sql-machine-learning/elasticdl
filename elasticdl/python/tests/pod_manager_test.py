@@ -15,6 +15,7 @@ import os
 import random
 import time
 import unittest
+from time import sleep
 from unittest.mock import MagicMock, call
 
 from elasticdl.python.common.constants import PodStatus
@@ -198,6 +199,7 @@ class PodManagerTest(unittest.TestCase):
             ]
             if new_launched_workers:
                 break
+            sleep(1)
         else:
             self.fail("Cannot to find any newly launched worker.")
 
