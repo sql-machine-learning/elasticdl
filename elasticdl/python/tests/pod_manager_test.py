@@ -164,24 +164,17 @@ class PodManagerTest(unittest.TestCase):
         max_check_num = 60
         for _ in range(max_check_num):
             time.sleep(1)
-            counters = pod_manager.get_pod_counter(pod_type="worker")
+            counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
             if counters["Running"] + counters["Pending"] > 0:
                 break
         # Note: There is a slight chance of race condition.
         # Hack to find a worker to remove
-        current_workers = set()
-        live_workers = set()
+        live_workers = None
         with pod_manager._lock:
-            for (
-                k,
-                (_, _, phase),
-            ) in pod_manager._worker_pods_ip_phase.items():
-                current_workers.add(k)
-                if phase in ["Running", "Pending"]:
-                    live_workers.add(k)
+            live_workers = pod_manager.get_alive_workers()
         self.assertTrue(live_workers)
 
-        pod_manager._remove_worker(live_workers.pop())
+        pod_manager._remove_worker(live_workers.pop().id)
         # verify a new worker get launched
         found = False
         for _ in range(max_check_num):
@@ -195,7 +188,7 @@ class PodManagerTest(unittest.TestCase):
         else:
             self.fail("Failed to find newly launched worker.")
 
-        pod_manager.stop_relaunch_and_remove_pods(pod_type="worker")
+        pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",

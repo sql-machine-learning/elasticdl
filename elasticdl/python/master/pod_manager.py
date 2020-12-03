@@ -362,19 +362,19 @@ class PodManager(object):
                 self._log_file_path
             )
         ps_args = [self._ps_args[0], bash_command]
-        with self._lock:
-            while True:
+        while True:
+            with self._lock:
                 pod = self._create_ps_pod(ps_id, ps_args)
                 if pod:
+                    self._k8s_client.create_ps_service(ps_id)
                     break
-                # TODO: should we fail the job when ps pods fail to
-                #       create for a long time?
-                logger.error(
-                    "Creating PS fails and will try again."
-                    "ps_id: {}, ps_args: {}.".format(ps_id, ps_args)
-                )
-                time.sleep(15)
-            self._k8s_client.create_ps_service(ps_id)
+            # TODO: should we fail the job when ps pods fail to
+            #       create for a long time?
+            logger.error(
+                "Creating PS fails and will try again."
+                "ps_id: {}, ps_args: {}.".format(ps_id, ps_args)
+            )
+            time.sleep(15)
 
     def _create_ps_pod(self, ps_id, ps_args):
         return self._k8s_client.create_ps(
@@ -477,32 +477,33 @@ class PodManager(object):
 
         # For the given worker id, check whether it meet
         # the state change condition
-        pod_state = PodStatus.INITIAL
-        if pod_name in self._pod_info_cache[pod_type]:
-            pod_state = self._pod_info_cache[pod_type][pod_name].status
-        matched_pod_state_flow = PodManager.get_pod_state_flow(
-            pod_state, evt_type, phase
-        )
-        # If there is no matched state change, return directly
-        if matched_pod_state_flow is None:
-            return
-
-        logger.info(
-            "Meet the requirements of the state change: {}".format(
-                matched_pod_state_flow
+        with self._lock:
+            pod_state = PodStatus.INITIAL
+            if pod_name in self._pod_info_cache[pod_type]:
+                pod_state = self._pod_info_cache[pod_type][pod_name].status
+            matched_pod_state_flow = PodManager.get_pod_state_flow(
+                pod_state, evt_type, phase
             )
-        )
+            # If there is no matched state change, return directly
+            if matched_pod_state_flow is None:
+                return
 
-        # Update the pod status in cache
-        new_state = matched_pod_state_flow.to_state
-        pod_info = PodInfo(
-            type=pod_type,
-            id=pod_index,
-            name=pod_name,
-            ip=pod_ip,
-            status=new_state,
-        )
-        self._pod_info_cache[pod_type][pod_name] = pod_info
+            logger.info(
+                "Meet the requirements of the state change: {}".format(
+                    matched_pod_state_flow
+                )
+            )
+
+            # Update the pod status in cache
+            new_state = matched_pod_state_flow.to_state
+            pod_info = PodInfo(
+                type=pod_type,
+                id=pod_index,
+                name=pod_name,
+                ip=pod_ip,
+                status=new_state,
+            )
+            self._pod_info_cache[pod_type][pod_name] = pod_info
 
         cluster_context = ClusterContext(pod_manager=self)
         should_relaunch = (
@@ -580,22 +581,24 @@ class PodManager(object):
         return all_exited
 
     def get_alive_workers(self):
-        return [
-            pod_info
-            for pod_info in self._pod_info_cache[PodType.WORKER].values()
-            if pod_info.status == PodStatus.RUNNING
-        ]
+        with self._lock:
+            return [
+                pod_info
+                for pod_info in self._pod_info_cache[PodType.WORKER].values()
+                if pod_info.status == PodStatus.RUNNING
+            ]
 
     def get_alive_worker_addr(self):
         alive_workers = self.get_alive_workers()
-        alive_workers.sort(lambda tup: tup.id)
+        alive_workers.sort(key=lambda tup: tup.id)
 
         return [info.ip for info in alive_workers]
 
     def get_worker_pod_ip(self, worker_id):
-        for pod_info in self._pod_info_cache[PodType.WORKER].values():
-            if pod_info.id == worker_id:
-                return pod_info.ip
+        with self._lock:
+            for pod_info in self._pod_info_cache[PodType.WORKER].values():
+                if pod_info.id == worker_id:
+                    return pod_info.ip
 
         return None
 
