@@ -588,11 +588,11 @@ class PodManager(object):
                 if pod_info.status == PodStatus.RUNNING
             ]
 
-    def get_alive_worker_addr(self):
+    def get_alive_worker_name_addr(self):
         alive_workers = self.get_alive_workers()
         alive_workers.sort(key=lambda tup: tup.id)
 
-        return [info.ip for info in alive_workers]
+        return [(info.name, info.ip) for info in alive_workers]
 
     def get_worker_pod_ip(self, worker_id):
         with self._lock:
