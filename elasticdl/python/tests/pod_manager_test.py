@@ -19,7 +19,10 @@ from unittest.mock import MagicMock, call
 
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.master.pod_event_callbacks import TaskRescheduleCallback
-from elasticdl.python.master.pod_manager import PodManager
+from elasticdl.python.master.pod_manager import (
+    PodManager,
+    _parse_worker_pod_priority,
+)
 from elasticdl.python.tests.test_utils import create_task_manager
 
 
@@ -260,6 +263,17 @@ class PodManagerTest(unittest.TestCase):
             self.fail("Failed to find newly launched ps.")
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.PS)
+
+    def test_parse_worker_pod_priority(self):
+        worker_priorities = _parse_worker_pod_priority(10, "0.5")
+        expected = {}
+        for i in range(5):
+            expected[i] = "high"
+        for i in range(5, 10):
+            expected[i] = "low"
+        self.assertDictEqual(worker_priorities, expected)
+        worker_priorities = _parse_worker_pod_priority(1, "0.5")
+        self.assertDictEqual(worker_priorities, {0: "high"})
 
 
 if __name__ == "__main__":

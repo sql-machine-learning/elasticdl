@@ -270,7 +270,7 @@ def add_common_params(parser):
         "--worker_pod_priority",
         default="",
         help="The requested priority of worker pod, we support following"
-        "configs: high/low/high=0.5. The high=0.5 means that half"
+        "configs: high/low/0.5. The 0.5 means that half"
         "worker pods have high priority, and half worker pods have"
         "low priority. The default value is low",
     )
