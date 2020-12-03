@@ -14,6 +14,7 @@
 
 import copy
 import itertools
+import math
 import os
 import threading
 import time
@@ -65,15 +66,13 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     res = {}
     if _is_float_str(worker_pod_priority):
         fraction = float(worker_pod_priority)
-        high_count = int(num_workers * fraction)
-        # At least 1 worker has high priority
-        high_count = 1 if high_count < 1 else high_count
+        high_count = math.ceil(num_workers * fraction)
         for i in range(num_workers):
             if i < high_count:
                 res[i] = "high"
             else:
                 res[i] = "low"
-    elif worker_pod_priority in ["", "high", "low"]:
+    elif worker_pod_priority in [None, "", "high", "low"]:
         for i in range(num_workers):
             res[i] = worker_pod_priority
     else:
