@@ -44,24 +44,17 @@ class TextDataReader(AbstractDataReader):
         return records
 
     def create_shards(self):
-        shard_name_prefix = self._filename + ":shard_"
         size = self.get_size()
-        shards = {}
+        shards = []
         num_shards = size // self._records_per_task
         start_ind = 0
         for shard_id in range(num_shards):
-            shards[shard_name_prefix + str(shard_id)] = (
-                start_ind,
-                self._records_per_task,
-            )
+            shards.append((self._filename, start_ind, self._records_per_task,))
             start_ind += self._records_per_task
         # Create a shard with the last records
         num_records_left = size % self._records_per_task
         if num_records_left != 0:
-            shards[shard_name_prefix + str(num_shards)] = (
-                start_ind,
-                num_records_left,
-            )
+            shards.append((self._filename, start_ind, num_records_left,))
         return shards
 
     def get_size(self):
