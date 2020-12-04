@@ -15,8 +15,10 @@ import os
 import random
 import time
 import unittest
+from time import sleep
 from unittest.mock import MagicMock, call
 
+from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.master.pod_event_callbacks import TaskRescheduleCallback
 from elasticdl.python.master.pod_manager import (
@@ -50,7 +52,7 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            if counters["Succeeded"] == 2:
+            if counters[PodStatus.SUCCEEDED] == 2:
                 break
 
         pod_manager._not_created_worker_id = [2]
@@ -59,16 +61,17 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            if counters["Succeeded"] == 3:
+            if counters[PodStatus.SUCCEEDED] == 3:
                 break
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            if not counters:
+            if counters[PodStatus.DELETED] == 3:
                 break
-        self.assertFalse(counters)
+        else:
+            self.fail("Cannot get expected 3 deleted pods.")
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
@@ -93,9 +96,11 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            if counters["Running"]:
-                worker_addrs = pod_manager.get_alive_worker_addr()
-                self.assertEqual(len(worker_addrs), counters["Running"])
+            if counters[PodStatus.RUNNING]:
+                worker_addrs = pod_manager.get_alive_worker_name_addr()
+                self.assertEqual(
+                    len(worker_addrs), counters[PodStatus.RUNNING]
+                )
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
 
@@ -131,15 +136,17 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            if counters["Failed"] == 3:
+            if counters[PodStatus.FAILED] == 3:
                 break
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
-            if not counters:
+            if counters[PodStatus.DELETED] == 3:
                 break
+        else:
+            self.fail("Cannot get 3 deleted worker pods as expected.")
         task_manager.recover_tasks.assert_has_calls(
             [call(0), call(1), call(2)], any_order=True
         )
@@ -167,44 +174,42 @@ class PodManagerTest(unittest.TestCase):
         max_check_num = 60
         for _ in range(max_check_num):
             time.sleep(1)
-            counters = pod_manager.get_pod_counter(pod_type="worker")
-            if counters["Running"] + counters["Pending"] > 0:
+            counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
+            if counters[PodStatus.RUNNING] + counters[PodStatus.PENDING] > 0:
                 break
         # Note: There is a slight chance of race condition.
         # Hack to find a worker to remove
-        current_workers = set()
-        live_workers = set()
-        with pod_manager._lock:
-            for (
-                k,
-                (_, _, phase),
-            ) in pod_manager._worker_pods_ip_phase.items():
-                current_workers.add(k)
-                if phase in ["Running", "Pending"]:
-                    live_workers.add(k)
-        self.assertTrue(live_workers)
+        alive_workers = pod_manager.get_pod_infos(
+            PodType.WORKER, [PodStatus.RUNNING, PodStatus.PENDING]
+        )
+        self.assertTrue(alive_workers)
 
-        pod_manager._remove_worker(live_workers.pop())
+        pod_manager._remove_worker(alive_workers.pop().id)
         # verify a new worker get launched
-        found = False
         for _ in range(max_check_num):
-            if found:
+            current_alive_workers = pod_manager.get_pod_infos(
+                PodType.WORKER, [PodStatus.RUNNING, PodStatus.PENDING]
+            )
+            # The former worker id is from 0 ~ num_workers - 1
+            # If a new worker is launched, the worker id is >= num_workers
+            new_launched_workers = [
+                pod_info
+                for pod_info in current_alive_workers
+                if pod_info.id >= num_workers
+            ]
+            if new_launched_workers:
                 break
-            time.sleep(1)
-            with pod_manager._lock:
-                for k in pod_manager._worker_pods_ip_phase:
-                    if k not in range(num_workers, num_workers * 2):
-                        found = True
+            sleep(1)
         else:
-            self.fail("Failed to find newly launched worker.")
+            self.fail("Cannot to find any newly launched worker.")
 
-        pod_manager.stop_relaunch_and_remove_pods(pod_type="worker")
+        pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
         "No Kubernetes cluster available",
     )
-    def test_relaunch_ps_pod(self):
+    def test_launch_ps_pod(self):
         num_ps = 3
         pod_manager = PodManager(
             job_name="test-relaunch-ps-pod-%d-%d"
@@ -233,34 +238,10 @@ class PodManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(1)
             counters = pod_manager.get_pod_counter(pod_type=PodType.PS)
-            if counters["Running"] + counters["Pending"] > 0:
+            if counters[PodStatus.RUNNING] + counters[PodStatus.PENDING] > 0:
                 break
-        # Note: There is a slight chance of race condition.
-        # Hack to find a ps to remove
-        all_current_ps = set()
-        all_live_ps = set()
-        with pod_manager._lock:
-            for k, (_, phase) in pod_manager._ps_pods_phase.items():
-                all_current_ps.add(k)
-                if phase in ["Running", "Pending"]:
-                    all_live_ps.add(k)
-        self.assertTrue(all_live_ps)
-
-        ps_to_be_removed = all_live_ps.pop()
-        all_current_ps.remove(ps_to_be_removed)
-        pod_manager._remove_parameter_server(ps_to_be_removed)
-        # Verify a new ps gets launched
-        found = False
-        for _ in range(max_check_num):
-            if found:
-                break
-            time.sleep(1)
-            with pod_manager._lock:
-                for k in pod_manager._ps_pods_phase:
-                    if k not in all_current_ps:
-                        found = True
         else:
-            self.fail("Failed to find newly launched ps.")
+            self.fail("PS pod cannot start within the time limit.")
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.PS)
 

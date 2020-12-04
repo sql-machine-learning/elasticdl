@@ -14,7 +14,9 @@
 import abc
 import collections
 
-PodInfo = collections.namedtuple("PodInfo", ("type", "id", "name"))
+PodInfo = collections.namedtuple(
+    "PodInfo", ("type", "id", "name", "ip", "status")
+)
 
 ClusterContext = collections.namedtuple("ClusterContext", ("pod_manager"))
 
@@ -111,5 +113,5 @@ class RendezvousServiceRefreshCallback(PodEventCallback):
         self._refresh_rendezvous_service(cluster_context.pod_manager)
 
     def _refresh_rendezvous_service(self, pod_manager):
-        worker_addrs = pod_manager.get_alive_worker_addr()
-        self._rendezvous_server.set_worker_hosts(worker_addrs)
+        worker_name_addrs = pod_manager.get_alive_worker_name_addr()
+        self._rendezvous_server.set_worker_hosts(worker_name_addrs)
