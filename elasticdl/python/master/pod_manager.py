@@ -312,8 +312,7 @@ class PodManager(object):
 
     def _init_pod_status(self):
         # _pod_info_cache is a dict. The key is the PodType. The value
-        # is also a dict. The value is a dict mapping pod_name to PodInfo
-        # object.
+        # is also a dict  mapping from pod_name to PodInfo object.
         self._pod_info_cache = {PodType.PS: {}, PodType.WORKER: {}}
 
         # worker ids for the pods which are not created.
@@ -591,6 +590,8 @@ class PodManager(object):
 
     def get_alive_worker_name_addr(self):
         alive_workers = self.get_alive_workers()
+        # TODO: Update from sorting by id to sort by
+        # the timestamp when the pod changes to the Running state.
         alive_workers.sort(key=lambda tup: tup.id)
 
         return [(info.name, info.ip) for info in alive_workers]
