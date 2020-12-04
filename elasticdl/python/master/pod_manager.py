@@ -14,6 +14,7 @@
 
 import copy
 import itertools
+import math
 import os
 import threading
 import time
@@ -22,10 +23,15 @@ from collections import Counter
 from kubernetes.client import V1EnvVar
 
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.constants import PodStatus, WorkerEnv
+from elasticdl.python.common.constants import (
+    PodManagerStatus,
+    PodStatus,
+    WorkerEnv,
+)
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import get_dict_from_params_str
+from elasticdl.python.master.pod_event_callbacks import ClusterContext, PodInfo
 from elasticdl_client.common.args import parse_envs
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
@@ -46,28 +52,34 @@ def _get_addrs(num_addrs, addr_get_fn):
     return _SERVICE_ADDR_SEP.join(addrs)
 
 
+def _is_float_str(str_number):
+    if not str_number:
+        return False
+    try:
+        float(str_number)
+        return True
+    except ValueError:
+        return False
+
+
 def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     res = {}
-    if isinstance(worker_pod_priority, str) and "high=" in worker_pod_priority:
-        try:
-            fraction = float(worker_pod_priority.split("=")[1])
-            high_count = int(num_workers * fraction)
-            for i in range(num_workers):
-                if i < high_count:
-                    res[i] = "high"
-                else:
-                    res[i] = "low"
-        except Exception:
-            logger.warning(
-                "Please check the input worker pod priority format,"
-                "e.g. high=0.5  The config is no use, and ElasticDL sets "
-                "low priority for all worker pods by default."
-            )
-            for i in range(num_workers):
-                res[i] = None
-    else:
+    if _is_float_str(worker_pod_priority):
+        fraction = float(worker_pod_priority)
+        high_count = math.ceil(num_workers * fraction)
+        for i in range(num_workers):
+            if i < high_count:
+                res[i] = "high"
+            else:
+                res[i] = "low"
+    elif worker_pod_priority in [None, "", "high", "low"]:
         for i in range(num_workers):
             res[i] = worker_pod_priority
+    else:
+        raise ValueError(
+            "Not support priority = {}, please set priority = "
+            "high/low/a fraction value.".format(worker_pod_priority)
+        )
     return res
 
 
@@ -97,12 +109,7 @@ def get_image_cluster_spec(cluster_spec):
     return cluster_spec
 
 
-# TODO: After decouple PodManager with TaskManager and RendezvousServer
-# with PodEventCallback, we can remove these two parameter from this
-# factory method and the __init__ method of PodManager.
-def create_pod_manager(
-    args, task_manager, rendezvous_server,
-):
+def create_pod_manager(args):
     pod_manager = None
 
     master_ip = os.getenv("MY_POD_IP", "localhost")
@@ -121,8 +128,6 @@ def create_pod_manager(
         cluster_spec = get_image_cluster_spec(args.cluster_spec)
 
         pod_manager = PodManager(
-            task_manager=task_manager,
-            rendezvous_server=rendezvous_server,
             job_name=args.job_name,
             image_name=args.worker_image,
             namespace=args.namespace,
@@ -150,8 +155,6 @@ def create_pod_manager(
 class PodManager(object):
     def __init__(
         self,
-        task_manager,
-        rendezvous_server=None,
         num_workers=1,
         worker_resource_request="cpu=1,memory=4096Mi",
         worker_resource_limit="cpu=1,memory=4096Mi",
@@ -184,8 +187,6 @@ class PodManager(object):
         self._volume = volume
         self._image_pull_policy = image_pull_policy
         self._envs = envs
-        self._task_manager = task_manager
-        self._rendezvous_server = rendezvous_server
         self._next_worker_id_fn = itertools.count().__next__
         self._log_file_path = log_file_path
 
@@ -206,11 +207,11 @@ class PodManager(object):
             self._num_ps, self._k8s_client.get_ps_service_address
         )
         self._worker_addrs = []
-        self._pod_event_callbacks = []
         self._worker_command = None
         self._worker_args = None
         self._ps_command = None
         self._ps_args = None
+        self._pod_event_callbacks = []
 
     def set_up(
         self,
@@ -226,6 +227,12 @@ class PodManager(object):
 
     def start(self):
         self._k8s_client.start_watch_events()
+        self.update_status(PodManagerStatus.PENDING)
+        if self._num_ps > 0:
+            logger.info("num ps pods : {}".format(self._num_ps))
+            self.start_parameter_servers()
+        self.start_workers()
+        self.update_status(PodManagerStatus.RUNNING)
 
     def add_pod_event_callback(self, pod_event_callback):
         self._pod_event_callbacks.append(pod_event_callback)
@@ -436,9 +443,14 @@ class PodManager(object):
             if evt_type == "MODIFIED" and phase == "Failed":
                 self._failed_pods.append(pod_name)
                 worker_id = self._worker_pod_name_to_id.get(pod_name, None)
-                if worker_id is not None:
-                    # Recover tasks when the worker failed
-                    self._task_manager.recover_tasks(worker_id)
+                # Notify each PodEventCallback that PodFailed is fired
+                for callback in self._pod_event_callbacks:
+                    callback.on_pod_failed(
+                        PodInfo(
+                            type=PodType.WORKER, id=worker_id, name=pod_name
+                        ),
+                        ClusterContext(pod_manager=self),
+                    )
 
                 if _should_relaunch_killed_pod(evt_obj):
                     relaunch_failed_pod = True
@@ -472,6 +484,13 @@ class PodManager(object):
                 else:
                     self.check_all_workers_exited()
 
+                if evt_type == "DELETED":
+                    # Notify each PodEventCallback that PodDeleted is fired
+                    for callback in self._pod_event_callbacks:
+                        callback.on_pod_deleted(
+                            PodInfo(type=None, id=worker_id, name=pod_name),
+                            ClusterContext(pod_manager=self),
+                        )
             elif pod_name in self._ps_pod_name_to_id:
                 # If the pod related with the event is a PS
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
@@ -484,9 +503,21 @@ class PodManager(object):
                 logger.error("Unknown pod name: %s" % pod_name)
                 return
 
-            if self._rendezvous_server:
-                self._worker_addrs = self._get_alive_worker_addr()
-                self._rendezvous_server.set_worker_hosts(self._worker_addrs)
+            # Notify each PodEventCallback that PodStarted is fired
+            if evt_type in ["ADDED", "MODIFIED"] and phase == "Running":
+                for callback in self._pod_event_callbacks:
+                    callback.on_pod_started(
+                        PodInfo(type=None, id=None, name=pod_name),
+                        ClusterContext(pod_manager=self),
+                    )
+
+            # Notify each PodEventCallback that PodSucceeded is fired
+            if evt_type == "MODIFIED" and phase == "Succeeded":
+                for callback in self._pod_event_callbacks:
+                    callback.on_pod_succeeded(
+                        PodInfo(type=None, id=None, name=pod_name),
+                        ClusterContext(pod_manager=self),
+                    )
 
         if relaunch_worker and worker_id >= 0:
             logger.info("Relaunching worker.")
@@ -524,7 +555,7 @@ class PodManager(object):
         _, pod_ip, _ = self._worker_pods_ip_phase[worker_id]
         return pod_ip
 
-    def _get_alive_worker_addr(self):
+    def get_alive_worker_addr(self):
         alive_workers = self.get_alive_workers()
         worker_addrs = []
         worker_start_times = []

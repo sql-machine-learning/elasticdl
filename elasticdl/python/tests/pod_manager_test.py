@@ -18,7 +18,11 @@ import unittest
 from unittest.mock import MagicMock, call
 
 from elasticdl.python.common.k8s_client import PodType
-from elasticdl.python.master.pod_manager import PodManager
+from elasticdl.python.master.pod_event_callbacks import TaskRescheduleCallback
+from elasticdl.python.master.pod_manager import (
+    PodManager,
+    _parse_worker_pod_priority,
+)
 from elasticdl.python.tests.test_utils import create_task_manager
 
 
@@ -28,10 +32,7 @@ class PodManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_create_delete_worker_pod(self):
-        task_d = create_task_manager({"f": (0, 10)}, {})
-        task_d.recover_tasks = MagicMock()
         pod_manager = PodManager(
-            task_d,
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
@@ -42,7 +43,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             worker_command=["/bin/bash"], worker_args=["-c", "echo"],
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
 
         pod_manager.start_workers()
         max_check_num = 20
@@ -74,9 +75,7 @@ class PodManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_get_worker_addrs(self):
-        task_d = create_task_manager({"f": (0, 10)}, {})
         pod_manager = PodManager(
-            task_d,
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
@@ -87,7 +86,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             worker_command=["/bin/bash"], worker_args=["-c", "sleep 5 #"],
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
 
         pod_manager.start_workers()
         max_check_num = 20
@@ -95,7 +94,7 @@ class PodManagerTest(unittest.TestCase):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
             if counters["Running"]:
-                worker_addrs = pod_manager._get_alive_worker_addr()
+                worker_addrs = pod_manager.get_alive_worker_addr()
                 self.assertEqual(len(worker_addrs), counters["Running"])
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
@@ -109,10 +108,9 @@ class PodManagerTest(unittest.TestCase):
         Start a pod running a python program destined to fail with
         restart_policy="Never" to test failed_worker_count
         """
-        task_d = create_task_manager({"f": (0, 10)}, {})
-        task_d.recover_tasks = MagicMock()
+        task_manager = create_task_manager([("f", 0, 10)], [])
+        task_manager.recover_tasks = MagicMock()
         pod_manager = PodManager(
-            task_d,
             job_name="test-failed-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
@@ -124,7 +122,10 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             worker_command=["/bin/bash"], worker_args=["-c", "badcommand"],
         )
-        pod_manager.start()
+        pod_manager.add_pod_event_callback(
+            TaskRescheduleCallback(task_manager=task_manager)
+        )
+        pod_manager._k8s_client.start_watch_events()
         pod_manager.start_workers()
         max_check_num = 20
         for _ in range(max_check_num):
@@ -139,7 +140,7 @@ class PodManagerTest(unittest.TestCase):
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
             if not counters:
                 break
-        task_d.recover_tasks.assert_has_calls(
+        task_manager.recover_tasks.assert_has_calls(
             [call(0), call(1), call(2)], any_order=True
         )
 
@@ -149,9 +150,7 @@ class PodManagerTest(unittest.TestCase):
     )
     def test_relaunch_worker_pod(self):
         num_workers = 3
-        task_d = create_task_manager({"f": (0, 10)}, {})
         pod_manager = PodManager(
-            task_d,
             job_name="test-relaunch-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
@@ -162,7 +161,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             worker_command=["/bin/bash"], worker_args=["-c", "sleep 10 #"],
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
         pod_manager.start_workers()
 
         max_check_num = 60
@@ -208,7 +207,6 @@ class PodManagerTest(unittest.TestCase):
     def test_relaunch_ps_pod(self):
         num_ps = 3
         pod_manager = PodManager(
-            task_manager=None,
             job_name="test-relaunch-ps-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
@@ -218,7 +216,7 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.set_up(
             ps_command=["/bin/bash"], ps_args=["-c", "sleep 10 #"],
         )
-        pod_manager.start()
+        pod_manager._k8s_client.start_watch_events()
         pod_manager.start_parameter_servers()
 
         # Check we also have ps services started
@@ -265,6 +263,17 @@ class PodManagerTest(unittest.TestCase):
             self.fail("Failed to find newly launched ps.")
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.PS)
+
+    def test_parse_worker_pod_priority(self):
+        worker_priorities = _parse_worker_pod_priority(10, "0.5")
+        expected = {}
+        for i in range(5):
+            expected[i] = "high"
+        for i in range(5, 10):
+            expected[i] = "low"
+        self.assertDictEqual(worker_priorities, expected)
+        worker_priorities = _parse_worker_pod_priority(1, "0.5")
+        self.assertDictEqual(worker_priorities, {0: "high"})
 
 
 if __name__ == "__main__":

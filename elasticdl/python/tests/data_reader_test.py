@@ -50,7 +50,7 @@ class RecordIODataReaderTest(unittest.TestCase):
             )
 
             # Test shards creation
-            expected_shards = {shard_name: (0, num_records)}
+            expected_shards = [(shard_name, 0, num_records)]
             reader = RecordIODataReader(data_dir=temp_dir_name)
             self.assertEqual(expected_shards, reader.create_shards())
 

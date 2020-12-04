@@ -65,7 +65,7 @@ class ServicerTest(unittest.TestCase):
         self.assertIsNotNone(server)
 
     def test_get_empty_task(self):
-        self.master.task_manager = create_task_manager({}, {})
+        self.master.task_manager = create_task_manager([], [])
         master_servicer = MasterServicer(
             self.master.task_manager, self.master.instance_manager, None, None,
         )
@@ -85,7 +85,7 @@ class ServicerTest(unittest.TestCase):
 
     def test_report_task_result(self):
         self.master.task_manager = create_task_manager(
-            {"shard_1": (0, 10), "shard_2": (0, 9)}, {}, 2
+            [("shard_1", 0, 10), ("shard_2", 0, 9)], [], 2
         )
         master = MasterServicer(
             self.master.task_manager, self.master.instance_manager, None, None,

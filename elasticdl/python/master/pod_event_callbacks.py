@@ -75,6 +75,7 @@ class PodEventCallback(metaclass=abc.ABCMeta):
 
 class TaskRescheduleCallback(PodEventCallback):
     def __init__(self, task_manager):
+        super(TaskRescheduleCallback, self).__init__()
         self._task_manager = task_manager
 
     def on_pod_started(self, pod_info, cluster_context):
@@ -84,9 +85,31 @@ class TaskRescheduleCallback(PodEventCallback):
         pass
 
     def on_pod_failed(self, pod_info, cluster_context):
-        # TODO: Call task_manager to reschedule the task
-        # of the failed worker to another worker
-        pass
+        if pod_info.id is not None:
+            self._task_manager.recover_tasks(pod_info.id)
 
     def on_pod_deleted(self, pod_info, cluster_context):
-        pass
+        if pod_info.id is not None:
+            self._task_manager.recover_tasks(pod_info.id)
+
+
+class RendezvousServiceRefreshCallback(PodEventCallback):
+    def __init__(self, rendezvous_server):
+        super(RendezvousServiceRefreshCallback, self).__init__()
+        self._rendezvous_server = rendezvous_server
+
+    def on_pod_started(self, pod_info, cluster_context):
+        self._refresh_rendezvous_service(cluster_context.pod_manager)
+
+    def on_pod_succeeded(self, pod_info, cluster_context):
+        self._refresh_rendezvous_service(cluster_context.pod_manager)
+
+    def on_pod_failed(self, pod_info, cluster_context):
+        self._refresh_rendezvous_service(cluster_context.pod_manager)
+
+    def on_pod_deleted(self, pod_info, cluster_context):
+        self._refresh_rendezvous_service(cluster_context.pod_manager)
+
+    def _refresh_rendezvous_service(self, pod_manager):
+        worker_addrs = pod_manager.get_alive_worker_addr()
+        self._rendezvous_server.set_worker_hosts(worker_addrs)

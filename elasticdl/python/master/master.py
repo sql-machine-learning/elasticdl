@@ -14,9 +14,13 @@
 import os
 import time
 
-from elasticdl.python.common.constants import InstanceManagerStatus
+from elasticdl.python.common.constants import PodManagerStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
+from elasticdl.python.master.pod_event_callbacks import (
+    RendezvousServiceRefreshCallback,
+    TaskRescheduleCallback,
+)
 from elasticdl.python.master.pod_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import create_master_service
@@ -46,20 +50,16 @@ class Master(object):
                 self.pod_manager._remove_worker
             )
         if self.pod_manager:
-            if self.elasticdl_job_service:
-                command = self.elasticdl_job_service.get_ps_worker_command()
-                self.pod_manager.set_up(
-                    worker_command=command,
-                    worker_args=self.elasticdl_job_service.get_worker_args(
-                        self._args
-                    ),
-                    ps_command=command,
-                    ps_args=self.elasticdl_job_service.get_ps_args(self._args),
+            self._set_command_in_pod_manager()
+            # Add PodEventCallbacks for the listeners of Pod events.
+            if self.task_manager:
+                self.pod_manager.add_pod_event_callback(
+                    TaskRescheduleCallback(self.task_manager)
                 )
-            else:
-                # TODO: Get the Pod arguments from the input
-                # args directly
-                pass
+            if self.rendezvous_server:
+                self.pod_manager.add_pod_event_callback(
+                    RendezvousServiceRefreshCallback(self.rendezvous_server)
+                )
 
         # Start the components one by one
         if self.task_manager:
@@ -76,6 +76,30 @@ class Master(object):
         self._master_server.start()
         logger.info("Master RPC server started")
 
+    def _set_command_in_pod_manager(self):
+        if self.elasticdl_job_service:
+            command = self.elasticdl_job_service.get_ps_worker_command()
+            self.pod_manager.set_up(
+                worker_command=command,
+                worker_args=self.elasticdl_job_service.get_worker_args(
+                    self._args
+                ),
+                ps_command=command,
+                ps_args=self.elasticdl_job_service.get_ps_args(self._args),
+            )
+        elif self._args.job_command:
+            self.pod_manager.set_up(
+                worker_command=["/bin/bash"],
+                worker_args=["-c", self._args.job_command],
+                ps_command=["/bin/bash"],
+                ps_args=["-c", self._args.job_command],
+            )
+        else:
+            raise ValueError(
+                "job_command is necessary if there is no elasticdl job "
+                "service."
+            )
+
     def run(self):
         """
         The main loop of master.
@@ -86,7 +110,7 @@ class Master(object):
                 if self.task_manager and self.task_manager.finished():
                     if self.pod_manager:
                         self.pod_manager.update_status(
-                            InstanceManagerStatus.FINISHED
+                            PodManagerStatus.FINISHED
                         )
                     break
                 if self.pod_manager and self.pod_manager.all_workers_exited:
@@ -115,9 +139,7 @@ class Master(object):
 
     def create_pod_manager_if_needed(self, args):
         if args.need_pod_manager:
-            self.pod_manager = create_pod_manager(
-                args, self.task_manager, self.rendezvous_server
-            )
+            self.pod_manager = create_pod_manager(args)
         else:
             self.pod_manager = None
 
@@ -141,7 +163,6 @@ class Master(object):
             self.elasticdl_job_service = ElasticdlJobService(
                 args=args,
                 task_manager=self.task_manager,
-                pod_manager=self.pod_manager,
                 rendezvous_server=self.rendezvous_server,
             )
         else:
