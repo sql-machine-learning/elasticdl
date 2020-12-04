@@ -106,9 +106,10 @@ def _should_relaunch_killed_pod(evt_obj):
 def _get_start_running_time_stamp(pod_status_obj):
     if (
         pod_status_obj.container_statuses
-        and pod_status_obj.container_statuses[0].running
+        and pod_status_obj.container_statuses[0].state
+        and pod_status_obj.container_statuses[0].state.running
     ):
-        return pod_status_obj.container_statuses[0].running.started_at
+        return pod_status_obj.container_statuses[0].state.running.started_at
 
     return None
 
@@ -513,13 +514,13 @@ class PodManager(object):
                 return
 
             # Update the pod status in cache
-            new_state = matched_pod_state_flow.to_status
+            new_status = matched_pod_state_flow.to_status
             pod_info = PodInfo(
                 type=pod_type,
                 id=pod_id,
                 name=pod_name,
                 ip=pod_ip,
-                status=new_state,
+                status=new_status,
                 start_time=pod_start_time,
             )
             self._pod_info_cache[pod_type][pod_name] = pod_info
