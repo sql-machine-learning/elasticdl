@@ -15,7 +15,7 @@ import abc
 import collections
 
 PodInfo = collections.namedtuple(
-    "PodInfo", ("type", "id", "name", "ip", "status")
+    "PodInfo", ("type", "id", "name", "ip", "status", "start_time")
 )
 
 ClusterContext = collections.namedtuple("ClusterContext", ("pod_manager"))

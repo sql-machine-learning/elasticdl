@@ -103,6 +103,17 @@ def _should_relaunch_killed_pod(evt_obj):
     )
 
 
+def _get_start_running_time_stamp(pod_status_obj):
+    if (
+        pod_status_obj.container_statuses
+        and pod_status_obj.container_statuses[0].state
+        and pod_status_obj.container_statuses[0].state.running
+    ):
+        return pod_status_obj.container_statuses[0].state.running.started_at
+
+    return None
+
+
 def get_image_cluster_spec(cluster_spec):
     if cluster_spec:
         filename = os.path.basename(cluster_spec)
@@ -480,6 +491,7 @@ class PodManager(object):
         pod_name = evt_obj.metadata.name
         pod_ip = evt_obj.status.pod_ip
         phase = evt_obj.status.phase
+        pod_start_time = _get_start_running_time_stamp(evt_obj.status)
         pod_type = evt_obj.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY]
 
         if pod_type == PodType.MASTER:
@@ -502,13 +514,14 @@ class PodManager(object):
                 return
 
             # Update the pod status in cache
-            new_state = matched_pod_state_flow.to_status
+            new_status = matched_pod_state_flow.to_status
             pod_info = PodInfo(
                 type=pod_type,
                 id=pod_id,
                 name=pod_name,
                 ip=pod_ip,
-                status=new_state,
+                status=new_status,
+                start_time=pod_start_time,
             )
             self._pod_info_cache[pod_type][pod_name] = pod_info
 
@@ -597,9 +610,7 @@ class PodManager(object):
 
     def get_alive_worker_name_addr(self):
         alive_workers = self.get_alive_workers()
-        # TODO: Update from sorting by id to sort by
-        # the timestamp when the pod changes to the Running state.
-        alive_workers.sort(key=lambda tup: tup.id)
+        alive_workers.sort(key=lambda pod_info: pod_info.start_time)
 
         return [(info.name, info.ip) for info in alive_workers]
 
