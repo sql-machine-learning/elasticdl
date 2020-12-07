@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader, IterableDataset
 
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.allreduce.pytorch_controller import (
-    get_elastic_controller
+    create_elastic_controller
 )
 
 
@@ -110,7 +110,7 @@ def train():
         pass a torch.utils.data.DataLoader.
         elastic_controller: The controller for elastic training.
     """
-    allreduce_controller = get_elastic_controller(batch_size=64)
+    allreduce_controller = create_elastic_controller(batch_size=64)
     dataset = ImageDataset(
         allreduce_controller.data_shard_service, shuffle=True
     )
