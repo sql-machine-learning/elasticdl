@@ -137,6 +137,9 @@ def create_pod_manager(args):
         for key in env_dict:
             env.append(V1EnvVar(name=key, value=env_dict[key]))
         env.append(V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=master_addr))
+        env.append(
+            V1EnvVar(name=WorkerEnv.WORKER_NUM, value=str(args.num_workers))
+        )
 
         kwargs = get_dict_from_params_str(args.aux_params)
         disable_relaunch = kwargs.get("disable_relaunch", False)
