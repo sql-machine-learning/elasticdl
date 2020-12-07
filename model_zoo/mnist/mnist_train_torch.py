@@ -18,6 +18,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from elasticdl.python.allreduce.torch_optimizer import (
+    ElasticDistributedOptimizer,
+)
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 
@@ -60,12 +63,19 @@ def train(dataset, elastic_controller):
     """
     model = Net()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
-    optimizer = hvd.DistributedOptimizer(optimizer)
+
+    # op must be sum to keep the batch size fixed
+    optimizer = ElasticDistributedOptimizer(
+        optimizer, op=hvd.Average, fixed_batch_size=True,
+    )
 
     # Set the model and optimizer to broadcast.
     elastic_controller.set_broadcast_model(model)
     elastic_controller.set_broadcast_optimizer(optimizer)
     model.train()
+
+    # Use the elastic function to wrap the training function with a batch.
+    elastic_train_one_step = elastic_controller.elastic_run(train_one_batch)
     for batch_idx, (data, target) in enumerate(dataset):
         # Convert tf.tensor to torch.tensor.
         target = tf.reshape(target, [-1])
@@ -75,20 +85,18 @@ def train(dataset, elastic_controller):
 
         target = target.type(torch.LongTensor)
 
-        # Use the elastic function to wrap the training function with a batch.
-        elastic_train_one_batch = elastic_controller.elastic_run(
-            train_one_batch
+        loss = elastic_train_one_step(
+            batch_idx, model, optimizer, data, target
         )
-        loss = elastic_train_one_batch(model, optimizer, data, target)
-        logger.info("loss = {}, step = {}".format(loss, batch_idx))
+        logger.info("loss = {}, batch_index = {}".format(loss, batch_idx))
 
 
-def train_one_batch(model, optimizer, data, target):
-    optimizer.zero_grad()
+def train_one_batch(batch_index, model, optimizer, data, target):
     output = model(data)
     loss = F.nll_loss(output, target)
     loss.backward()
     optimizer.step()
+    optimizer.zero_grad()
     return loss
 
 

@@ -50,7 +50,7 @@ class RecordIODataReaderTest(unittest.TestCase):
             )
 
             # Test shards creation
-            expected_shards = {shard_name: (0, num_records)}
+            expected_shards = [(shard_name, 0, num_records)]
             reader = RecordIODataReader(data_dir=temp_dir_name)
             self.assertEqual(expected_shards, reader.create_shards())
 
@@ -94,7 +94,7 @@ class TextDataReaderTest(unittest.TestCase):
             self.assertEqual(len(shards), 7)
             task = _Task(iris_file_name, 0, 20, elasticdl_pb2.TRAINING)
             record_count = 0
-            for record in csv_data_reader.read_records(task, shuffle=True):
+            for record in csv_data_reader.read_records(task):
                 record_count += 1
             self.assertEqual(csv_data_reader.get_size(), num_records)
             self.assertEqual(record_count, 20)

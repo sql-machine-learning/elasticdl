@@ -412,12 +412,13 @@ def distributed_train_and_evaluate(
         record_num = batch_size
     else:
         record_num = 128
-    shards = {
-        create_recordio_file(record_num, dataset_name, feature_shape): (
+    shards = [
+        (
+            create_recordio_file(record_num, dataset_name, feature_shape),
             0,
             record_num,
         )
-    }
+    ]
     task_args = TaskManagerArgs(minibatch_size=2, num_minibatches_per_task=32)
     task_d = TaskManager(task_args)
 
@@ -427,7 +428,7 @@ def distributed_train_and_evaluate(
         task_d.create_tasks(elasticdl_pb2.TRAINING)
         task_d.create_tasks(elasticdl_pb2.EVALUATION)
     else:
-        task_d._training_shards = {}
+        task_d._training_shards = []
         task_d._evaluation_shards = shards
         task_d.create_tasks(elasticdl_pb2.TRAINING)
 

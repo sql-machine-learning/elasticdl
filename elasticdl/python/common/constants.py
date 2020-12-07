@@ -74,6 +74,8 @@ class PodStatus(object):
     RUNNING = "Running"
     FINISHED = "Finished"
     PENDING = "Pending"
+    INITIAL = "Initial"
+    DELETED = "Deleted"
 
 
 class ReaderType(object):
@@ -100,3 +102,4 @@ class HorovodEnv(object):
 class WorkerEnv(object):
     MASTER_ADDR = "MASTER_ADDR"
     WORKER_ID = "WORKER_ID"
+    WORKER_NUM = "WORKER_NUM"

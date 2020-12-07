@@ -17,6 +17,10 @@ import time
 from elasticdl.python.common.constants import PodManagerStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
+from elasticdl.python.master.pod_event_callbacks import (
+    RendezvousServiceRefreshCallback,
+    TaskRescheduleCallback,
+)
 from elasticdl.python.master.pod_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import create_master_service
@@ -47,6 +51,15 @@ class Master(object):
             )
         if self.pod_manager:
             self._set_command_in_pod_manager()
+            # Add PodEventCallbacks for the listeners of Pod events.
+            if self.task_manager:
+                self.pod_manager.add_pod_event_callback(
+                    TaskRescheduleCallback(self.task_manager)
+                )
+            if self.rendezvous_server:
+                self.pod_manager.add_pod_event_callback(
+                    RendezvousServiceRefreshCallback(self.rendezvous_server)
+                )
 
         # Start the components one by one
         if self.task_manager:
@@ -126,9 +139,7 @@ class Master(object):
 
     def create_pod_manager_if_needed(self, args):
         if args.need_pod_manager:
-            self.pod_manager = create_pod_manager(
-                args, self.task_manager, self.rendezvous_server
-            )
+            self.pod_manager = create_pod_manager(args)
         else:
             self.pod_manager = None
 
