@@ -161,7 +161,7 @@ def _check_master_args_validity(args):
         )
     if args.num_ps_pods == 0:
         logger.warning("AllReduce strategy does not need PS")
-        args.distributed_strategy == DistributionStrategy.ALLREDUCE
+        args.distribution_strategy = DistributionStrategy.ALLREDUCE
 
 
 def parse_master_args(master_args=None):
