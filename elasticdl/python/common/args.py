@@ -159,6 +159,9 @@ def _check_master_args_validity(args):
         logger.warning(
             "grads_to_wait is set to 1 while using asynchronous SGD."
         )
+    if args.num_ps == 0:
+        logger.warning("AllReduce strategy does not need PS")
+        args.distributed_strategy == DistributionStrategy.ALLREDUCE
 
 
 def parse_master_args(master_args=None):
