@@ -270,7 +270,7 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
     return temp_file.name
 
 
-def create_iris_csv_file(size, columns, temp_dir=None):
+def create_iris_csv_file(size, columns, with_heads=False, temp_dir=None):
     """Creates a temporary CSV file.
 
     Args:
@@ -291,7 +291,8 @@ def create_iris_csv_file(size, columns, temp_dir=None):
     csv_file_name = temp_file.name + ".csv"
     with open(csv_file_name, "w", newline="") as csv_file:
         csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(columns)
+        if with_heads:
+            csv_writer.writerow(columns)
         csv_writer.writerows(value_data)
 
     return csv_file_name
