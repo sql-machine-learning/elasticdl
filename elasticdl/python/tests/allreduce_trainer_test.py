@@ -23,6 +23,7 @@ from elasticdl.python.allreduce.base_controller import (
 )
 from elasticdl.python.allreduce.pytorch_controller import (
     PyTorchAllReduceController,
+    create_elastic_controller,
 )
 from elasticdl.python.allreduce.tensorflow_controller import (
     TensorFlowV2AllReduceController,
@@ -167,6 +168,12 @@ class PyTorchReduceControllerTest(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIsNotNone(controller._model)
         self.assertIsNotNone(controller._optimizer)
+
+    def test_create_elastic_controller(self):
+        controller = create_elastic_controller(batch_size=64)
+        self.assertIsNotNone(controller)
+        self.assertIsNotNone(controller.data_shard_service._mc)
+        self.assertEqual(controller.data_shard_service._batch_size, 64)
 
 
 if __name__ == "__main__":

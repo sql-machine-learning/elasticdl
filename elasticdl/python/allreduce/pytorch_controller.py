@@ -20,7 +20,10 @@ from elasticdl.python.allreduce.base_controller import (
     AllReduceController,
 )
 from elasticdl.python.common.constants import WorkerEnv
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.worker.data_shard_service import DataShardService
+from elasticdl.python.worker.master_client import MasterClient
 
 try:
     import horovod.torch as hvd
@@ -32,6 +35,53 @@ try:
 
 except ImportError:
     hvd = None
+
+
+def create_elastic_controller(batch_size):
+    """Create an elastic AllReduce controller with data shard service.
+    Users can use the `controller.data_shard_service` to get data
+    shards like:
+    ```python
+    while True:
+        shard = controller.data_shard_service.fetch_shard()
+        for i in range(shard.start, shard.end):
+            yield i
+    ```
+
+    Users also can use the controller to do an elastic training.
+
+    ```python
+    model = ...
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    optimizer = hvd.DistributedOptimizer(optimizer)
+
+    controller.set_broadcast_model(model)
+    ontroller.set_broadcast_optimizer(optimizer)
+    model.train()
+    for batch_idx, (data, target) in enumerate(data_loader):
+        # Use the elastic function to wrap the training function with a batch.
+        elastic_train_one_batch = allreduce_controller.elastic_run(
+            train_one_batch
+        )
+
+    def train_one_batch(model, optimizer, data, target):
+        optimizer.zero_grad()
+        output = model(data)
+        loss = F.nll_loss(output, target)
+        loss.backward()
+        optimizer.step()
+        return loss
+    ```
+    """
+    master_addr = os.getenv("MASTER_ADDR", "localhost:12345")
+    worker_id = int(os.getenv("WORKER_ID", 0))
+
+    master_client = MasterClient(build_channel(master_addr), worker_id)
+    data_shard_service = DataShardService(batch_size, master_client)
+
+    controller = PyTorchAllReduceController(master_client, data_shard_service)
+    controller.init_horovod_locally()
+    return controller
 
 
 class PyTorchAllReduceController(AllReduceController):

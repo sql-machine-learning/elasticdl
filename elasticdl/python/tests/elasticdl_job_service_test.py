@@ -50,23 +50,6 @@ class ElasticdlJobServiceTest(unittest.TestCase):
             args.append(value)
         return args
 
-    def test_create_instance_manager(self):
-        self.arguments[
-            "distribution_strategy"
-        ] = DistributionStrategy.PARAMETER_SERVER
-        with tempfile.TemporaryDirectory() as temp_dir_name:
-            create_recordio_file(
-                self._num_records,
-                DatasetName.TEST_MODULE,
-                1,
-                temp_dir=temp_dir_name,
-            )
-            self.arguments["training_data"] = temp_dir_name
-            args = self._get_args()
-            args = parse_master_args(args)
-            master = ElasticdlJobService(args, TaskManager(args))
-            self.assertIsNotNone(master.instance_manager)
-
     def test_create_master_for_allreduce(self):
         self.arguments[
             "distribution_strategy"
@@ -83,7 +66,7 @@ class ElasticdlJobServiceTest(unittest.TestCase):
             args = self._get_args()
             args = parse_master_args(args)
             master = ElasticdlJobService(args, TaskManager(args))
-            self.assertIsNotNone(master.instance_manager)
+            self.assertIsNotNone(master)
 
     def test_create_master_without_eval(self):
         self.arguments[

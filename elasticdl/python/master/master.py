@@ -14,10 +14,14 @@
 import os
 import time
 
-from elasticdl.python.common.constants import InstanceManagerStatus
+from elasticdl.python.common.constants import PodManagerStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
-from elasticdl.python.master.pod_manager import PodManager
+from elasticdl.python.master.pod_event_callbacks import (
+    RendezvousServiceRefreshCallback,
+    TaskRescheduleCallback,
+)
+from elasticdl.python.master.pod_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import create_master_service
 from elasticdl.python.master.task_manager import TaskManager
@@ -26,20 +30,44 @@ from elasticdl_client.common.constants import DistributionStrategy
 
 class Master(object):
     def __init__(self, args):
-        self.create_pod_manager_if_needed(args)
         self.create_task_manager_if_needed(args)
         self.create_rendezvous_server_if_needed(args)
+        # TODO: At the present, the creation of PodManager requires TaskManager
+        # and RendezvousServer, so we move the create method after these
+        # two. After the next decouple step, there is no dependency between
+        # these create method calls.
+        self.create_pod_manager_if_needed(args)
         self.create_elasticdl_job_service_if_needed(args)
         self.create_master_grpc_service(args)
+        self._args = args
         self._exit_code = 0
 
     def prepare(self):
+        self.validate()
+        # Composite the components
+        if self.task_manager and self.pod_manager:
+            self.task_manager.set_task_timeout_callback(
+                self.pod_manager._remove_worker
+            )
         if self.pod_manager:
-            self.pod_manager.start()
+            self._set_command_in_pod_manager()
+            # Add PodEventCallbacks for the listeners of Pod events.
+            if self.task_manager:
+                self.pod_manager.add_pod_event_callback(
+                    TaskRescheduleCallback(self.task_manager)
+                )
+            if self.rendezvous_server:
+                self.pod_manager.add_pod_event_callback(
+                    RendezvousServiceRefreshCallback(self.rendezvous_server)
+                )
+
+        # Start the components one by one
         if self.task_manager:
             self.task_manager.start()
         if self.rendezvous_server:
             self.rendezvous_server.start()
+        if self.pod_manager:
+            self.pod_manager.start()
         if self.elasticdl_job_service:
             self.elasticdl_job_service.start()
 
@@ -48,6 +76,30 @@ class Master(object):
         self._master_server.start()
         logger.info("Master RPC server started")
 
+    def _set_command_in_pod_manager(self):
+        if self.elasticdl_job_service:
+            command = self.elasticdl_job_service.get_ps_worker_command()
+            self.pod_manager.set_up(
+                worker_command=command,
+                worker_args=self.elasticdl_job_service.get_worker_args(
+                    self._args
+                ),
+                ps_command=command,
+                ps_args=self.elasticdl_job_service.get_ps_args(self._args),
+            )
+        elif self._args.job_command:
+            self.pod_manager.set_up(
+                worker_command=["/bin/bash"],
+                worker_args=["-c", self._args.job_command],
+                ps_command=["/bin/bash"],
+                ps_args=["-c", self._args.job_command],
+            )
+        else:
+            raise ValueError(
+                "job_command is necessary if there is no elasticdl job "
+                "service."
+            )
+
     def run(self):
         """
         The main loop of master.
@@ -55,17 +107,18 @@ class Master(object):
         """
         try:
             while True:
-                if self.task_manager.finished():
+                if self.task_manager and self.task_manager.finished():
                     if self.pod_manager:
                         self.pod_manager.update_status(
-                            InstanceManagerStatus.FINISHED
+                            PodManagerStatus.FINISHED
                         )
                     break
-                if self.pod_manager.all_workers_exited:
-                    raise Exception(
-                        "All workers exited but there also are",
-                        "unfinished tasks",
-                    )
+                if self.pod_manager and self.pod_manager.all_workers_exited:
+                    if self.task_manager:
+                        raise Exception(
+                            "All workers exited but there also are",
+                            "unfinished tasks",
+                        )
                 time.sleep(30)
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
@@ -85,8 +138,10 @@ class Master(object):
         logger.info("Master stopped")
 
     def create_pod_manager_if_needed(self, args):
-        # TODO: set None if args.need_pod_manager is False.
-        self.pod_manager = PodManager(args)
+        if args.need_pod_manager:
+            self.pod_manager = create_pod_manager(args)
+        else:
+            self.pod_manager = None
 
     def create_task_manager_if_needed(self, args):
         if args.need_task_manager:
@@ -106,11 +161,10 @@ class Master(object):
             # TODO: Remove rendezvous server after rafactoring the pod
             # manager.
             self.elasticdl_job_service = ElasticdlJobService(
-                args, self.task_manager, self.rendezvous_server
+                args=args,
+                task_manager=self.task_manager,
+                rendezvous_server=self.rendezvous_server,
             )
-            # TODO: Move the initialization of pod manager away from
-            # elasticdl_job_service
-            self.pod_manager = self.elasticdl_job_service.instance_manager
         else:
             self.elasticdl_job_service = None
 
@@ -128,3 +182,23 @@ class Master(object):
             self.rendezvous_server,
             evaluation_service,
         )
+
+    def validate(self):
+        """
+        Check if the master has a valid configuration.
+        If not, raise exception.
+        """
+        need_pod_manager = (
+            (self.task_manager and self.task_manager.support_fault_tolerance)
+            or self.rendezvous_server
+            or self.elasticdl_job_service
+        )
+        if need_pod_manager and not self.pod_manager:
+            raise Exception("Pod manager is required.")
+        if self.elasticdl_job_service and not (
+            self.task_manager and self.task_manager.support_fault_tolerance
+        ):
+            raise Exception(
+                "Task manager with fault tolerance is required for ",
+                "elasticdl job service.",
+            )

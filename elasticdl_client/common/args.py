@@ -165,10 +165,22 @@ def add_train_params(parser):
     )
     add_bool_param(
         parser=parser,
+        name="--need_pod_manager",
+        default=True,
+        help="If true, master creates a pod manager to maintain the "
+        "cluster for the job. Otherwise, no pod manager is created",
+    )
+    add_bool_param(
+        parser=parser,
         name="--task_fault_tolerance",
         default=True,
         help="If true, task manager supports fault tolerance, otherwise "
         "no fault tolerance.",
+    )
+    parser.add_argument(
+        "--job_command",
+        help="The command executed in the pod launched by the master",
+        default="",
     )
 
 
@@ -258,7 +270,7 @@ def add_common_params(parser):
         "--worker_pod_priority",
         default="",
         help="The requested priority of worker pod, we support following"
-        "configs: high/low/high=0.5. The high=0.5 means that half"
+        "configs: high/low/0.5. The 0.5 means that half"
         "worker pods have high priority, and half worker pods have"
         "low priority. The default value is low",
     )
@@ -396,7 +408,7 @@ def add_common_args_between_master_and_worker(parser):
         "or a specific model file. If set `image_base`, the path should"
         "be accessed by ElasticDL client. If set `image_name`, it is"
         "the path inside this pre-built image.",
-        required=True,
+        default="",
     )
     parser.add_argument(
         "--log_level",
@@ -446,7 +458,7 @@ def add_common_args_between_master_and_worker(parser):
     parser.add_argument(
         "--model_def",
         type=str,
-        required=True,
+        default="",
         help="The import path to the model definition function/class in the "
         'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
     )

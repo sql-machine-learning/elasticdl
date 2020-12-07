@@ -62,25 +62,19 @@ class ODPSDataReader(AbstractDataReader):
 
     def create_shards(self):
         check_required_kwargs(["table", "records_per_task"], self._kwargs)
-        reader = self.get_odps_reader(self._kwargs["table"])
-        shard_name_prefix = self._kwargs["table"] + ":shard_"
+        table_name = self._kwargs["table"]
+        reader = self.get_odps_reader(table_name)
         table_size = reader.get_table_size()
         records_per_task = self._kwargs["records_per_task"]
-        shards = {}
+        shards = []
         num_shards = table_size // records_per_task
         start_ind = 0
         for shard_id in range(num_shards):
-            shards[shard_name_prefix + str(shard_id)] = (
-                start_ind,
-                records_per_task,
-            )
+            shards.append((table_name, start_ind, records_per_task,))
             start_ind += records_per_task
         num_records_left = table_size % records_per_task
         if num_records_left != 0:
-            shards[shard_name_prefix + str(num_shards)] = (
-                start_ind,
-                num_records_left,
-            )
+            shards.append((table_name, start_ind, num_records_left,))
         return shards
 
     @property

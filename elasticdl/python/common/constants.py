@@ -19,7 +19,7 @@ class GRPC(object):
     MAX_RECEIVE_MESSAGE_LENGTH = 256 * 1024 * 1024
 
 
-class InstanceManagerStatus(object):
+class PodManagerStatus(object):
     PENDING = "Pending"
     RUNNING = "Running"
     FINISHED = "Finished"
@@ -74,6 +74,8 @@ class PodStatus(object):
     RUNNING = "Running"
     FINISHED = "Finished"
     PENDING = "Pending"
+    INITIAL = "Initial"
+    DELETED = "Deleted"
 
 
 class ReaderType(object):

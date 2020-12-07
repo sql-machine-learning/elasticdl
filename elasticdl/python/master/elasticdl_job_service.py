@@ -13,33 +13,48 @@
 
 import os
 
-from kubernetes.client import V1EnvVar
-
 from elasticdl.python.common.args import wrap_go_args_with_string
-from elasticdl.python.common.constants import (
-    InstanceManagerStatus,
-    JobType,
-    WorkerEnv,
-)
+from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
-    get_dict_from_params_str,
     get_module_file_path,
     get_optimizer_info,
     load_module,
 )
 from elasticdl.python.master.evaluation_service import EvaluationService
-from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
-    parse_envs,
     wrap_python_args_with_string,
 )
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
-    ClusterSpecConfig,
     DistributionStrategy,
 )
+
+
+def get_job_type(args):
+    if all((args.training_data, args.validation_data, args.evaluation_steps,)):
+        job_type = JobType.TRAINING_WITH_EVALUATION
+    elif all(
+        (
+            args.validation_data,
+            not args.training_data,
+            not args.prediction_data,
+        )
+    ):
+        job_type = JobType.EVALUATION_ONLY
+    elif all(
+        (
+            args.prediction_data,
+            not args.validation_data,
+            not args.training_data,
+        )
+    ):
+        job_type = JobType.PREDICTION_ONLY
+    else:
+        job_type = JobType.TRAINING_ONLY
+
+    return job_type
 
 
 class ElasticdlJobService(object):
@@ -52,7 +67,7 @@ class ElasticdlJobService(object):
         # Master addr
         master_ip = os.getenv("MY_POD_IP", "localhost")
         self.master_addr = "%s:%d" % (master_ip, args.port)
-        self.job_type = ElasticdlJobService._get_job_type(args)
+        self.job_type = get_job_type(args)
 
         # Initialize the components from the model definition
         model_module = load_module(
@@ -78,52 +93,9 @@ class ElasticdlJobService(object):
             )
         )
 
-        # Initialize instance manager
-        self.instance_manager = self._create_instance_manager(args)
-
-        self.task_manager.set_task_timeout_callback(
-            self.instance_manager._remove_worker
-        )
-
     def start(self):
-        """
-        Start the components one by one. Make sure that it is ready to run.
-        """
+        self.logger.info("ElasticDL job service starts")
         # Start the worker manager if requested
-        if self.instance_manager:
-            self.instance_manager.update_status(InstanceManagerStatus.PENDING)
-            if self.num_ps_pods > 0:
-                self.logger.info("num ps pods : {}".format(self.num_ps_pods))
-                self.instance_manager.start_parameter_servers()
-            self.instance_manager.start_workers()
-            self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
-
-    @staticmethod
-    def _get_job_type(args):
-        if all(
-            (args.training_data, args.validation_data, args.evaluation_steps,)
-        ):
-            job_type = JobType.TRAINING_WITH_EVALUATION
-        elif all(
-            (
-                args.validation_data,
-                not args.training_data,
-                not args.prediction_data,
-            )
-        ):
-            job_type = JobType.EVALUATION_ONLY
-        elif all(
-            (
-                args.prediction_data,
-                not args.validation_data,
-                not args.training_data,
-            )
-        ):
-            job_type = JobType.PREDICTION_ONLY
-        else:
-            job_type = JobType.TRAINING_ONLY
-
-        return job_type
 
     def _create_evaluation_service(self, eval_func, evaluation_steps):
         evaluation_service = None
@@ -145,58 +117,11 @@ class ElasticdlJobService(object):
 
         return evaluation_service
 
-    def _create_instance_manager(self, args):
-        instance_manager = None
+    @staticmethod
+    def get_ps_worker_command():
+        return ["/bin/bash"]
 
-        container_command = ["/bin/bash"]
-        if args.num_workers:
-            assert args.worker_image, "Worker image cannot be empty"
-            worker_args = self._create_worker_args(args)
-            ps_args = self._create_ps_args(args)
-
-            env_dict = parse_envs(args.envs)
-            env = []
-            for key in env_dict:
-                env.append(V1EnvVar(name=key, value=env_dict[key]))
-            env.append(
-                V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=self.master_addr)
-            )
-
-            kwargs = get_dict_from_params_str(args.aux_params)
-            disable_relaunch = kwargs.get("disable_relaunch", False)
-            cluster_spec = self._get_image_cluster_spec(args.cluster_spec)
-
-            instance_manager = InstanceManager(
-                self.task_manager,
-                rendezvous_server=self.rendezvous_server,
-                job_name=args.job_name,
-                image_name=args.worker_image,
-                worker_command=container_command,
-                worker_args=worker_args,
-                namespace=args.namespace,
-                num_workers=args.num_workers,
-                worker_resource_request=args.worker_resource_request,
-                worker_resource_limit=args.worker_resource_limit,
-                worker_pod_priority=args.worker_pod_priority,
-                num_ps=args.num_ps_pods,
-                ps_command=container_command,
-                ps_args=ps_args,
-                ps_resource_request=args.ps_resource_request,
-                ps_resource_limit=args.ps_resource_limit,
-                ps_pod_priority=args.ps_pod_priority,
-                volume=args.volume,
-                image_pull_policy=args.image_pull_policy,
-                restart_policy=args.restart_policy,
-                cluster_spec=cluster_spec,
-                cluster_spec_json=args.cluster_spec_json,
-                envs=env,
-                disable_relaunch=disable_relaunch,
-                log_file_path=args.log_file_path,
-            )
-
-        return instance_manager
-
-    def _create_worker_args(self, args):
+    def get_worker_args(self, args):
         worker_client_command = (
             BashCommandTemplate.SET_PIPEFAIL
             + " python -m elasticdl.python.worker.main"
@@ -213,7 +138,7 @@ class ElasticdlJobService(object):
         worker_args = ["-c", " ".join(worker_args)]
         return worker_args
 
-    def _create_ps_args(self, args):
+    def get_ps_args(self, args):
         if args.distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
             opt_type, opt_args = get_optimizer_info(self._optimizer)
             ps_command = "elasticdl_ps"
@@ -247,12 +172,3 @@ class ElasticdlJobService(object):
             return ps_args
         else:
             return []
-
-    def _get_image_cluster_spec(self, cluster_spec):
-        if cluster_spec:
-            filename = os.path.basename(cluster_spec)
-            image_cluster_spec = os.path.join(
-                ClusterSpecConfig.CLUSTER_SPEC_DIR, filename
-            )
-            return image_cluster_spec
-        return cluster_spec
