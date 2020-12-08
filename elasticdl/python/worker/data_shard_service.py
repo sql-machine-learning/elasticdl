@@ -97,6 +97,6 @@ class DataShardService(object):
         start and end index.
         """
         task = self.get_task()
-        if task.type == elasticdl_pb2.COMPLETED:
+        if task.type != elasticdl_pb2.TRAINING:
             return None
         return task.shard
