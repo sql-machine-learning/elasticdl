@@ -159,6 +159,14 @@ def _check_master_args_validity(args):
         logger.warning(
             "grads_to_wait is set to 1 while using asynchronous SGD."
         )
+    if (
+        args.num_ps_pods == 0
+        and args.distribution_strategy != DistributionStrategy.ALLREDUCE
+    ):
+        logger.warning(
+            "Set the distribution strategy to be AllReduce if ps number is 0."
+        )
+        args.distribution_strategy = DistributionStrategy.ALLREDUCE
 
 
 def parse_master_args(master_args=None):
