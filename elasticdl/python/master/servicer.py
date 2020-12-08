@@ -111,7 +111,13 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # we are trying to pop and invoke the callback.
             # Then the master tells the worker to wait
             # in case of new tasks later.
-            res.type = elasticdl_pb2.WAIT
+            if self._rendezvous_server:
+                # If there is no more task, master only send wait task to
+                # the last worker and other workers exit.
+                if len(self._instance_manager.get_alive_workers()) == 1:
+                    res.type = elasticdl_pb2.WAIT
+            else:
+                res.type = elasticdl_pb2.WAIT
         with self._lock:
             self._task_manager.reset_worker_start_task_time(request.worker_id)
         return res
