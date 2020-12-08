@@ -85,6 +85,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         shard = elasticdl_pb2.Shard()
         res = elasticdl_pb2.Task(shard=shard)
         res.model_version = self._version
+        res.type = -1
         if request.task_type == elasticdl_pb2.EVALUATION:
             task_id, task = self._task_manager.get_eval_task(request.worker_id)
         else:
@@ -110,9 +111,13 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # we are trying to pop and invoke the callback.
             # Then the master tells the worker to wait
             # in case of new tasks later.
-            res.type = elasticdl_pb2.WAIT
-        else:
-            res.type = elasticdl_pb2.COMPLETED
+            if self._rendezvous_server:
+                # If there is no more task, master only send wait task to
+                # the last worker and other workers exit.
+                if len(self._instance_manager.get_alive_workers()) == 1:
+                    res.type = elasticdl_pb2.WAIT
+            else:
+                res.type = elasticdl_pb2.WAIT
         with self._lock:
             self._task_manager.reset_worker_start_task_time(request.worker_id)
         return res
