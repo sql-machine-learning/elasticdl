@@ -281,7 +281,6 @@ class Worker(object):
         train_end_task = self._task_data_service.get_train_end_callback_task()
         if train_end_task:
             self._callbacks_list.on_train_end()
-            self._task_data_service.clear_train_end_callback_task()
             self._mc.report_task_result(
                 task_id=train_end_task.task_id, err_msg=""
             )
