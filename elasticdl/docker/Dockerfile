@@ -90,4 +90,4 @@ RUN HOROVOD_WITHOUT_MPI=1 \
         HOROVOD_WITHOUT_MXNET=1 \
         HOROVOD_WITH_TENSORFLOW=1 \
         HOROVOD_WITH_PYTORCH=1  \
-        pip install horovod==0.20.0
+        pip install horovod==0.21.0
