@@ -13,7 +13,6 @@ enum TaskType {
   PREDICTION = 2;
   WAIT = 3;
   TRAIN_END_CALLBACK = 4;
-  COMPLETED = 5;
 }
 
 message Shard {

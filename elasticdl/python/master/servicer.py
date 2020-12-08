@@ -85,6 +85,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         shard = elasticdl_pb2.Shard()
         res = elasticdl_pb2.Task(shard=shard)
         res.model_version = self._version
+        res.type = -1
         if request.task_type == elasticdl_pb2.EVALUATION:
             task_id, task = self._task_manager.get_eval_task(request.worker_id)
         else:
@@ -111,8 +112,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # Then the master tells the worker to wait
             # in case of new tasks later.
             res.type = elasticdl_pb2.WAIT
-        else:
-            res.type = elasticdl_pb2.COMPLETED
         with self._lock:
             self._task_manager.reset_worker_start_task_time(request.worker_id)
         return res
