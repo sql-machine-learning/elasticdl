@@ -11,9 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import cv2
+import argparse
 import linecache
+import os
+
+import cv2
 import horovod.torch as hvd
 import numpy as np
 import torch
@@ -22,10 +24,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, IterableDataset
 
-from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.allreduce.pytorch_controller import (
-    create_elastic_controller
+    create_elastic_controller,
 )
+from elasticdl.python.common.log_utils import default_logger as logger
 
 
 def read_images(shard):
@@ -42,7 +44,7 @@ def read_images(shard):
     Each line of the CSV contains the relative path and label.
     """
     filename = shard.name.split(":")[0]
-    records = linecache.getlines(filename)[shard.start: shard.end]
+    records = linecache.getlines(filename)[shard.start : shard.end]
     file_path = os.path.dirname(filename)
 
     images = []
@@ -100,7 +102,7 @@ class Net(nn.Module):
         return output
 
 
-def train():
+def train(args):
     """ The function to run the training loop.
 
     Args:
@@ -110,13 +112,15 @@ def train():
         pass a torch.utils.data.DataLoader.
         elastic_controller: The controller for elastic training.
     """
-    allreduce_controller = create_elastic_controller(batch_size=64)
+    allreduce_controller = create_elastic_controller(
+        batch_size=args.batch_size
+    )
     dataset = ImageDataset(
         allreduce_controller.data_shard_service, shuffle=True
     )
-    data_loader = DataLoader(dataset=dataset, batch_size=64)
+    data_loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
     model = Net()
-    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
     optimizer = hvd.DistributedOptimizer(optimizer)
 
     # Set the model and optimizer to broadcast.
@@ -143,5 +147,18 @@ def train_one_batch(model, optimizer, data, target):
     return loss
 
 
+def arg_parser():
+    parser = argparse.ArgumentParser(description="Process training parameters")
+    parser.add_argument(
+        "batch_size", type=int, default=64,
+    )
+    parser.add_argument(
+        "--learning_rate", type=float, default=0.1,
+    )
+    return parser
+
+
 if __name__ == "__main__":
-    train()
+    parser = arg_parser()
+    args = parser.parse_args()
+    train(args)
