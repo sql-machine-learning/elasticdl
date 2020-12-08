@@ -150,10 +150,10 @@ def train_one_batch(model, optimizer, data, target):
 def arg_parser():
     parser = argparse.ArgumentParser(description="Process training parameters")
     parser.add_argument(
-        "batch_size", type=int, default=64,
+        "--batch_size", type=int, default=64, required=False
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=0.1,
+        "--learning_rate", type=float, default=0.1, required=False
     )
     return parser
 
