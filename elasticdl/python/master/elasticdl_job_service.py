@@ -26,10 +26,7 @@ from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
     wrap_python_args_with_string,
 )
-from elasticdl_client.common.constants import (
-    BashCommandTemplate,
-    DistributionStrategy,
-)
+from elasticdl_client.common.constants import DistributionStrategy
 
 
 def get_job_type(args):
@@ -122,10 +119,7 @@ class ElasticdlJobService(object):
         return ["/bin/bash"]
 
     def get_worker_args(self, args):
-        worker_client_command = (
-            BashCommandTemplate.SET_PIPEFAIL
-            + " python -m elasticdl.python.worker.main"
-        )
+        worker_client_command = "python -m elasticdl.python.worker.main"
         worker_args = [
             "--job_type",
             self.job_type,
