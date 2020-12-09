@@ -352,7 +352,9 @@ class PodManager(object):
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
-        bash_command = self._worker_args[1]
+        bash_command = " ".join(
+            [BashCommandTemplate.SET_PIPEFAIL, self._worker_args[1]]
+        )
         if self._ps_addrs:
             bash_command += " --ps_addrs {}".format(self._ps_addrs)
         if self._log_file_path:
