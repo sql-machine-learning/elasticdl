@@ -18,7 +18,7 @@ import math
 import os
 import threading
 import time
-from collections import Counter, namedtuple
+from collections import Counter
 
 from kubernetes.client import V1EnvVar
 
@@ -32,6 +32,7 @@ from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import get_dict_from_params_str
 from elasticdl.python.master.pod_event_callbacks import ClusterContext, PodInfo
+from elasticdl.python.master.pod_state import get_pod_state_flow
 from elasticdl_client.common.args import parse_envs
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
@@ -168,82 +169,6 @@ def create_pod_manager(args):
         )
 
     return pod_manager
-
-
-PodStateFlow = namedtuple(
-    "PodStateFlow",
-    ("from_status", "to_status", "event_type", "phase", "should_relaunch"),
-)
-
-"""
-The DAG for the state machine is in the issue
-https://github.com/sql-machine-learning/elasticdl/issues/2395#issue-753964852
-"""
-POD_STATE_FLOWS = [
-    PodStateFlow(
-        from_status=PodStatus.INITIAL,
-        to_status=PodStatus.PENDING,
-        event_type="ADDED",
-        phase="Pending",
-        should_relaunch=False,
-    ),
-    PodStateFlow(
-        from_status=PodStatus.INITIAL,
-        to_status=PodStatus.RUNNING,
-        event_type="ADDED",
-        phase="Running",
-        should_relaunch=False,
-    ),
-    PodStateFlow(
-        from_status=PodStatus.PENDING,
-        to_status=PodStatus.RUNNING,
-        event_type="MODIFIED",
-        phase="Running",
-        should_relaunch=False,
-    ),
-    PodStateFlow(
-        from_status=PodStatus.RUNNING,
-        to_status=PodStatus.SUCCEEDED,
-        event_type="MODIFIED",
-        phase="Succeeded",
-        should_relaunch=False,
-    ),
-    PodStateFlow(
-        from_status=PodStatus.RUNNING,
-        to_status=PodStatus.FAILED,
-        event_type="MODIFIED",
-        phase="Failed",
-        should_relaunch=True,
-    ),
-    PodStateFlow(
-        from_status=PodStatus.PENDING,
-        to_status=PodStatus.DELETED,
-        event_type="DELETED",
-        phase=None,
-        should_relaunch=True,
-    ),
-    PodStateFlow(
-        from_status=PodStatus.RUNNING,
-        to_status=PodStatus.DELETED,
-        event_type="DELETED",
-        phase=None,
-        should_relaunch=True,
-    ),
-    PodStateFlow(
-        from_status=PodStatus.SUCCEEDED,
-        to_status=PodStatus.DELETED,
-        event_type="DELETED",
-        phase=None,
-        should_relaunch=False,
-    ),
-    PodStateFlow(
-        from_status=PodStatus.FAILED,
-        to_status=PodStatus.DELETED,
-        event_type="DELETED",
-        phase=None,
-        should_relaunch=False,
-    ),
-]
 
 
 class PodManager(object):
@@ -511,7 +436,7 @@ class PodManager(object):
             pod_state = PodStatus.INITIAL
             if pod_name in self._pod_info_cache[pod_type]:
                 pod_state = self._pod_info_cache[pod_type][pod_name].status
-            matched_pod_state_flow = PodManager.get_pod_state_flow(
+            matched_pod_state_flow = get_pod_state_flow(
                 pod_state, evt_type, phase
             )
             # If there is no matched state change, return directly
@@ -570,21 +495,6 @@ class PodManager(object):
                     new_worker_id
                 ] = self._worker_pod_priority[pod_id]
             self._start_worker(new_worker_id)
-
-    @staticmethod
-    def get_pod_state_flow(from_status, event_type, phase):
-        for pod_state_flow in POD_STATE_FLOWS:
-            if (
-                from_status == pod_state_flow.from_status
-                and event_type == pod_state_flow.event_type
-                and (
-                    pod_state_flow.phase is None
-                    or phase == pod_state_flow.phase
-                )
-            ):
-                return pod_state_flow
-
-        return None
 
     @property
     def all_workers_exited(self):
