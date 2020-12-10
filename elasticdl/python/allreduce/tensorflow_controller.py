@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import time
+import tensorflow as tf
 
 from tensorflow.python.framework.errors_impl import UnknownError
 
@@ -74,3 +75,44 @@ class TensorFlowV2AllReduceController(AllReduceController):
                     self._rendezvous_manager.init_horovod_if_needed()
         self.data_shard_service.report_batch_done()
         return result
+
+
+class TensorFlowV1AllReduceController(AllReduceController):
+    """The controller is responsible for elastic training of
+    TensorFlow eager execution using AllReduce.
+    """
+
+    def __init__(self, master_client, master_addr):
+        super(TensorFlowV1AllReduceController, self).__init__(
+            master_client, master_addr
+        )
+        self._bcast_op = None
+
+    def broadcast(self):
+        if self._bcast_op is None:
+            self._variables = tf.global_variables()
+            self._bcast_op = broadcast_variables(self._variables, root_rank=0)
+        session = tf.get_default_session()
+        session.run(self._bcast_op)
+
+    def train_one_batch_with_retries(self, func, *args, **kwargs):
+        for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
+            try:
+                self._broadcast_if_needed()
+                result = func(*args, **kwargs)
+                return result
+            except UnknownError as e:
+                logger.warning(
+                    "Failed to perform allreduce operation on "
+                    "the gradients. Retrying..."
+                )
+                # Those error message show that the communication
+                # to merge gradient fails and we can rebuild the
+                # communication.
+                if (
+                    "HorovodAllreduce" in e.message
+                    or "HorovodAllgather" in e.message
+                    or "HorovodBroadcast" in e.message
+                ):
+                    time.sleep(3)
+                    self._rendezvous_manager.init_horovod_if_needed()
