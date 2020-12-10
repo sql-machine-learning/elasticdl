@@ -84,6 +84,9 @@ def parse(resource_str):
                     % k
                 )
             _valid_gpu_spec(v)
+        elif k.startswith("nvidia.com"):
+            # The configuration of GPU may be "nvidia.com/P100-PCIE-16GB-P=1"
+            _valid_gpu_spec(v)
         else:
             raise ValueError(
                 "%s is not in the allowed list of resource types: %s"
