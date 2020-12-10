@@ -85,6 +85,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         shard = elasticdl_pb2.Shard()
         res = elasticdl_pb2.Task(shard=shard)
         res.model_version = self._version
+        res.type = -1
         if request.task_type == elasticdl_pb2.EVALUATION:
             task_id, task = self._task_manager.get_eval_task(request.worker_id)
         else:
