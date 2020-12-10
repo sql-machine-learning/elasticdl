@@ -58,16 +58,13 @@ class SavedModelExporterTest(unittest.TestCase):
         dataset = tf.data.Dataset.from_tensor_slices(
             np.array([[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]])
         )
-        task = (
+        task_data_service.train_end_callback_task = (
             "",
             0,
             1,
             elasticdl_pb2.TRAIN_END_CALLBACK,
         )
         task_data_service.get_dataset_by_task = mock.Mock(return_value=dataset)
-        task_data_service.get_train_end_callback_task = mock.Mock(
-            return_value=task
-        )
 
         with tempfile.TemporaryDirectory() as temp_dir_name:
             checkpoint_dir = os.path.join(temp_dir_name, "checkpoint")
