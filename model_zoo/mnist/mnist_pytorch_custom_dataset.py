@@ -27,7 +27,7 @@ from elasticdl.python.allreduce.pytorch_controller import (
     create_elastic_controller,
 )
 from elasticdl.python.allreduce.torch_optimizer import (
-    ElasticDistributedOptimizer
+    ElasticDistributedOptimizer,
 )
 from elasticdl.python.common.log_utils import default_logger as logger
 
@@ -148,9 +148,7 @@ def train_one_batch(model, optimizer, data, target):
 
 def arg_parser():
     parser = argparse.ArgumentParser(description="Process training parameters")
-    parser.add_argument(
-        "--batch_size", type=int, default=64, required=False
-    )
+    parser.add_argument("--batch_size", type=int, default=64, required=False)
     parser.add_argument(
         "--learning_rate", type=float, default=0.1, required=False
     )
