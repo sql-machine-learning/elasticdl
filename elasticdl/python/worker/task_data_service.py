@@ -114,12 +114,8 @@ class TaskDataService(object):
         """
         while True:
             task = self._data_shard_service.get_task()
-            if not task.shard.name:
+            if task.type != elasticdl_pb2.TRAINING:
                 break
-            with self._lock:
-                if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
-                    self._pending_train_end_callback_task = task
-                    break
 
             for data in self.data_reader.read_records(task):
                 if data:
@@ -128,7 +124,7 @@ class TaskDataService(object):
     def get_eval_dataset(self):
         def _gen():
             task = self._data_shard_service.get_task(elasticdl_pb2.EVALUATION)
-            if not task.shard.name:
+            if task.type != elasticdl_pb2.EVALUATION:
                 return
             logger.info("the evaluation task_id: %d" % task.task_id)
             self.current_eval_task = task
