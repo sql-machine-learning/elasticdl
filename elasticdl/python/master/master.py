@@ -30,13 +30,9 @@ from elasticdl_client.common.constants import DistributionStrategy
 
 class Master(object):
     def __init__(self, args):
+        self.create_pod_manager_if_needed(args)
         self.create_task_manager_if_needed(args)
         self.create_rendezvous_server_if_needed(args)
-        # TODO: At the present, the creation of PodManager requires TaskManager
-        # and RendezvousServer, so we move the create method after these
-        # two. After the next decouple step, there is no dependency between
-        # these create method calls.
-        self.create_pod_manager_if_needed(args)
         self.create_elasticdl_job_service_if_needed(args)
         self.create_master_grpc_service(args)
         self._args = args
