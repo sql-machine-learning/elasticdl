@@ -33,26 +33,25 @@ class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
     the horovod size dynamically.
     """
 
-    def __init__(self, backward_passes_per_step, hvd_max_size=None):
+    def __init__(self, optimizer, hvd_max_size=None):
         """
         Args:
-            backward_passes_per_step: A tf.Variable which stands for
-                `backward_passes_per_step` of this process.
-            global_batch_count_per_step: The total batch counts per step
-                of all the workers for this training job.
+            optimizer: A DistributedOptimizer from ElasticDL.
+            hvd_max_size: The maximum horovod size for the elastic training.
         """
         self._value_placeholder = tf.placeholder(
-            backward_passes_per_step.dtype, []
+            optimizer.mutable_local_backward_passes_per_step.dtype, []
         )
         self._update_op = tf.assign(
-            backward_passes_per_step, self._value_placeholder
+            optimizer.mutable_local_backward_passes_per_step,
+            self._value_placeholder,
         )
 
         hvd_max_size = complement_value_from_env_if_none(
             hvd_max_size, "WORKER_NUM", int, 1
         )
         self._global_batch_count_per_step = (
-            hvd_max_size * backward_passes_per_step
+            hvd_max_size * optimizer.backward_passes_per_step
         )
 
     def before_run(self, run_context):
@@ -510,6 +509,14 @@ class _DistributedOptimizer(_LegacyOptimizer):
         """Calls this same method on the underlying optimizer."""
         return self._optimizer.variables(*args, **kwargs)
 
+    @property
+    def backward_passes_per_step(self):
+        return self._agg_helper.backward_passes_per_step
+
+    @property
+    def mutable_local_backward_passes_per_step(self):
+        return self._agg_helper.mutable_local_backward_passes_per_step
+
 
 def DistributedOptimizer(
     optimizer,
@@ -526,7 +533,6 @@ def DistributedOptimizer(
     num_groups=0,
     fixed_global_batch_size=False,
     hvd_max_size=None,
-    global_batch_count_per_step=None,
 ):
     """Construct a new DistributedOptimizer, which uses another optimizer
     under the hood for computing single-process gradient values and
@@ -577,11 +583,11 @@ def DistributedOptimizer(
       num_groups:
         Number of groups to assign gradient allreduce ops to for explicit
         grouping. Defaults to no explicit groups.
-    fixed_global_batch_size:
+      fixed_global_batch_size:
         Whether to keep the global batch size is fixed even though the worker
         number is changing during elastic execution.
-    global_batch_count_per_step:
-        Total batch number per step of all the workers.
+      hvd_max_size:
+        The maximum horovod size for the elastic training.
     """
 
     # *ElasticDL Update*: If `fixed_global_batch_size` == False,
