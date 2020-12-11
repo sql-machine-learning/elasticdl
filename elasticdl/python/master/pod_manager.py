@@ -277,19 +277,7 @@ class PodManager(object):
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
-        # self._worker_args has 2 strings. The first string is "-c" and
-        # the second string is the shell command to run, like
-        # ["-c", "python -m elasticdl.python.worker.main --minibatch_size 64"]
-        job_command = self._worker_args[1]
-        if self._ps_addrs:
-            job_command += " --ps_addrs {}".format(self._ps_addrs)
-        if self._log_file_path:
-            job_command += BashCommandTemplate.REDIRECTION.format(
-                self._log_file_path
-            )
-        for extra_arg in self._worker_args[2:]:
-            job_command += " {}".format(extra_arg)
-        job_command = BashCommandTemplate.SET_PIPEFAIL + job_command
+        job_command = self._complement_job_command()
         worker_args = [self._worker_args[0], job_command]
         envs = copy.deepcopy(self._envs)
         envs.append(V1EnvVar(name=WorkerEnv.WORKER_ID, value=str(worker_id)))
@@ -313,6 +301,21 @@ class PodManager(object):
                 return False
 
             return True
+
+    def _complement_job_command(self):
+        # self._worker_args has 2 strings. The first string is "-c" and
+        # the second string is the shell command to run, like
+        # ["-c", "python -m elasticdl.python.worker.main --minibatch_size 64"]
+        job_command = self._worker_args[1]
+        if self._ps_addrs:
+            job_command += " --ps_addrs {}".format(self._ps_addrs)
+        if self._log_file_path:
+            job_command += BashCommandTemplate.REDIRECTION.format(
+                self._log_file_path
+            )
+        job_command += " ".join(self._worker_args[2:])
+        job_command = BashCommandTemplate.SET_PIPEFAIL + job_command
+        return job_command
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
