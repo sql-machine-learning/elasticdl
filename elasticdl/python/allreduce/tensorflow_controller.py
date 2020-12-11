@@ -12,8 +12,8 @@
 # limitations under the License.
 
 import time
-import tensorflow as tf
 
+import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.allreduce.base_controller import (

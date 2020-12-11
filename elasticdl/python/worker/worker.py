@@ -490,6 +490,7 @@ class Worker(object):
             from elasticdl.python.allreduce.tensorflow_controller import (
                 TensorFlowV1AllReduceController,
             )
+
             elastic_controller = TensorFlowV1AllReduceController(
                 self._mc, self._master_addr
             )
