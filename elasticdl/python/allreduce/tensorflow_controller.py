@@ -79,7 +79,7 @@ class TensorFlowV2AllReduceController(AllReduceController):
 
 class TensorFlowV1AllReduceController(AllReduceController):
     """The controller is responsible for elastic training of
-    TensorFlow eager execution using AllReduce.
+    TensorFlow graph execution using AllReduce.
     """
 
     def __init__(self, master_client, master_addr):
