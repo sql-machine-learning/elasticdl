@@ -589,7 +589,7 @@ def wrap_python_args_with_string(args):
     """
     result = []
     for value in args:
-        if "--" not in value:
+        if not value.startswith("--"):
             result.append("'{}'".format(value))
         else:
             result.append(value)

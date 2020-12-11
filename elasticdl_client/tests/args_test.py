@@ -57,6 +57,8 @@ class ArgsTest(unittest.TestCase):
             "test_args",
             "--checkpoint_dir",
             "",
+            "--job_command",
+            "python test.py --batch_size=10 --epochs=2",
         ]
         args = wrap_python_args_with_string(args)
         expected_args = [
@@ -66,5 +68,7 @@ class ArgsTest(unittest.TestCase):
             "'test_args'",
             "--checkpoint_dir",
             "''",
+            "--job_command",
+            "'python test.py --batch_size=10 --epochs=2'",
         ]
         self.assertListEqual(args, expected_args)
