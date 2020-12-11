@@ -156,13 +156,19 @@ class TaskManagerTest(unittest.TestCase):
         average_task_completed_time = (
             task_manager._get_average_task_completed_time()
         )
-        self.assertEqual(average_task_completed_time, {0: 300, 1: 300})
-        task_manager._task_completed_times[0] = [10] * 21
-        task_manager._task_completed_times[1] = [5] * 21
+        self.assertEqual(
+            average_task_completed_time,
+            {elasticdl_pb2.TRAINING: 300, elasticdl_pb2.EVALUATION: 300},
+        )
+        task_manager._task_completed_times[elasticdl_pb2.TRAINING] = [10] * 21
+        task_manager._task_completed_times[elasticdl_pb2.EVALUATION] = [5] * 21
         average_task_completed_time = (
             task_manager._get_average_task_completed_time()
         )
-        self.assertEqual(average_task_completed_time, {0: 10, 1: 5})
+        self.assertEqual(
+            average_task_completed_time,
+            {elasticdl_pb2.TRAINING: 10, elasticdl_pb2.EVALUATION: 5},
+        )
 
 
 if __name__ == "__main__":

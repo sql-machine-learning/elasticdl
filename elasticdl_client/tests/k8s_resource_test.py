@@ -107,6 +107,18 @@ class K8SResourceTest(unittest.TestCase):
             },
             parse("cpu=0.1,memory=32Mi,disk=64Mi,amd.com/gpu=1"),
         )
+        # WHEN gpu resource name has GPU type.
+        self.assertEqual(
+            {
+                "cpu": "250m",
+                "memory": "32Mi",
+                "disk": "64Mi",
+                "nvidia.com/P100-PCIE-16GB-P": "1",
+            },
+            parse(
+                "cpu=250m,memory=32Mi,disk=64Mi,nvidia.com/P100-PCIE-16GB-P=1"
+            ),
+        )
         # When gpu resource name does not have a valid vendor name,
         # raise an error
         self.assertRaisesRegex(

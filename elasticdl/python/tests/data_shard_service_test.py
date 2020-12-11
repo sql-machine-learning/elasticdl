@@ -14,6 +14,7 @@
 import unittest
 from unittest.mock import MagicMock, Mock
 
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.master.task_manager import _Task
 from elasticdl.python.worker.data_shard_service import DataShardService
 
@@ -22,7 +23,7 @@ class DataShardServiceTest(unittest.TestCase):
     def setUp(self):
         self._master_client = Mock()
         self._master_client.get_task = MagicMock(
-            return_value=_Task("test_file", 0, 1, 0)
+            return_value=_Task("test_file", 0, 1, elasticdl_pb2.TRAINING)
         )
         self._master_client.report_task_result = MagicMock(return_value=True)
 
