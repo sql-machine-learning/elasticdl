@@ -18,16 +18,13 @@ import tensorflow as tf
 from horovod.tensorflow import _LegacyOptimizer
 
 
-def complement_value_from_env_if_none(original_value, key, clz):
+def complement_value_from_env_if_none(
+    original_value, key, clz, default_value=None
+):
     if original_value is not None:
         return original_value
 
-    if key in os.environ:
-        return clz(os.environ.get(key))
-
-    raise ValueError(
-        "Cannot complement the value with key {} from environment".format(key)
-    )
+    return clz(os.environ.get(key, default_value))
 
 
 class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
@@ -36,9 +33,7 @@ class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
     the horovod size dynamically.
     """
 
-    def __init__(
-        self, backward_passes_per_step, global_batch_count_per_step=None
-    ):
+    def __init__(self, backward_passes_per_step, hvd_max_size=None):
         """
         Args:
             backward_passes_per_step: A tf.Variable which stands for
@@ -53,8 +48,11 @@ class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
             backward_passes_per_step, self._value_placeholder
         )
 
-        self._global_batch_count_per_step = complement_value_from_env_if_none(
-            global_batch_count_per_step, "global_batch_count_per_step", int
+        hvd_max_size = complement_value_from_env_if_none(
+            hvd_max_size, "WORKER_NUM", int, 1
+        )
+        self._global_batch_count_per_step = (
+            hvd_max_size * backward_passes_per_step
         )
 
     def before_run(self, run_context):
@@ -110,9 +108,11 @@ class LocalGradientAggregationHelper:
     ):
         self._allreduce_grads = allreduce_func
 
-        # backward_passes_per_step controls how often gradient updates are
-        # synchronized.
-        self.backward_passes_per_step = tf.Variable(
+        # backward_passes_per_step is the value set in the model definition,
+        self.backward_passes_per_step = backward_passes_per_step
+        # mutable_local_backward_passes_per_step controls how often gradient
+        # updates are synchronized for this process.
+        self.mutable_local_backward_passes_per_step = tf.Variable(
             initial_value=backward_passes_per_step,
             trainable=False,
             dtype=tf.int32,
@@ -127,8 +127,9 @@ class LocalGradientAggregationHelper:
         self.locally_aggregated_grads = []
 
         # Used to know when to allreduce and apply gradients. We allreduce
-        # when `self.counter` is equal to `self.backward_passes_per_step`. We
-        # apply gradients when `self.counter` is equal to 0.
+        # when `self.counter` is equal to
+        # `self.mutable_local_backward_passes_per_step`. We apply gradients
+        # when `self.counter` is equal to 0.
         self.counter = None
 
         self.sparse_as_dense = sparse_as_dense
@@ -262,31 +263,18 @@ class LocalGradientAggregationHelper:
                 )
 
             with tf.control_dependencies([reset_op]):
-                # *Elastic Update*: If ReduceOP is average,
+                # *ElasticDL Update*: If ReduceOP is average,
                 # multiply horovod_size / global_batch_count_per_step.
                 averaged_gradients = self.update_gradients_for_elastic_workers(
                     averaged_gradients
                 )
 
-                # Divide by backward_passes_per_step if
-                # average_aggregated_gradients is True.
-                with tf.control_dependencies(
-                    [g.op for g in averaged_gradients if g is not None]
-                ):
-                    gradient_divisor = (
-                        self.backward_passes_per_step
-                        if self.average_aggregated_gradients
-                        else 1
-                    )
-
-                    averaged_gradients = apply_op_to_not_none_tensors(
-                        tf.divide, averaged_gradients, gradient_divisor,
-                    )
-                    return averaged_gradients
+                return averaged_gradients
 
     # *ElasticDL Update*: Update the gradient using
     # global_batch_count_per_step if the ReduceOP is average.
     def update_gradients_for_elastic_workers(self, grads):
+        gradient_multiplier = 1
         if self.op == hvd.Average:
             valid_grads = get_not_none_from_list(grads)
             horovod_size = tf.cast(
@@ -296,13 +284,24 @@ class LocalGradientAggregationHelper:
                 dtype=valid_grads[0].dtype,
             )
             gradient_multiplier = (
-                horovod_size / self.global_batch_count_per_step
+                (horovod_size / self.global_batch_count_per_step)
+                if self.average_aggregated_gradients
+                else (
+                    horovod_size
+                    * self.backward_passes_per_step
+                    / self.global_batch_count_per_step
+                )
             )
-            return apply_op_to_not_none_tensors(
-                tf.multiply, grads, gradient_multiplier
+        elif self.op == hvd.Sum:
+            gradient_multiplier = (
+                1.0 / self.backward_passes_per_step
+                if self.average_aggregated_gradients
+                else 1
             )
 
-        return grads
+        return apply_op_to_not_none_tensors(
+            tf.multiply, grads, gradient_multiplier
+        )
 
     def compute_gradients(self, grads):
         """
@@ -336,7 +335,9 @@ class LocalGradientAggregationHelper:
             # equivalent to `backward_passes_per_step`. This the condition is
             # true, it also resets the counter back to 0.
             allreduced_grads = tf.cond(
-                tf.equal(self.counter, self.backward_passes_per_step),
+                tf.equal(
+                    self.counter, self.mutable_local_backward_passes_per_step
+                ),
                 lambda: self._allreduce_grads_helper(grads),
                 lambda: grads,
             )
@@ -524,6 +525,7 @@ def DistributedOptimizer(
     average_aggregated_gradients=False,
     num_groups=0,
     fixed_global_batch_size=False,
+    hvd_max_size=None,
     global_batch_count_per_step=None,
 ):
     """Construct a new DistributedOptimizer, which uses another optimizer
@@ -617,21 +619,15 @@ def DistributedOptimizer(
 
     if isinstance(optimizer, _LegacyOptimizer):
         if op == hvd.Adasum:
-            return hvd._DistributedAdasumOptimizer(
-                optimizer,
-                name,
-                use_locking,
-                device_dense,
-                device_sparse,
-                compression,
-                backward_passes_per_step,
+            raise ValueError(
+                """op == Adasum and fixed_global_batch_size == True is
+                not yet supported"""
             )
 
-        # If global_batch_count_per_step is None from the parameter,
-        # try to get the value from environment variable.
-        global_batch_count_per_step = complement_value_from_env_if_none(
-            global_batch_count_per_step, "global_batch_count_per_step", int
+        hvd_max_size = complement_value_from_env_if_none(
+            hvd_max_size, "WORKER_NUM", int, 1
         )
+        global_batch_count_per_step = hvd_max_size * backward_passes_per_step
         return _DistributedOptimizer(
             optimizer=optimizer,
             name=name,
@@ -648,21 +644,8 @@ def DistributedOptimizer(
             global_batch_count_per_step=global_batch_count_per_step,
         )
     elif isinstance(optimizer, tf.keras.optimizers.Optimizer):
-        if op == hvd.Adasum:
-            raise ValueError("op == Adasum is not supported yet with Keras")
-
-        import horovod.tensorflow.keras as hvd_k
-
-        return hvd_k.DistributedOptimizer(
-            optimizer=optimizer,
-            name=name,
-            device_dense=device_dense,
-            device_sparse=device_sparse,
-            compression=compression,
-            sparse_as_dense=sparse_as_dense,
-            gradient_predivide_factor=gradient_predivide_factor,
-            backward_passes_per_step=backward_passes_per_step,
-            average_aggregated_gradients=average_aggregated_gradients,
+        raise ValueError(
+            "fixed_global_batch_size == True is not supported yet with Keras"
         )
     else:
         raise ValueError(
