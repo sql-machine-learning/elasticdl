@@ -4,6 +4,10 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE} as dev
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
+# Allows for log messages by `print` in Python to be immediately dumped
+# to the stream instead of being buffered.
+ENV PYTHONUNBUFFERED 0
+
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rx /etc/bash.bashrc
 
