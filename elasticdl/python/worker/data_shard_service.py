@@ -35,8 +35,7 @@ class DataShardService(object):
 
     def get_task(self, task_type=None):
         task = self._mc.get_task(task_type)
-        # TODO Use task type to determine whether there are new tasks or not
-        if task.shard.name and task.type == elasticdl_pb2.TRAINING:
+        if task.type == elasticdl_pb2.TRAINING:
             self._pending_tasks.append(task)
             if len(self._pending_tasks) == 1:
                 self._current_task = task
