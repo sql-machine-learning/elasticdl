@@ -51,7 +51,6 @@ from elasticdl.python.allreduce.pytorch_controller import (
 from elasticdl.python.allreduce.torch_optimizer import (
     ElasticDistributedOptimizer,
 )
-from elasticdl.python.common.log_utils import default_logger as logger
 
 
 def read_images(shard):
@@ -156,7 +155,7 @@ def train(args):
             train_one_batch
         )
         loss = elastic_train_one_batch(model, optimizer, data, target)
-        logger.info("loss = {}, step = {}".format(loss, batch_idx))
+        print("loss = {}, step = {}".format(loss, batch_idx))
 
 
 def train_one_batch(model, optimizer, data, target):
