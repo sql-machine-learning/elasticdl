@@ -58,7 +58,7 @@ class SavedModelExporterTest(unittest.TestCase):
         dataset = tf.data.Dataset.from_tensor_slices(
             np.array([[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]])
         )
-        task_data_service._pending_train_end_callback_task = (
+        task_data_service.train_end_callback_task = (
             "",
             0,
             1,
