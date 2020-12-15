@@ -16,7 +16,7 @@ import unittest
 import horovod.torch as hvd
 import torch.optim as optim
 
-from elasticdl.python.allreduce.torch_optimizer import DistributedOptimizer
+from elasticai_api.pytorch.optimizer import DistributedOptimizer
 from elasticdl.python.tests.test_module import TorchModel
 
 
