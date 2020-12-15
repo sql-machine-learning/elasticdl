@@ -503,7 +503,7 @@ class PodManager(object):
 
     @property
     def all_workers_exited(self):
-        # At start, there maybe not workers.
+        # At start, there may be no worker.
         if not self._pod_info_cache[PodType.WORKER]:
             return False
         with self._lock:
