@@ -98,6 +98,7 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
         self._fixed_batch_size = fixed_batch_size
         self._global_batch_num_per_step = global_batch_num_per_step
         self._iter_step = 0
+        self._update_gradients = True
 
     def load_state_dict(self, *args, **kwargs):
         self._handles = {}
