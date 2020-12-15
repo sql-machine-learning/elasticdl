@@ -43,7 +43,7 @@ class AllReduceTrainer(Trainer):
         self._need_broadcast = True
         self._var_created = False
         self._optimizer = model.optimizer
-        self._last_init_time = time.time()
+        self._last_init_time = 0
 
     @tf.function
     def _training_process(self, features, labels):

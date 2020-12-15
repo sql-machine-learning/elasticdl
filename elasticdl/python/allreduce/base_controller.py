@@ -99,7 +99,7 @@ class AllReduceController(object):
         self._rendezvous_manager = RendevousManager(master_client)
         self.data_shard_service = data_shard_service
         self._step = 0
-        self._last_init_time = time.time()
+        self._last_init_time = 0
         self._first_call = True
         self._need_broadcast = True
 
