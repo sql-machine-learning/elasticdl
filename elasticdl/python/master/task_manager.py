@@ -482,7 +482,7 @@ class TaskManager(object):
 
     def record_task_completed_time(self, task_type, completed_time):
         self._max_task_completed_times[task_type] = max(
-            self._task_completed_times[task_type], completed_time
+            self._max_task_completed_times[task_type], completed_time
         )
 
     def set_task_timeout_callback(self, callback_fn):
