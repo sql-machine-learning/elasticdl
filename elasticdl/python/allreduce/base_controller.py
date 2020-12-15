@@ -58,7 +58,11 @@ class RendevousManager(object):
         # the worker should rebuild the communication because the master
         # has updated the communication group.
         if rank_response.rendezvous_id != self._rendezvous_id:
-            logger.info("Initialize Horovod")
+            logger.info(
+                "Initialize Horovod with rank = {} and size = {}".format(
+                    rank_response.rank_id, rank_response.world_size
+                )
+            )
             os.environ[HorovodEnv.RENDEZVOUS_PORT] = str(
                 rank_response.rendezvous_port
             )
