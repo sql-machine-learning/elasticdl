@@ -30,6 +30,7 @@ from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 
 _MAX_TASK_RETRIES = 3
+_TASK_TIMEOUT_THRESHOLD = 300
 
 
 class _Shard(object):
@@ -504,7 +505,10 @@ class TaskManager(object):
                     elasticdl_pb2.TRAINING,
                     elasticdl_pb2.EVALUATION,
                 ]:
-                    if (cur_time - start_time) > 3 * avg_time[task.type]:
+                    task_elapsed_time = cur_time - start_time
+                    if task_elapsed_time > max(
+                        _TASK_TIMEOUT_THRESHOLD, 3 * avg_time[task.type]
+                    ):
                         logger.info(
                             "worker %d timeout, relaunch it" % worker_id
                         )
@@ -526,7 +530,9 @@ class TaskManager(object):
         average_task_completed_time = {}
 
         if len(self._task_completed_times[elasticdl_pb2.TRAINING]) < 20:
-            average_task_completed_time[elasticdl_pb2.TRAINING] = 300
+            average_task_completed_time[
+                elasticdl_pb2.TRAINING
+            ] = _TASK_TIMEOUT_THRESHOLD
         else:
             average_task_completed_time[
                 elasticdl_pb2.TRAINING
@@ -535,7 +541,9 @@ class TaskManager(object):
             )
 
         if len(self._task_completed_times[elasticdl_pb2.EVALUATION]) < 20:
-            average_task_completed_time[elasticdl_pb2.EVALUATION] = 300
+            average_task_completed_time[
+                elasticdl_pb2.EVALUATION
+            ] = _TASK_TIMEOUT_THRESHOLD
         else:
             average_task_completed_time[
                 elasticdl_pb2.EVALUATION
