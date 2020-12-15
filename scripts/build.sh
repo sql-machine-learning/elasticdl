@@ -43,10 +43,10 @@ echo "Building the wheel for elasticdl_preprocessing."
 rm -rf ./build/lib
 python setup_preprocessing.py --quiet bdist_wheel --dist-dir ./build
 
-# Create elasticdl_sdk package
-echo "Building the wheel for elasticdl_sdk."
+# Create elasticai_api package
+echo "Building the wheel for elasticai_api."
 rm -rf ./build/lib
-python setup_sdk.py --quiet bdist_wheel --dist-dir ./build
+python setup_api.py --quiet bdist_wheel --dist-dir ./build
 
 # Create elasticdl_client package
 echo "Building the wheel for elasticdl_client."

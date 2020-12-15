@@ -17,18 +17,18 @@ tensorflow_require_list = ["tensorflow"]
 pytorch_require_list = ["torch"]
 
 setup(
-    name="elasticdl_sdk",
+    name="elasticai-api",
     version="0.2.0rc3.dev0",
-    description="The model development sdk for ElasticDL.",
+    description="The model development api for ElasticDL.",
     long_description="This is the sdk for developing ElasticDL models."
-    " Model developers can make slight update using the sdk based on their"
-    " TensorFlow or Pytorch models. And then the model can be trained in the"
-    " elastic and fault-tolerant way.",
+    " Model developers can make slight update using the api in it based on"
+    " their TensorFlow or Pytorch models. And then the model can be trained"
+    " in the elastic and fault-tolerant way.",
     long_description_content_type="text/markdown",
     author="Ant Financial",
     url="https://elasticdl.org",
     python_requires=">=3.5",
-    packages=find_packages(include=["elasticdl_sdk*"], exclude=["*test*"]),
+    packages=find_packages(include=["elasticai_api*"], exclude=["*test*"]),
     extras_require={
         "tensorflow": tensorflow_require_list,
         "pytorch": pytorch_require_list,

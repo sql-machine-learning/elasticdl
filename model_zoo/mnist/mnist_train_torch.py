@@ -18,9 +18,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from elasticai_api.pytorch.optimizer import ElasticDistributedOptimizer
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl_sdk.pytorch.optimizer import ElasticDistributedOptimizer
 
 
 class Net(nn.Module):
