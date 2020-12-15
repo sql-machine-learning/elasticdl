@@ -19,7 +19,7 @@ from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.allreduce.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
-    DEFAULT_STEPS_TO_CHECK_RENDEZVOUS,
+    DEFAULT_SECS_TO_CHECK_RENDEZVOUS,
     RendevousManager,
 )
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -43,6 +43,7 @@ class AllReduceTrainer(Trainer):
         self._need_broadcast = True
         self._var_created = False
         self._optimizer = model.optimizer
+        self._last_init_time = time.time()
 
     @tf.function
     def _training_process(self, features, labels):
@@ -92,10 +93,10 @@ class AllReduceTrainer(Trainer):
         """"Check periodically whether new workers join the job
         and re-initialize Horovod if True.
         """
-        iter_steps = self._optimizer.iterations.numpy()
-
-        if iter_steps % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
+        cur_time = time.time()
+        if cur_time - self._last_init_time > DEFAULT_SECS_TO_CHECK_RENDEZVOUS:
             self._rendezvous_manager.init_horovod_if_needed()
+            self._last_init_time = cur_time
 
     def _broadcast_model(self):
         broadcast_variables(self._model.variables, root_rank=0)

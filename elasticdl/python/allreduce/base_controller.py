@@ -32,7 +32,7 @@ except ImportError:
 # The default maximum number of retries for allreduce operation
 # if allreduce-based distributed training strategy is used.
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
-DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
+DEFAULT_SECS_TO_CHECK_RENDEZVOUS = 60
 
 
 class RendevousManager(object):
@@ -99,6 +99,7 @@ class AllReduceController(object):
         self._rendezvous_manager = RendevousManager(master_client)
         self.data_shard_service = data_shard_service
         self._step = 0
+        self._last_init_time = time.time()
         self._first_call = True
         self._need_broadcast = True
 
@@ -126,8 +127,10 @@ class AllReduceController(object):
         """Check whether to initialize Horovod periodically in case
         that new workers join the job.
         """
-        if self._step % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
+        cur_time = time.time()
+        if cur_time - self._last_init_time > DEFAULT_SECS_TO_CHECK_RENDEZVOUS:
             self._rendezvous_manager.init_horovod_if_needed()
+            self._last_init_time = cur_time
 
     def _broadcast_if_needed(self):
         if self._rendezvous_manager.need_broadcast:
