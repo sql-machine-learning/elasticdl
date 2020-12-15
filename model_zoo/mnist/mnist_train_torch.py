@@ -18,7 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from elasticdl.python.allreduce.torch_optimizer import DistributedOptimizer
+from elasticai_api.pytorch.optimizer import DistributedOptimizer
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 
