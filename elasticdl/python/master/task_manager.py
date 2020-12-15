@@ -29,7 +29,7 @@ from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 
 _MAX_TASK_RETRIES = 3
-_TASK_TIMEOUT_THRESHOLD = 300
+_TASK_TIMEOUT_THRESHOLD_SECS = 300
 
 
 class _Shard(object):
@@ -506,7 +506,7 @@ class TaskManager(object):
                     elasticdl_pb2.EVALUATION,
                 ]:
                     if cur_time - start_time > max(
-                        _TASK_TIMEOUT_THRESHOLD,
+                        _TASK_TIMEOUT_THRESHOLD_SECS,
                         3 * self._max_task_completed_times[task.type],
                     ):
                         logger.info(
