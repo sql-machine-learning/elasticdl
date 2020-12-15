@@ -19,7 +19,7 @@ from horovod.torch.compression import Compression
 from horovod.torch.mpi_ops import Average, allreduce_async_, size, synchronize
 
 
-class _ElasticDistributedOptimizer(torch.optim.Optimizer):
+class _DistributedOptimizer(torch.optim.Optimizer):
     """The optimizer is implemented based on _DistributedOptimizer in Horovod
     (https://github.com/horovod/horovod/blob/v0.20.0/horovod/torch/optimizer.py).
     But it modifies the `step`, `zero_grad` and `_allreduce_grad_async` to
@@ -56,7 +56,7 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
                 "model.named_parameters()."
             )
 
-        dups = _ElasticDistributedOptimizer.find_duplicates(
+        dups = _DistributedOptimizer.find_duplicates(
             [k for k, _ in named_parameters]
         )
         if len(dups) > 0:
@@ -263,7 +263,7 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
             return super(self.__class__, self).zero_grad()
 
 
-def ElasticDistributedOptimizer(
+def DistributedOptimizer(
     optimizer,
     named_parameters=None,
     compression=Compression.none,
@@ -282,7 +282,7 @@ def ElasticDistributedOptimizer(
     cls = type(
         optimizer.__class__.__name__,
         (optimizer.__class__,),
-        dict(_ElasticDistributedOptimizer.__dict__),
+        dict(_DistributedOptimizer.__dict__),
     )
     return cls(
         optimizer.param_groups,
