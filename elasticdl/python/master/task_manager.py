@@ -14,7 +14,6 @@
 """TaskQueue Implementation"""
 
 import random
-import statistics
 import threading
 import time
 
@@ -497,7 +496,7 @@ class TaskManager(object):
         while True:
             doing_tasks = self._doing.copy()
             cur_time = time.time()
-            avg_time = self._get_average_task_completed_time()
+            max_time = self._get_max_task_completed_time()
             for _, (worker_id, task, start_time) in doing_tasks.items():
                 if task.type == elasticdl_pb2.TRAINING:
                     start_time = self._worker_start_task_time[worker_id]
@@ -507,7 +506,7 @@ class TaskManager(object):
                 ]:
                     task_elapsed_time = cur_time - start_time
                     if task_elapsed_time > max(
-                        _TASK_TIMEOUT_THRESHOLD, 3 * avg_time[task.type]
+                        _TASK_TIMEOUT_THRESHOLD, 3 * max_time[task.type]
                     ):
                         logger.info(
                             "worker %d timeout, relaunch it" % worker_id
@@ -518,7 +517,7 @@ class TaskManager(object):
                         break
             time.sleep(30)
 
-    def _get_average_task_completed_time(self):
+    def _get_max_task_completed_time(self):
         """Get the average completed time of tasks. If the number of
         the completed tasks, the average time is 300s. Otherwise, the function
         will return the average execution time.
@@ -527,27 +526,23 @@ class TaskManager(object):
             A dict: It contains containing the average time
             for TRAINING and EVALUATION tasks.
         """
-        average_task_completed_time = {}
+        max_task_completed_time = {}
 
         if len(self._task_completed_times[elasticdl_pb2.TRAINING]) < 20:
-            average_task_completed_time[
+            max_task_completed_time[
                 elasticdl_pb2.TRAINING
             ] = _TASK_TIMEOUT_THRESHOLD
         else:
-            average_task_completed_time[
-                elasticdl_pb2.TRAINING
-            ] = statistics.mean(
+            max_task_completed_time[elasticdl_pb2.TRAINING] = max(
                 self._task_completed_times[elasticdl_pb2.TRAINING]
             )
 
         if len(self._task_completed_times[elasticdl_pb2.EVALUATION]) < 20:
-            average_task_completed_time[
+            max_task_completed_time[
                 elasticdl_pb2.EVALUATION
             ] = _TASK_TIMEOUT_THRESHOLD
         else:
-            average_task_completed_time[
-                elasticdl_pb2.EVALUATION
-            ] = statistics.mean(
+            max_task_completed_time[elasticdl_pb2.EVALUATION] = max(
                 self._task_completed_times[elasticdl_pb2.EVALUATION]
             )
-        return average_task_completed_time
+        return max_task_completed_time
