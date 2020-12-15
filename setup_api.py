@@ -21,11 +21,10 @@ setup(
     version="0.2.0rc3.dev0",
     description="The model development api for ElasticDL.",
     long_description="This is the sdk for developing ElasticDL models."
-    " Model developers can make slight update using the api in it based on"
-    " their TensorFlow or Pytorch models. And then the model can be trained"
-    " in the elastic and fault-tolerant way.",
+    " Model developers can use these APIs to support elastic and"
+    " fault-tolerant training for their TensorFlow or Pytorch models.",
     long_description_content_type="text/markdown",
-    author="Ant Financial",
+    author="Ant Group",
     url="https://elasticdl.org",
     python_requires=">=3.5",
     packages=find_packages(include=["elasticai_api*"], exclude=["*test*"]),
