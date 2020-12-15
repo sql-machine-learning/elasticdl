@@ -26,6 +26,7 @@ class ElasticOptimizerTest(unittest.TestCase):
         model = TorchModel()
         optimizer = optim.SGD(model.parameters(), lr=0.1)
         optimizer = DistributedOptimizer(optimizer, fixed_batch_size=True)
+        optimizer.zero_grad()
         optimizer.backward_passes_per_step = 2
         optimizer.step()
         self.assertEqual(optimizer._iter_step, 1)
