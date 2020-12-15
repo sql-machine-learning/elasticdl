@@ -118,6 +118,8 @@ class AllReduceController(object):
         return wrapper
 
     def init_horovod_locally(self):
+        # Use elastic Horovod to run model locally.
+        os.environ[HorovodEnv.ELASTIC] = str(1)
         hvd.init()
 
     def _init_variables_before_first_calling(self, func, *args, **kwargs):
