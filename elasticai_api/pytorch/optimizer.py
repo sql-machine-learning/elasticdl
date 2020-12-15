@@ -260,7 +260,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
                 "but before optimizer.step() or optimizer.synchronize(). "
                 "This is prohibited as it can cause a race condition."
             )
-            return super(self.__class__, self).zero_grad()
+        return super(self.__class__, self).zero_grad()
 
 
 def DistributedOptimizer(
