@@ -105,7 +105,6 @@ class AllReduceControllerTest(unittest.TestCase):
         controller = AllReduceController(master_client, data_shard_service)
         elastic_run = controller.elastic_run(self.train)
         elastic_run()
-        self.assertEqual(controller._step, 1)
         self.assertFalse(controller._first_call)
 
 
