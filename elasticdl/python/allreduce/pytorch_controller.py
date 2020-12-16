@@ -31,6 +31,7 @@ try:
     from horovod.torch.functions import (
         broadcast_optimizer_state,
         broadcast_parameters,
+        broadcast_object,
     )
 
 except ImportError:
@@ -108,6 +109,9 @@ class PyTorchAllReduceController(AllReduceController):
     def broadcast(self):
         broadcast_parameters(self._model.state_dict(), root_rank=0)
         broadcast_optimizer_state(self._optimizer, root_rank=0)
+        self.global_completed_batch_num = broadcast_object(
+            self.global_completed_batch_num, name="GlobalCompletedBatchNum"
+        )
 
     def train_one_batch_with_retries(self, func, *args, **kwargs):
         self.reset_backward_passes_per_step()
