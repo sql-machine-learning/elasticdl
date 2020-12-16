@@ -48,8 +48,8 @@ from torch.utils.data import DataLoader, IterableDataset
 from elasticdl.python.allreduce.pytorch_controller import (
     create_elastic_controller,
 )
-from elasticdl.python.allreduce.torch_optimizer import (
-    ElasticDistributedOptimizer,
+from elasticai_api.pytorch.optimizer import (
+    DistributedOptimizer,
 )
 
 
@@ -141,7 +141,7 @@ def train(args):
     data_loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
     model = Net()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
-    optimizer = ElasticDistributedOptimizer(optimizer, fixed_batch_size=True)
+    optimizer = DistributedOptimizer(optimizer, fixed_batch_size=True)
 
     # Set the model and optimizer to broadcast.
     allreduce_controller.set_broadcast_model(model)
