@@ -98,7 +98,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
         self._fixed_global_batch_size = fixed_global_batch_size
         self._global_batch_num_per_step = global_batch_num_per_step
         self._backward_passes = 0
-        self._update_gradients = True
+        self.update_gradients = True
 
     def load_state_dict(self, *args, **kwargs):
         self._handles = {}
@@ -230,11 +230,12 @@ class _DistributedOptimizer(torch.optim.Optimizer):
             self._fixed_global_batch_size
             and self._backward_passes % self.backward_passes_per_step != 0
         ):
-            self._update_gradients = False
+            self.update_gradients = False
         else:
-            self._update_gradients = True
+            self.update_gradients = True
+            self._backward_passes = 0
 
-        if not self._update_gradients:
+        if not self.update_gradients:
             return
 
         if self._should_synchronize:
@@ -252,7 +253,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
         return super(self.__class__, self).step(closure)
 
     def zero_grad(self):
-        if not self._update_gradients:
+        if not self.update_gradients:
             return
         if self._handles:
             raise AssertionError(

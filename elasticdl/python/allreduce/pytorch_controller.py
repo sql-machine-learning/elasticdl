@@ -98,7 +98,6 @@ class PyTorchAllReduceController(AllReduceController):
             os.getenv(WorkerEnv.WORKER_NUM, 1)
         )
         self.global_completed_batch_num = 0
-        self._backward_passes = 0
 
     def set_broadcast_model(self, model):
         self._model = model
@@ -144,16 +143,14 @@ class PyTorchAllReduceController(AllReduceController):
         self._rendezvous_manager.init_horovod_if_needed()
 
     def _update_completed_minibatches(self):
-        self._backward_passes += 1
         if (
             hasattr(self._optimizer, "fixed_global_batch_size")
             and self._optimizer.fixed_global_batch_size
         ):
-            if self._backward_passes % self.backward_passes_per_step == 0:
+            if self._optimizer.update_gradients:
                 self.global_completed_batch_num += (
                     self.global_batch_num_per_step
                 )
-                self._backward_passes = 0
         else:
             self.global_completed_batch_num += hvd.size()
 
