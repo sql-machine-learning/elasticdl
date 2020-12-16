@@ -139,7 +139,7 @@ def train(args):
     data_loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
     model = Net()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
-    optimizer = DistributedOptimizer(optimizer, fixed_batch_size=True)
+    optimizer = DistributedOptimizer(optimizer, fixed_global_batch_size=True)
 
     # Set the model and optimizer to broadcast.
     allreduce_controller.set_broadcast_model(model)
