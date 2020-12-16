@@ -34,8 +34,8 @@ except ImportError:
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 # The default timeout is 30s in Horovod.
 # https://github.com/horovod/horovod/blob/2fdea15bc6317848944c72cf8dd0aaa98b2e1a2a/horovod/common/gloo/gloo_context.cc#L59
-DEFAULT_SECS_TO_CHECK_RENDEZVOUS = os.getenv(
-    HorovodEnv.GLOO_TIMEOUT_SECONDS, 30
+DEFAULT_SECS_TO_CHECK_RENDEZVOUS = int(
+    os.getenv(HorovodEnv.GLOO_TIMEOUT_SECONDS, 30)
 )
 
 
