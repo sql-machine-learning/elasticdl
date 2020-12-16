@@ -14,7 +14,6 @@
 """TaskQueue Implementation"""
 
 import random
-import statistics
 import threading
 import time
 
@@ -30,6 +29,7 @@ from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 
 _MAX_TASK_RETRIES = 3
+_TASK_TIMEOUT_THRESHOLD_SECS = 300
 
 
 class _Shard(object):
@@ -146,9 +146,9 @@ class TaskManager(object):
         if not args.custom_training_loop:
             self._add_deferred_callback_create_train_end_task()
 
-        self._task_completed_times = {
-            elasticdl_pb2.EVALUATION: [],
-            elasticdl_pb2.TRAINING: [],
+        self._max_task_completed_times = {
+            elasticdl_pb2.EVALUATION: 0,
+            elasticdl_pb2.TRAINING: 0,
         }
         self._worker_start_task_time = {}
         self._task_timeout_callbacks = []
@@ -481,7 +481,9 @@ class TaskManager(object):
         self._worker_start_task_time[worker_id] = time.time()
 
     def record_task_completed_time(self, task_type, completed_time):
-        self._task_completed_times[task_type].append(completed_time)
+        self._max_task_completed_times[task_type] = max(
+            self._max_task_completed_times[task_type], completed_time
+        )
 
     def set_task_timeout_callback(self, callback_fn):
         self._task_timeout_callbacks.append(callback_fn)
@@ -496,7 +498,6 @@ class TaskManager(object):
         while True:
             doing_tasks = self._doing.copy()
             cur_time = time.time()
-            avg_time = self._get_average_task_completed_time()
             for _, (worker_id, task, start_time) in doing_tasks.items():
                 if task.type == elasticdl_pb2.TRAINING:
                     start_time = self._worker_start_task_time[worker_id]
@@ -504,7 +505,10 @@ class TaskManager(object):
                     elasticdl_pb2.TRAINING,
                     elasticdl_pb2.EVALUATION,
                 ]:
-                    if (cur_time - start_time) > 3 * avg_time[task.type]:
+                    if cur_time - start_time > max(
+                        _TASK_TIMEOUT_THRESHOLD_SECS,
+                        3 * self._max_task_completed_times[task.type],
+                    ):
                         logger.info(
                             "worker %d timeout, relaunch it" % worker_id
                         )
@@ -513,33 +517,3 @@ class TaskManager(object):
                         self._invoke_task_timeout_callback(worker_id)
                         break
             time.sleep(30)
-
-    def _get_average_task_completed_time(self):
-        """Get the average completed time of tasks. If the number of
-        the completed tasks, the average time is 300s. Otherwise, the function
-        will return the average execution time.
-
-        Returns:
-            A dict: It contains containing the average time
-            for TRAINING and EVALUATION tasks.
-        """
-        average_task_completed_time = {}
-
-        if len(self._task_completed_times[elasticdl_pb2.TRAINING]) < 20:
-            average_task_completed_time[elasticdl_pb2.TRAINING] = 300
-        else:
-            average_task_completed_time[
-                elasticdl_pb2.TRAINING
-            ] = statistics.mean(
-                self._task_completed_times[elasticdl_pb2.TRAINING]
-            )
-
-        if len(self._task_completed_times[elasticdl_pb2.EVALUATION]) < 20:
-            average_task_completed_time[elasticdl_pb2.EVALUATION] = 300
-        else:
-            average_task_completed_time[
-                elasticdl_pb2.EVALUATION
-            ] = statistics.mean(
-                self._task_completed_times[elasticdl_pb2.EVALUATION]
-            )
-        return average_task_completed_time

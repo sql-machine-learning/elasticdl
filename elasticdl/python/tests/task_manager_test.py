@@ -151,22 +151,17 @@ class TaskManagerTest(unittest.TestCase):
         time.sleep(1)  # Sleep 1s to reassgin checkout the timeout task
         self.assertEqual(len(task_manager._todo), task_count)
 
-    def test_get_average_task_completed_time(self):
+    def test_get_max_task_completed_time(self):
         task_manager = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
-        average_task_completed_time = (
-            task_manager._get_average_task_completed_time()
-        )
         self.assertEqual(
-            average_task_completed_time,
-            {elasticdl_pb2.TRAINING: 300, elasticdl_pb2.EVALUATION: 300},
+            task_manager._max_task_completed_times,
+            {elasticdl_pb2.TRAINING: 0, elasticdl_pb2.EVALUATION: 0},
         )
-        task_manager._task_completed_times[elasticdl_pb2.TRAINING] = [10] * 21
-        task_manager._task_completed_times[elasticdl_pb2.EVALUATION] = [5] * 21
-        average_task_completed_time = (
-            task_manager._get_average_task_completed_time()
-        )
+        task_manager.record_task_completed_time(elasticdl_pb2.TRAINING, 10)
+        task_manager.record_task_completed_time(elasticdl_pb2.EVALUATION, 5)
+
         self.assertEqual(
-            average_task_completed_time,
+            task_manager._max_task_completed_times,
             {elasticdl_pb2.TRAINING: 10, elasticdl_pb2.EVALUATION: 5},
         )
 

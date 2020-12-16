@@ -34,7 +34,7 @@ class TaskDataService(object):
         if custom_data_reader is not None:
             self._create_data_reader_fn = custom_data_reader
         self._lock = threading.Lock()
-        self._pending_train_end_callback_task = None
+        self.train_end_callback_task = None
         if data_reader_params:
             self.data_reader = self._create_data_reader_fn(
                 data_origin=data_origin, **data_reader_params
@@ -78,13 +78,10 @@ class TaskDataService(object):
         return dataset
 
     def get_train_end_callback_task(self):
-        if self._pending_train_end_callback_task:
-            return self._pending_train_end_callback_task
-
         while True:
             task = self._data_shard_service.get_task()
             if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
-                self._pending_train_end_callback_task = task
+                self.train_end_callback_task = task
                 return task
             elif task.type == elasticdl_pb2.WAIT:
                 # The worker can only do the callback task until
@@ -93,9 +90,6 @@ class TaskDataService(object):
                 time.sleep(5)
             else:
                 return None
-
-    def clear_train_end_callback_task(self):
-        self._pending_train_end_callback_task = None
 
     def get_dataset(self):
         """

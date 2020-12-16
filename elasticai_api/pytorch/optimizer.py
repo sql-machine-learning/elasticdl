@@ -19,7 +19,7 @@ from horovod.torch.compression import Compression
 from horovod.torch.mpi_ops import Average, allreduce_async_, size, synchronize
 
 
-class _ElasticDistributedOptimizer(torch.optim.Optimizer):
+class _DistributedOptimizer(torch.optim.Optimizer):
     """The optimizer is implemented based on _DistributedOptimizer in Horovod
     (https://github.com/horovod/horovod/blob/v0.20.0/horovod/torch/optimizer.py).
     But it modifies the `step`, `zero_grad` and `_allreduce_grad_async` to
@@ -56,7 +56,7 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
                 "model.named_parameters()."
             )
 
-        dups = _ElasticDistributedOptimizer.find_duplicates(
+        dups = _DistributedOptimizer.find_duplicates(
             [k for k, _ in named_parameters]
         )
         if len(dups) > 0:
@@ -98,6 +98,7 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
         self._fixed_batch_size = fixed_batch_size
         self._global_batch_num_per_step = global_batch_num_per_step
         self._iter_step = 0
+        self._update_gradients = True
 
     def load_state_dict(self, *args, **kwargs):
         self._handles = {}
@@ -259,10 +260,10 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
                 "but before optimizer.step() or optimizer.synchronize(). "
                 "This is prohibited as it can cause a race condition."
             )
-            return super(self.__class__, self).zero_grad()
+        return super(self.__class__, self).zero_grad()
 
 
-def ElasticDistributedOptimizer(
+def DistributedOptimizer(
     optimizer,
     named_parameters=None,
     compression=Compression.none,
@@ -281,7 +282,7 @@ def ElasticDistributedOptimizer(
     cls = type(
         optimizer.__class__.__name__,
         (optimizer.__class__,),
-        dict(_ElasticDistributedOptimizer.__dict__),
+        dict(_DistributedOptimizer.__dict__),
     )
     return cls(
         optimizer.param_groups,

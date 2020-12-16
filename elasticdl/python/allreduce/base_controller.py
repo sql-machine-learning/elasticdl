@@ -32,7 +32,11 @@ except ImportError:
 # The default maximum number of retries for allreduce operation
 # if allreduce-based distributed training strategy is used.
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
-DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
+# The default timeout is 30s in Horovod.
+# https://github.com/horovod/horovod/blob/2fdea15bc6317848944c72cf8dd0aaa98b2e1a2a/horovod/common/gloo/gloo_context.cc#L59
+DEFAULT_SECS_TO_CHECK_RENDEZVOUS = os.getenv(
+    HorovodEnv.GLOO_TIMEOUT_SECONDS, 30
+)
 
 
 class RendevousManager(object):
@@ -58,7 +62,11 @@ class RendevousManager(object):
         # the worker should rebuild the communication because the master
         # has updated the communication group.
         if rank_response.rendezvous_id != self._rendezvous_id:
-            logger.info("Initialize Horovod")
+            logger.info(
+                "Initialize Horovod with rank = {} and size = {}".format(
+                    rank_response.rank_id, rank_response.world_size
+                )
+            )
             os.environ[HorovodEnv.RENDEZVOUS_PORT] = str(
                 rank_response.rendezvous_port
             )
@@ -99,6 +107,7 @@ class AllReduceController(object):
         self._rendezvous_manager = RendevousManager(master_client)
         self.data_shard_service = data_shard_service
         self._step = 0
+        self._last_init_time = 0
         self._first_call = True
         self._need_broadcast = True
 
@@ -114,6 +123,8 @@ class AllReduceController(object):
         return wrapper
 
     def init_horovod_locally(self):
+        # Use elastic Horovod to run model locally.
+        os.environ[HorovodEnv.ELASTIC] = str(1)
         hvd.init()
 
     def _init_variables_before_first_calling(self, func, *args, **kwargs):
@@ -126,8 +137,10 @@ class AllReduceController(object):
         """Check whether to initialize Horovod periodically in case
         that new workers join the job.
         """
-        if self._step % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
+        cur_time = time.time()
+        if cur_time - self._last_init_time > DEFAULT_SECS_TO_CHECK_RENDEZVOUS:
             self._rendezvous_manager.init_horovod_if_needed()
+            self._last_init_time = cur_time
 
     def _broadcast_if_needed(self):
         if self._rendezvous_manager.need_broadcast:
