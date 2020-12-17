@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, Mock
 import tensorflow as tf
 import torch.optim as optim
 
+from elasticai_api.pytorch.optimizer import DistributedOptimizer
 from elasticdl.python.allreduce.base_controller import (
     AllReduceController,
     RendevousManager,
@@ -105,7 +106,6 @@ class AllReduceControllerTest(unittest.TestCase):
         controller = AllReduceController(master_client, data_shard_service)
         elastic_run = controller.elastic_run(self.train)
         elastic_run()
-        self.assertEqual(controller._step, 1)
         self.assertFalse(controller._first_call)
 
 
@@ -140,12 +140,7 @@ class TensorFlowV2ReduceControllerTest(unittest.TestCase):
 
 
 class PyTorchReduceControllerTest(unittest.TestCase):
-    def train(self):
-        return 1
-
-    def test_elastic_run(self):
-        import horovod.torch as hvd
-
+    def setUp(self):
         master_client = Mock()
         master_client.get_comm_rank = MagicMock(
             return_value=Mock(
@@ -153,27 +148,46 @@ class PyTorchReduceControllerTest(unittest.TestCase):
             )
         )
         data_shard_service = DataShardService(1, master_client)
-        controller = PyTorchAllReduceController(
+        self.controller = PyTorchAllReduceController(
             master_client, data_shard_service
         )
+
+    def train(self):
+        return 1
+
+    def test_elastic_run(self):
+        import horovod.torch as hvd
+
         model = TorchModel()
         optimizer = optim.SGD(model.parameters(), lr=0.1)
         hvd.init()
         optimizer = hvd.DistributedOptimizer(optimizer)
-        controller.set_broadcast_model(model)
-        controller.set_broadcast_optimizer(optimizer)
-        controller.broadcast()
-        result = controller.train_one_batch_with_retries(self.train)
-        controller.restore()
+        self.controller.set_broadcast_model(model)
+        self.controller.set_broadcast_optimizer(optimizer)
+        self.controller.broadcast()
+        result = self.controller.train_one_batch_with_retries(self.train)
+        self.controller.restore()
         self.assertEqual(result, 1)
-        self.assertIsNotNone(controller._model)
-        self.assertIsNotNone(controller._optimizer)
+        self.assertIsNotNone(self.controller._model)
+        self.assertIsNotNone(self.controller._optimizer)
+        self.assertEqual(self.controller.global_completed_batch_num, 1)
 
     def test_create_elastic_controller(self):
         controller = create_elastic_controller(batch_size=64)
         self.assertIsNotNone(controller)
         self.assertIsNotNone(controller.data_shard_service._mc)
         self.assertEqual(controller.data_shard_service._batch_size, 64)
+
+    def test_reset_backward_passes_per_step(self):
+        model = TorchModel()
+        optimizer = optim.SGD(model.parameters(), lr=0.1)
+        optimizer = DistributedOptimizer(
+            optimizer, fixed_global_batch_size=True
+        )
+        self.controller.set_broadcast_optimizer(optimizer)
+        self.controller.global_batch_num_per_step = 2
+        self.controller.reset_backward_passes_per_step()
+        self.assertEqual(self.controller.backward_passes_per_step, 2)
 
 
 if __name__ == "__main__":

@@ -106,7 +106,6 @@ class AllReduceController(object):
 
         self._rendezvous_manager = RendevousManager(master_client)
         self.data_shard_service = data_shard_service
-        self._step = 0
         self._last_init_time = 0
         self._first_call = True
         self._need_broadcast = True
@@ -117,7 +116,7 @@ class AllReduceController(object):
             self._init_variables_before_first_calling(func, *args, **kwargs)
             self._init_horovod_periodically()
             result = self.train_one_batch_with_retries(func, *args, **kwargs)
-            self._step += 1
+            self.data_shard_service.report_batch_done()
             return result
 
         return wrapper
