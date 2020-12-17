@@ -73,7 +73,6 @@ class TensorFlowV2AllReduceController(AllReduceController):
                 ):
                     time.sleep(3)
                     self._rendezvous_manager.init_horovod_if_needed()
-        self.data_shard_service.report_batch_done()
         return result
 
 

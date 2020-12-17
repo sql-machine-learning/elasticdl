@@ -31,6 +31,7 @@ try:
     from horovod.torch.functions import (
         broadcast_optimizer_state,
         broadcast_parameters,
+        broadcast_object,
     )
 
 except ImportError:
@@ -93,7 +94,10 @@ class PyTorchAllReduceController(AllReduceController):
         self._optimizer = None
         self.backward_passes_per_step = 1
         # ElasticDL master should set the number of workers into envs.
-        self.batch_num_per_step = int(os.getenv(WorkerEnv.WORKER_NUM, 1))
+        self.global_batch_num_per_step = int(
+            os.getenv(WorkerEnv.WORKER_NUM, 1)
+        )
+        self.global_completed_batch_num = 0
 
     def set_broadcast_model(self, model):
         self._model = model
@@ -104,6 +108,9 @@ class PyTorchAllReduceController(AllReduceController):
     def broadcast(self):
         broadcast_parameters(self._model.state_dict(), root_rank=0)
         broadcast_optimizer_state(self._optimizer, root_rank=0)
+        self.global_completed_batch_num = broadcast_object(
+            self.global_completed_batch_num, name="GlobalCompletedBatchNum"
+        )
 
     def train_one_batch_with_retries(self, func, *args, **kwargs):
         self.reset_backward_passes_per_step()
@@ -124,7 +131,7 @@ class PyTorchAllReduceController(AllReduceController):
             except RuntimeError:
                 traceback.print_exc()
                 self.restore()
-        self.data_shard_service.report_batch_done()
+        self._update_completed_minibatches()
         return result
 
     def restore(self):
@@ -134,23 +141,41 @@ class PyTorchAllReduceController(AllReduceController):
         self._optimizer.zero_grad()
         self._rendezvous_manager.init_horovod_if_needed()
 
-    def reset_backward_passes_per_step(self):
-        world_size = hvd.size()
-        rank = hvd.rank()
-        self.backward_passes_per_step = int(
-            self.batch_num_per_step / world_size
-        )
-        if rank < self.batch_num_per_step % world_size:
-            self.backward_passes_per_step += 1
+    def _update_completed_minibatches(self):
         if (
-            self.backward_passes_per_step
-            != self._optimizer.backward_passes_per_step
+            hasattr(self._optimizer, "fixed_global_batch_size")
+            and self._optimizer.fixed_global_batch_size
         ):
-            self._optimizer.backward_passes_per_step = (
-                self.backward_passes_per_step
-            )
-            logger.info(
-                "Backward passes = {}".format(
-                    self._optimizer.backward_passes_per_step
+            if self._optimizer.update_gradients:
+                self.global_completed_batch_num += (
+                    self.global_batch_num_per_step
                 )
+        else:
+            self.global_completed_batch_num += hvd.size()
+
+    def reset_backward_passes_per_step(self):
+        # Only reset backward_passes_per_step when using the optimizer
+        # with fixed_global_batch_size
+        if (
+            hasattr(self._optimizer, "fixed_global_batch_size")
+            and self._optimizer.fixed_global_batch_size
+        ):
+            world_size = hvd.size()
+            rank = hvd.rank()
+            self.backward_passes_per_step = int(
+                self.global_batch_num_per_step / world_size
             )
+            if rank < self.global_batch_num_per_step % world_size:
+                self.backward_passes_per_step += 1
+            if (
+                self.backward_passes_per_step
+                != self._optimizer.backward_passes_per_step
+            ):
+                self._optimizer.backward_passes_per_step = (
+                    self.backward_passes_per_step
+                )
+                logger.info(
+                    "Backward passes = {}".format(
+                        self._optimizer.backward_passes_per_step
+                    )
+                )

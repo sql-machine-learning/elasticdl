@@ -95,10 +95,10 @@ class _DistributedOptimizer(torch.optim.Optimizer):
         if size() > 1 or os.environ.get("HOROVOD_ELASTIC") == "1":
             self._register_hooks()
 
-        self._fixed_global_batch_size = fixed_global_batch_size
+        self.fixed_global_batch_size = fixed_global_batch_size
         self._global_batch_num_per_step = global_batch_num_per_step
-        self._iter_step = 0
-        self._update_gradients = True
+        self._backward_passes = 0
+        self.update_gradients = True
 
     def load_state_dict(self, *args, **kwargs):
         self._handles = {}
@@ -143,7 +143,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
             # Split average operation across pre/postscale factors
             # C++ backend will apply additional 1 / size() factor
             # to postscale_factor for op == Average.
-            if self._fixed_global_batch_size:
+            if self.fixed_global_batch_size:
                 # Set global_batch_num_per_step into the divisor
                 # to averager gradient.
                 prescale_factor = 1.0 / (
@@ -225,16 +225,17 @@ class _DistributedOptimizer(torch.optim.Optimizer):
             self._should_synchronize = True
 
     def step(self, closure=None):
-        self._iter_step += 1
+        self._backward_passes += 1
         if (
-            self._fixed_global_batch_size
-            and self._iter_step % self.backward_passes_per_step != 0
+            self.fixed_global_batch_size
+            and self._backward_passes % self.backward_passes_per_step != 0
         ):
-            self._update_gradients = False
+            self.update_gradients = False
         else:
-            self._update_gradients = True
+            self.update_gradients = True
+            self._backward_passes = 0
 
-        if not self._update_gradients:
+        if not self.update_gradients:
             return
 
         if self._should_synchronize:
@@ -252,7 +253,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
         return super(self.__class__, self).step(closure)
 
     def zero_grad(self):
-        if not self._update_gradients:
+        if not self.update_gradients:
             return
         if self._handles:
             raise AssertionError(
