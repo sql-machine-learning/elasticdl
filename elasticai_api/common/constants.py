@@ -1,0 +1,30 @@
+# Copyright 2020 The ElasticDL Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+class HorovodEnv(object):
+    RENDEZVOUS_ADDR = "HOROVOD_GLOO_RENDEZVOUS_ADDR"
+    RENDEZVOUS_PORT = "HOROVOD_GLOO_RENDEZVOUS_PORT"
+    RANK = "HOROVOD_RANK"
+    SIZE = "HOROVOD_SIZE"
+    CONTROLLER = "HOROVOD_CONTROLLER"
+    CPU_OPERATIONS = "HOROVOD_CPU_OPERATIONS"
+    HOSTNAME = "HOROVOD_HOSTNAME"
+    ELASTIC = "HOROVOD_ELASTIC"
+    GLOO_TIMEOUT_SECONDS = "HOROVOD_GLOO_TIMEOUT_SECONDS"
+
+
+class WorkerEnv(object):
+    MASTER_ADDR = "MASTER_ADDR"
+    WORKER_ID = "WORKER_ID"
+    WORKER_NUM = "WORKER_NUM"
