@@ -95,7 +95,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
         if size() > 1 or os.environ.get("HOROVOD_ELASTIC") == "1":
             self._register_hooks()
 
-        self._fixed_global_batch_size = fixed_global_batch_size
+        self.fixed_global_batch_size = fixed_global_batch_size
         self._global_batch_num_per_step = global_batch_num_per_step
         self._backward_passes = 0
         self.update_gradients = True
@@ -143,7 +143,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
             # Split average operation across pre/postscale factors
             # C++ backend will apply additional 1 / size() factor
             # to postscale_factor for op == Average.
-            if self._fixed_global_batch_size:
+            if self.fixed_global_batch_size:
                 # Set global_batch_num_per_step into the divisor
                 # to averager gradient.
                 prescale_factor = 1.0 / (
@@ -227,7 +227,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
     def step(self, closure=None):
         self._backward_passes += 1
         if (
-            self._fixed_global_batch_size
+            self.fixed_global_batch_size
             and self._backward_passes % self.backward_passes_per_step != 0
         ):
             self.update_gradients = False

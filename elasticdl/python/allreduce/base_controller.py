@@ -116,6 +116,7 @@ class AllReduceController(object):
             self._init_variables_before_first_calling(func, *args, **kwargs)
             self._init_horovod_periodically()
             result = self.train_one_batch_with_retries(func, *args, **kwargs)
+            self.data_shard_service.report_batch_done()
             return result
 
         return wrapper

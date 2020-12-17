@@ -132,7 +132,6 @@ class PyTorchAllReduceController(AllReduceController):
                 traceback.print_exc()
                 self.restore()
         self._update_completed_minibatches()
-        self.data_shard_service.report_batch_done()
         return result
 
     def restore(self):
