@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package elasticai;
+package proto;
 
 option go_package = "elasticdl/go/pkg/proto";
 

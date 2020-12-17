@@ -39,13 +39,13 @@ message ReportVersionRequest {
 }
 
 service Master {
-  rpc get_task(elasticai.GetTaskRequest) returns (elasticai.Task);
+  rpc get_task(GetTaskRequest) returns (Task);
   rpc report_evaluation_metrics(ReportEvaluationMetricsRequest)
       returns (google.protobuf.Empty);
-  rpc report_task_result(elasticai.ReportTaskResultRequest)
+  rpc report_task_result(ReportTaskResultRequest)
       returns (google.protobuf.Empty);
   rpc report_version(ReportVersionRequest) returns (google.protobuf.Empty);
-  rpc get_comm_rank(elasticai.GetCommRankRequest) returns (elasticai.GetCommRankResponse);
+  rpc get_comm_rank(GetCommRankRequest) returns (GetCommRankResponse);
 }
 
 message PullEmbeddingVectorRequest {
