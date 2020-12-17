@@ -147,8 +147,8 @@ class TaskManager(object):
             self._add_deferred_callback_create_train_end_task()
 
         self._max_task_completed_times = {
-            elasticdl_pb2.EVALUATION: 0,
-            elasticdl_pb2.TRAINING: 0,
+            elasticai_api_pb2.EVALUATION: 0,
+            elasticai_api_pb2.TRAINING: 0,
         }
         self._worker_start_task_time = {}
         self._task_timeout_callbacks = []
@@ -172,14 +172,14 @@ class TaskManager(object):
         )
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
-            self.create_tasks(elasticdl_pb2.TRAINING)
+            self.create_tasks(elasticai_api_pb2.TRAINING)
 
     def _create_evaluation_tasks(self, validation_data, data_reader_params):
         self._evaluation_shards = self._maybe_create_shards(
             validation_data, data_reader_params,
         )
         if not self._training_shards and self._evaluation_shards:
-            self.create_tasks(elasticdl_pb2.EVALUATION)
+            self.create_tasks(elasticai_api_pb2.EVALUATION)
 
     def _maybe_create_shards(self, data_origin, data_reader_params):
         kwargs = get_dict_from_params_str(data_reader_params)
@@ -220,9 +220,9 @@ class TaskManager(object):
             model_version,
         )
         self.reset_job_counters(task_type)
-        if task_type == elasticdl_pb2.TRAINING:
+        if task_type == elasticai_api_pb2.TRAINING:
             shards = self._training_shards
-        elif task_type == elasticdl_pb2.EVALUATION:
+        elif task_type == elasticai_api_pb2.EVALUATION:
             shards = self._evaluation_shards
         else:
             raise ValueError("Not supported type")
@@ -260,10 +260,10 @@ class TaskManager(object):
                         model_version=model_version,
                     )
                 )
-        if task_type == elasticdl_pb2.TRAINING:
+        if task_type == elasticai_api_pb2.TRAINING:
             random.shuffle(tasks)
             self._todo.extend(tasks)
-        elif task_type == elasticdl_pb2.EVALUATION:
+        elif task_type == elasticai_api_pb2.EVALUATION:
             self._eval_todo.extend(tasks)
         else:
             self._todo.extend(tasks)
@@ -280,7 +280,7 @@ class TaskManager(object):
         """ Create evaluation tasks and return the number of
         evaluation tasks.
         """
-        self.create_tasks(elasticdl_pb2.EVALUATION, model_version)
+        self.create_tasks(elasticai_api_pb2.EVALUATION, model_version)
         return len(self._eval_todo)
 
     def get_eval_task(self, worker_id):
@@ -304,7 +304,7 @@ class TaskManager(object):
         if not self._training_shards:
             return
 
-        self.reset_job_counters(elasticdl_pb2.TRAIN_END_CALLBACK)
+        self.reset_job_counters(elasticai_api_pb2.TRAIN_END_CALLBACK)
         shards = self._training_shards
         assert shards is not None
 
@@ -321,7 +321,7 @@ class TaskManager(object):
             shard_name=shard_name,
             start=start_ind_this_task,
             end=end_ind_this_task,
-            type=elasticdl_pb2.TRAIN_END_CALLBACK,
+            type=elasticai_api_pb2.TRAIN_END_CALLBACK,
         )
 
         self._todo.append(train_end_callback_task)
@@ -358,7 +358,7 @@ class TaskManager(object):
             ):
                 # Start a new epoch
                 self._epoch += 1
-                self.create_tasks(elasticdl_pb2.TRAINING)
+                self.create_tasks(elasticai_api_pb2.TRAINING)
                 logger.info("Starting epoch %d", self._epoch)
 
             if not self._todo:
@@ -393,14 +393,14 @@ class TaskManager(object):
                 logger.warning("Task %d of %s failed " % (task_id, task.type))
                 if not self.check_exceed_max_task_retries(task):
                     if task.type in [
-                        elasticdl_pb2.TRAINING,
-                        elasticdl_pb2.TRAIN_END_CALLBACK,
+                        elasticai_api_pb2.TRAINING,
+                        elasticai_api_pb2.TRAIN_END_CALLBACK,
                     ]:
                         self._todo.append(task)
                     else:
                         self._eval_todo.append(task)
             elif (
-                task.type == elasticdl_pb2.EVALUATION
+                task.type == elasticai_api_pb2.EVALUATION
                 and self._evaluation_service is not None
             ):
                 evaluation_task_completed = True
@@ -421,7 +421,7 @@ class TaskManager(object):
         return (time.time() - start_time), task, worker_id
 
     def _check_exceed_max_step(self, task):
-        if self._max_step > 0 and task.type == elasticdl_pb2.TRAINING:
+        if self._max_step > 0 and task.type == elasticai_api_pb2.TRAINING:
             task_records = task.shard.end - task.shard.start
             task_batch_count = int(task_records / self._batch_size)
             self._completed_steps += task_batch_count
@@ -457,7 +457,7 @@ class TaskManager(object):
                 for id, (wid, _, _) in self._doing.items()
                 if wid == worker_id
             ]
-        request = elasticdl_pb2.ReportTaskResultRequest()
+        request = elasticai_api_pb2.ReportTaskResultRequest()
         for id in ids:
             request.task_id = id
             self.report(request, False)
@@ -499,11 +499,11 @@ class TaskManager(object):
             doing_tasks = self._doing.copy()
             cur_time = time.time()
             for _, (worker_id, task, start_time) in doing_tasks.items():
-                if task.type == elasticdl_pb2.TRAINING:
+                if task.type == elasticai_api_pb2.TRAINING:
                     start_time = self._worker_start_task_time[worker_id]
                 if task.type in [
-                    elasticdl_pb2.TRAINING,
-                    elasticdl_pb2.EVALUATION,
+                    elasticai_api_pb2.TRAINING,
+                    elasticai_api_pb2.EVALUATION,
                 ]:
                     if cur_time - start_time > max(
                         _TASK_TIMEOUT_THRESHOLD_SECS,

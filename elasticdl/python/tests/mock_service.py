@@ -28,7 +28,7 @@ class MockMasterService(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def get_task(self, request, _):
-        return elasticdl_pb2.Task()
+        return elasticai_api_pb2.Task()
 
 
 def _server(server_instance=MockMasterService):

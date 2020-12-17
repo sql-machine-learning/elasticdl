@@ -70,7 +70,7 @@ class ServicerTest(unittest.TestCase):
             self.master.task_manager, self.master.instance_manager, None, None,
         )
 
-        req = elasticdl_pb2.GetTaskRequest()
+        req = elasticai_api_pb2.GetTaskRequest()
 
         # No task yet, make sure the returned versions are as expected.
         req.worker_id = 1
@@ -94,7 +94,7 @@ class ServicerTest(unittest.TestCase):
         # task to number of runs.
         tasks = defaultdict(int)
         while True:
-            req = elasticdl_pb2.GetTaskRequest()
+            req = elasticai_api_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
             task = master.get_task(req, None)
             if not task.shard.name:
@@ -104,7 +104,7 @@ class ServicerTest(unittest.TestCase):
             )
             task_key = (task.shard.name, task.shard.start, task.shard.end)
             tasks[task_key] += 1
-            report = elasticdl_pb2.ReportTaskResultRequest()
+            report = elasticai_api_pb2.ReportTaskResultRequest()
             report.task_id = task.task_id
             if task.shard.start == 0 and tasks[task_key] == 1:
                 # Simulate error reports.
@@ -144,7 +144,7 @@ class ServicerTest(unittest.TestCase):
             self.master.rendezvous_server,
             None,
         )
-        request = elasticdl_pb2.GetCommRankRequest()
+        request = elasticai_api_pb2.GetCommRankRequest()
         request.worker_id = 0
         rank_response = master_servicer.get_comm_rank(request, None)
         self.assertEqual(rank_response.world_size, 2)

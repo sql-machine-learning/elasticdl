@@ -82,10 +82,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return self._version
 
     def get_task(self, request, _):
-        shard = elasticdl_pb2.Shard()
-        res = elasticdl_pb2.Task(shard=shard)
+        shard = elasticai_api_pb2.Shard()
+        res = elasticai_api_pb2.Task(shard=shard)
         res.model_version = self._version
-        if request.task_type == elasticdl_pb2.EVALUATION:
+        if request.task_type == elasticai_api_pb2.EVALUATION:
             task_id, task = self._task_manager.get_eval_task(request.worker_id)
         else:
             task_id, task = self._task_manager.get(request.worker_id)
@@ -100,7 +100,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 res.extended_config[k] = v
 
             # For evaluation task, it will use the fixed version model
-            if task.type == elasticdl_pb2.EVALUATION:
+            if task.type == elasticai_api_pb2.EVALUATION:
                 res.model_version = task.model_version
         elif (not self._task_manager.finished()) or (
             self._task_manager.invoke_deferred_callback()
@@ -114,9 +114,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 # If there is no more task, master only send wait task to
                 # the last worker and other workers exit.
                 if len(self._instance_manager.get_alive_workers()) == 1:
-                    res.type = elasticdl_pb2.WAIT
+                    res.type = elasticai_api_pb2.WAIT
             else:
-                res.type = elasticdl_pb2.WAIT
+                res.type = elasticai_api_pb2.WAIT
         with self._lock:
             self._task_manager.reset_worker_start_task_time(request.worker_id)
         return res
@@ -136,8 +136,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                             worker_id
                         )
                         if task.type in [
-                            elasticdl_pb2.TRAINING,
-                            elasticdl_pb2.EVALUATION,
+                            elasticai_api_pb2.TRAINING,
+                            elasticai_api_pb2.EVALUATION,
                         ]:
                             self._task_manager.record_task_completed_time(
                                 task.type, complete_time
@@ -164,7 +164,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         worker_id = request.worker_id
         worker_host = self._instance_manager.get_worker_pod_ip(worker_id)
 
-        res = elasticdl_pb2.GetCommRankResponse()
+        res = elasticai_api_pb2.GetCommRankResponse()
         res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
         res.world_size = self._rendezvous_server.get_size()
         res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()

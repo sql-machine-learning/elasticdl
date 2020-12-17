@@ -30,7 +30,7 @@ class MasterTest(unittest.TestCase):
         self.arguments = {
             "num_ps_pods": "1",
             "num_workers": "2",
-            "job_type": str(elasticdl_pb2.TRAINING),
+            "job_type": str(elasticai_api_pb2.TRAINING),
             "minibatch_size": "32",
             "model_zoo": self._model_zoo_path,
             "model_def": "mnist.mnist_functional_api.custom_model",

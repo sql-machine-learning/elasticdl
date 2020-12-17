@@ -62,7 +62,7 @@ class SavedModelExporterTest(unittest.TestCase):
             "",
             0,
             1,
-            elasticdl_pb2.TRAIN_END_CALLBACK,
+            elasticai_api_pb2.TRAIN_END_CALLBACK,
         )
         task_data_service.get_dataset_by_task = mock.Mock(return_value=dataset)
 

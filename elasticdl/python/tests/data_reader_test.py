@@ -57,7 +57,7 @@ class RecordIODataReaderTest(unittest.TestCase):
             # Test records reading
             records = list(
                 reader.read_records(
-                    _Task(shard_name, 0, num_records, elasticdl_pb2.TRAINING)
+                    _Task(shard_name, 0, num_records, elasticai_api_pb2.TRAINING)
                 )
             )
             self.assertEqual(len(records), num_records)
@@ -92,7 +92,7 @@ class TextDataReaderTest(unittest.TestCase):
             )
             shards = csv_data_reader.create_shards()
             self.assertEqual(len(shards), 7)
-            task = _Task(iris_file_name, 0, 20, elasticdl_pb2.TRAINING)
+            task = _Task(iris_file_name, 0, 20, elasticai_api_pb2.TRAINING)
             record_count = 0
             for record in csv_data_reader.read_records(task):
                 record_count += 1
@@ -143,7 +143,7 @@ class ODPSDataReaderTest(unittest.TestCase):
         records = list(
             self.reader.read_records(
                 _Task(
-                    self.test_table + ":shard_0", 0, 2, elasticdl_pb2.TRAINING
+                    self.test_table + ":shard_0", 0, 2, elasticai_api_pb2.TRAINING
                 )
             )
         )
@@ -222,7 +222,7 @@ class ODPSDataReaderTest(unittest.TestCase):
                     self.test_table + ":shard_0",
                     0,
                     num_records,
-                    elasticdl_pb2.TRAINING,
+                    elasticai_api_pb2.TRAINING,
                 )
             ):
                 if data is not None:

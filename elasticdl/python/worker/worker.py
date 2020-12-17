@@ -208,10 +208,10 @@ class Worker(object):
         self._trainer.init_variables_if_need(features, labels)
         self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
-            if task_type == elasticdl_pb2.EVALUATION:
+            if task_type == elasticai_api_pb2.EVALUATION:
                 self._trainer.evaluate_minibatch(features, labels)
                 break
-            elif task_type == elasticdl_pb2.TRAINING:
+            elif task_type == elasticai_api_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
                 self._callbacks_list.on_train_batch_begin(self._model_version)
@@ -238,7 +238,7 @@ class Worker(object):
                             int(self._model_version / self._log_loss_steps) + 1
                         )
                     break
-            elif task_type == elasticdl_pb2.PREDICTION:
+            elif task_type == elasticai_api_pb2.PREDICTION:
                 accepted = self._trainer.predict_minibatch(features)
                 if accepted:
                     break
@@ -264,7 +264,7 @@ class Worker(object):
         for dataset_batch in dataset:
             evaluation_exist = True
             data_err_msg = self._safe_process_minibatch(
-                dataset_batch, elasticdl_pb2.EVALUATION, None
+                dataset_batch, elasticai_api_pb2.EVALUATION, None
             )
             if data_err_msg:
                 err_msg = data_err_msg

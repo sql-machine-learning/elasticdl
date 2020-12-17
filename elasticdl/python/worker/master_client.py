@@ -55,7 +55,7 @@ class MasterClient:
             c.f. /elasticdl/proto/elasticdl.proto
         """
 
-        req = elasticdl_pb2.GetTaskRequest()
+        req = elasticai_api_pb2.GetTaskRequest()
         req.worker_id = self._worker_id
         if task_type is not None:
             req.task_type = task_type
@@ -65,7 +65,7 @@ class MasterClient:
         except Exception:
             # the master node would stop the gRPC service if no more tasks.
             # And this will result a gRPC call exception.
-            res = elasticdl_pb2.Task()
+            res = elasticai_api_pb2.Task()
         return res
 
     def report_task_result(self, task_id, err_msg, exec_counters=None):
@@ -82,7 +82,7 @@ class MasterClient:
           statistics of the task being executed.
         """
 
-        report = elasticdl_pb2.ReportTaskResultRequest()
+        report = elasticai_api_pb2.ReportTaskResultRequest()
         report.task_id = task_id
         report.err_message = err_msg
         if isinstance(exec_counters, dict):
@@ -112,6 +112,6 @@ class MasterClient:
         return self._stub.get_model_version()
 
     def get_comm_rank(self):
-        req = elasticdl_pb2.GetCommRankRequest()
+        req = elasticai_api_pb2.GetCommRankRequest()
         req.worker_id = self._worker_id
         return self._stub.get_comm_rank(req)

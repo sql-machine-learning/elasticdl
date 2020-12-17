@@ -23,7 +23,7 @@ class DataShardServiceTest(unittest.TestCase):
     def setUp(self):
         self._master_client = Mock()
         self._master_client.get_task = MagicMock(
-            return_value=_Task("test_file", 0, 1, elasticdl_pb2.TRAINING)
+            return_value=_Task("test_file", 0, 1, elasticai_api_pb2.TRAINING)
         )
         self._master_client.report_task_result = MagicMock(return_value=True)
 

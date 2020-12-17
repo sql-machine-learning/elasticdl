@@ -127,7 +127,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
     def testEvaluationOnly(self):
         task_d = create_task_manager([], [("f1", 0, 10), ("f2", 0, 10)])
-        task_d.create_tasks(elasticdl_pb2.EVALUATION)
+        task_d.create_tasks(elasticai_api_pb2.EVALUATION)
 
         evaluation_service = EvaluationService(
             task_d.create_evaluation_tasks, 0, True, _eval_metrics_fn

@@ -139,7 +139,7 @@ def create_task_manager(training_shards, evaluation_shards, num_epochs=1):
     task_manager._training_shards = training_shards
     task_manager._evaluation_shards = evaluation_shards
     if task_manager._training_shards:
-        task_manager.create_tasks(elasticdl_pb2.TRAINING)
+        task_manager.create_tasks(elasticai_api_pb2.TRAINING)
     return task_manager
 
 
@@ -425,12 +425,12 @@ def distributed_train_and_evaluate(
     if training:
         task_d._training_shards = shards
         task_d._evaluation_shards = shards
-        task_d.create_tasks(elasticdl_pb2.TRAINING)
-        task_d.create_tasks(elasticdl_pb2.EVALUATION)
+        task_d.create_tasks(elasticai_api_pb2.TRAINING)
+        task_d.create_tasks(elasticai_api_pb2.EVALUATION)
     else:
         task_d._training_shards = []
         task_d._evaluation_shards = shards
-        task_d.create_tasks(elasticdl_pb2.TRAINING)
+        task_d.create_tasks(elasticai_api_pb2.TRAINING)
 
     if training:
         evaluation_service = EvaluationService(

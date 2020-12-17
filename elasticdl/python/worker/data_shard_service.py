@@ -35,7 +35,7 @@ class DataShardService(object):
 
     def get_task(self, task_type=None):
         task = self._mc.get_task(task_type)
-        if task.type == elasticdl_pb2.TRAINING:
+        if task.type == elasticai_api_pb2.TRAINING:
             self._pending_tasks.append(task)
             if len(self._pending_tasks) == 1:
                 self._current_task = task
@@ -96,6 +96,6 @@ class DataShardService(object):
         start and end index.
         """
         task = self.get_task()
-        if task.type != elasticdl_pb2.TRAINING:
+        if task.type != elasticai_api_pb2.TRAINING:
             return None
         return task.shard

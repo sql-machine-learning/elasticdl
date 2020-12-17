@@ -40,7 +40,7 @@ class WorkerTest(unittest.TestCase):
             "--worker_id",
             "0",
             "--job_type",
-            elasticdl_pb2.TRAINING,
+            elasticai_api_pb2.TRAINING,
             "--minibatch_size",
             self._batch_size,
             "--model_zoo",
