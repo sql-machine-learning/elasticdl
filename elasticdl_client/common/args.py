@@ -177,6 +177,13 @@ def add_train_params(parser):
         help="If true, task manager supports fault tolerance, otherwise "
         "no fault tolerance.",
     )
+    add_bool_param(
+        parser=parser,
+        name="--task_timeout_tolerance",
+        default=False,
+        help="If true, the master will recover the worker if its task"
+        "execution is timeout.",
+    )
     parser.add_argument(
         "--job_command",
         help="The command executed in the pod launched by the master",

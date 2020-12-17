@@ -113,6 +113,7 @@ class TaskManager(object):
         self._batch_size = args.minibatch_size
         self._num_epochs = args.num_epochs
         self.support_fault_tolerance = args.task_fault_tolerance
+        self.support_timeout_tolerance = args.task_timeout_tolerance
         self._epoch = 0
         self._max_step = args.max_step
         self._completed_steps = 0
@@ -470,7 +471,7 @@ class TaskManager(object):
                 evaluation_service.init_eval_only_job(len(self._eval_todo))
 
     def start(self):
-        if self.support_fault_tolerance:
+        if self.support_fault_tolerance and self.support_timeout_tolerance:
             threading.Thread(
                 target=self._check_and_reassign_timeout_tasks,
                 name="check_timeout_tasks",
