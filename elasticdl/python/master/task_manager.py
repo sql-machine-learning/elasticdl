@@ -18,7 +18,6 @@ import threading
 import time
 
 from elasticai_api.proto import elasticai_api_pb2
-from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import (
@@ -217,7 +216,9 @@ class TaskManager(object):
     def create_tasks(self, task_type, model_version=-1):
         logger.info(
             "Creating a new set of %s tasks for model version %d",
-            elasticdl_pb2._TASKTYPE.values_by_number[task_type].name.lower(),
+            elasticai_api_pb2._TASKTYPE.values_by_number[
+                task_type
+            ].name.lower(),
             model_version,
         )
         self.reset_job_counters(task_type)
