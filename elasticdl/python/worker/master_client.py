@@ -13,6 +13,7 @@
 
 import numpy as np
 
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.tensor_utils import serialize_ndarray
 

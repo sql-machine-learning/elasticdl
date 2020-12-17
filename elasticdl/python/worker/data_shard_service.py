@@ -14,7 +14,7 @@
 import threading
 from collections import deque
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 
 

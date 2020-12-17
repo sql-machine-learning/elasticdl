@@ -16,7 +16,7 @@ import unittest
 
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy

@@ -22,7 +22,7 @@ import odps
 import tensorflow as tf
 from odps import ODPS
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.common.model_utils import load_module
 from elasticdl.python.data.odps_io import is_odps_configured
@@ -57,7 +57,9 @@ class RecordIODataReaderTest(unittest.TestCase):
             # Test records reading
             records = list(
                 reader.read_records(
-                    _Task(shard_name, 0, num_records, elasticai_api_pb2.TRAINING)
+                    _Task(
+                        shard_name, 0, num_records, elasticai_api_pb2.TRAINING
+                    )
                 )
             )
             self.assertEqual(len(records), num_records)
@@ -143,7 +145,10 @@ class ODPSDataReaderTest(unittest.TestCase):
         records = list(
             self.reader.read_records(
                 _Task(
-                    self.test_table + ":shard_0", 0, 2, elasticai_api_pb2.TRAINING
+                    self.test_table + ":shard_0",
+                    0,
+                    2,
+                    elasticai_api_pb2.TRAINING,
                 )
             )
         )

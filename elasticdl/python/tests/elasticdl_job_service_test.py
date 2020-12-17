@@ -15,7 +15,7 @@ import os
 import tempfile
 import unittest
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.args import parse_master_args
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
 from elasticdl.python.tests.test_utils import (

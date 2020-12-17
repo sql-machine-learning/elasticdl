@@ -15,7 +15,7 @@ import threading
 import time
 import unittest
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.tests.test_utils import create_task_manager
 
 
@@ -158,7 +158,9 @@ class TaskManagerTest(unittest.TestCase):
             {elasticai_api_pb2.TRAINING: 0, elasticai_api_pb2.EVALUATION: 0},
         )
         task_manager.record_task_completed_time(elasticai_api_pb2.TRAINING, 10)
-        task_manager.record_task_completed_time(elasticai_api_pb2.EVALUATION, 5)
+        task_manager.record_task_completed_time(
+            elasticai_api_pb2.EVALUATION, 5
+        )
 
         self.assertEqual(
             task_manager._max_task_completed_times,

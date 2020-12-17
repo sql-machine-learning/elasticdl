@@ -16,7 +16,7 @@ import time
 
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 
@@ -117,7 +117,9 @@ class TaskDataService(object):
 
     def get_eval_dataset(self):
         def _gen():
-            task = self._data_shard_service.get_task(elasticai_api_pb2.EVALUATION)
+            task = self._data_shard_service.get_task(
+                elasticai_api_pb2.EVALUATION
+            )
             if task.type != elasticai_api_pb2.EVALUATION:
                 return
             logger.info("the evaluation task_id: %d" % task.task_id)

@@ -18,7 +18,8 @@ from concurrent import futures
 import grpc
 from google.protobuf import empty_pb2
 
-from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticai_api.proto import elasticai_api_pb2
+from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.log_utils import default_logger as logger
 

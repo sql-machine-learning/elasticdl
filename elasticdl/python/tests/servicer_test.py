@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, Mock
 
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import (
     MasterServicer,
