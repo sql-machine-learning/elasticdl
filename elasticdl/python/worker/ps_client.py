@@ -14,8 +14,8 @@
 import grpc
 import numpy as np
 
+from elasticai_api.common.grpc_utils import build_channel
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.hash_utils import (
     int_to_id,
     scatter_embedding_vector,

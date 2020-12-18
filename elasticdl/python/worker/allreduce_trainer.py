@@ -17,7 +17,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.framework.errors_impl import UnknownError
 
-from elasticdl.python.allreduce.base_controller import (
+from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
     DEFAULT_SECS_TO_CHECK_RENDEZVOUS,
     RendevousManager,

@@ -17,18 +17,17 @@ from unittest.mock import MagicMock, Mock
 import tensorflow as tf
 import torch.optim as optim
 
-from elasticai_api.pytorch.optimizer import DistributedOptimizer
-from elasticdl.python.allreduce.base_controller import (
+from elasticai_api.common.base_controller import (
     AllReduceController,
     RendevousManager,
 )
-from elasticdl.python.allreduce.pytorch_controller import (
+from elasticai_api.common.data_shard_service import DataShardService
+from elasticai_api.pytorch.controller import (
     PyTorchAllReduceController,
     create_elastic_controller,
 )
-from elasticdl.python.allreduce.tensorflow_controller import (
-    TensorFlowV2AllReduceController,
-)
+from elasticai_api.pytorch.optimizer import DistributedOptimizer
+from elasticai_api.tensorflow.controller import TensorFlowV2AllReduceController
 from elasticdl.python.tests.test_module import (
     TorchModel,
     custom_model,
@@ -36,7 +35,6 @@ from elasticdl.python.tests.test_module import (
     optimizer,
 )
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
-from elasticdl.python.worker.data_shard_service import DataShardService
 
 
 class AllReduceTrainerTest(unittest.TestCase):

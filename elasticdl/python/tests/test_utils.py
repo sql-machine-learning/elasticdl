@@ -25,10 +25,10 @@ import recordio
 import tensorflow as tf
 from odps import ODPS
 
+from elasticai_api.common.grpc_utils import build_channel
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import JobType, MaxComputeConfig
-from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
