@@ -18,7 +18,7 @@ pytorch_require_list = ["torch"]
 
 setup(
     name="elasticai-api",
-    version="0.2.0rc3.dev0",
+    version="0.2.0rc5.dev0",
     description="The model development api for ElasticDL.",
     long_description="This is the sdk for developing ElasticDL models."
     " Model developers can use these APIs to support elastic and"
