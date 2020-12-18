@@ -188,6 +188,11 @@ class PyTorchReduceControllerTest(unittest.TestCase):
         self.controller.global_batch_num_per_step = 2
         self.controller.reset_backward_passes_per_step()
         self.assertEqual(self.controller.backward_passes_per_step, 2)
+        self.assertEqual(optimizer.backward_passes_per_step, 2)
+        self.assertListEqual(
+            list(optimizer._allreduce_delay.values()),
+            [2] * len(optimizer._allreduce_delay),
+        )
 
 
 if __name__ == "__main__":
