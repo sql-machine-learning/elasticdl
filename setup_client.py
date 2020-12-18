@@ -18,14 +18,14 @@ with open("elasticdl_client/requirements.txt") as f:
 
 setup(
     name="elasticdl_client",
-    version="0.2.0rc3.dev0",
+    version="0.2.0rc5.dev0",
     description="The client command line tool for ElasticDL.",
     long_description="ElasticDL Client is the client command line tool for"
     " ElasticDL. Users can use it to submit distributed ElasticDL jobs to"
     " a Kubernetes cluster. It also provides an easy way to build and push"
     " Docker images for distributed ElasticDL jobs.",
     long_description_content_type="text/markdown",
-    author="Ant Financial",
+    author="Ant Group",
     url="https://elasticdl.org",
     install_requires=required_deps,
     python_requires=">=3.5",

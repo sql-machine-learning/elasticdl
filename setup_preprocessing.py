@@ -22,14 +22,14 @@ with open("elasticdl_preprocessing/requirements-dev.txt") as f:
 
 setup(
     name="elasticdl_preprocessing",
-    version="0.2.0rc3.dev0",
+    version="0.2.0rc5.dev0",
     description="A feature preprocessing library.",
     long_description="This is an extension of the native Keras Preprocessing"
     " Layers and Feature Column API from TensorFlow. We can develop our model"
     " using the native high-level API from TensorFlow and our library."
     " We can train this model using native TensorFlow or ElasticDL.",
     long_description_content_type="text/markdown",
-    author="Ant Financial",
+    author="Ant Group",
     url="https://elasticdl.org",
     install_requires=required_deps,
     extras_require=extras,
