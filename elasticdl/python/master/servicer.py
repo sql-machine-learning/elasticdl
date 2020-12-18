@@ -18,7 +18,7 @@ from concurrent import futures
 import grpc
 from google.protobuf import empty_pb2
 
-from elasticai_api.proto import elasticai_api_pb2
+from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -41,19 +41,27 @@ def create_master_service(
         ],
     )
     master_servicer = MasterServicer(
-        evaluation_service=evaluation_service,
         task_manager=task_manager,
         instance_manager=pod_manager,
         rendezvous_server=rendezvous_server,
+        evaluation_service=evaluation_service,
     )
-    elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
+    elasticai_api_pb2_grpc.add_MasterServicer_to_server(
+        master_servicer, server
+    )
+    elasticdl_pb2_grpc.add_TrainLoopMasterServicer_to_server(
+        master_servicer, server
+    )
     server.add_insecure_port("[::]:{}".format(port))
     logger.info("The port of the master server is: %d", port)
 
     return server
 
 
-class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
+class MasterServicer(
+    elasticai_api_pb2_grpc.MasterServicer,
+    elasticdl_pb2_grpc.TrainLoopMasterServicer,
+):
     """Master service implementation"""
 
     def __init__(
@@ -74,10 +82,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
         self._lock = threading.Lock()
         self._version = 0
-
-    @staticmethod
-    def var_name_encode(name):
-        return name.replace(":", "-")
 
     def get_model_version(self):
         return self._version

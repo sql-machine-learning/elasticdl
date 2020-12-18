@@ -16,12 +16,15 @@ from concurrent import futures
 import grpc
 from google.protobuf import empty_pb2
 
-from elasticai_api.proto import elasticai_api_pb2
+from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.grpc_utils import find_free_port
 
 
-class MockMasterService(elasticdl_pb2_grpc.MasterServicer):
+class MockMasterService(
+    elasticai_api_pb2_grpc.MasterServicer,
+    elasticdl_pb2_grpc.TrainLoopMasterServicer,
+):
     def report_evaluation_metrics(self, request, _):
         return empty_pb2.Empty()
 
@@ -38,7 +41,10 @@ def _server(server_instance=MockMasterService):
     port = find_free_port()
     master_servicer = server_instance()
     svr = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
-    elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, svr)
+    elasticai_api_pb2_grpc.add_MasterServicer_to_server(master_servicer, svr)
+    elasticdl_pb2_grpc.add_TrainLoopMasterServicer_to_server(
+        master_servicer, svr
+    )
     svr.add_insecure_port("[::]:{}".format(port))
     svr.start()
     return svr, port

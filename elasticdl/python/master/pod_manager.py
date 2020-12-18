@@ -504,6 +504,7 @@ class PodManager(object):
             # At start, there may be no worker.
             if not self._pod_info_cache[PodType.WORKER]:
                 return False
+
             all_exited = all(
                 [
                     pod_info.status

@@ -38,14 +38,10 @@ message ReportVersionRequest {
   int32 model_version = 1;
 }
 
-service Master {
-  rpc get_task(GetTaskRequest) returns (Task);
+service TrainLoopMaster {
   rpc report_evaluation_metrics(ReportEvaluationMetricsRequest)
       returns (google.protobuf.Empty);
-  rpc report_task_result(ReportTaskResultRequest)
-      returns (google.protobuf.Empty);
   rpc report_version(ReportVersionRequest) returns (google.protobuf.Empty);
-  rpc get_comm_rank(GetCommRankRequest) returns (GetCommRankResponse);
 }
 
 message PullEmbeddingVectorRequest {
