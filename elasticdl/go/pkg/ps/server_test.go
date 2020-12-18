@@ -46,7 +46,7 @@ func (s *masterServer) run() {
 		log.Fatalf("failed to start Master: %v", err)
 	}
 	s.server = grpc.NewServer()
-	proto.RegisterMasterServer(s.server, s)
+	proto.RegisterTrainLoopMasterServer(s.server, s)
 	go s.startServe(lis)
 }
 
