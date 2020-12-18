@@ -2,8 +2,11 @@ syntax = "proto3";
 
 package proto;
 
+<<<<<<< HEAD
 import "google/protobuf/empty.proto";
 
+=======
+>>>>>>> develop
 option go_package = "elasticdl/go/pkg/proto";
 
 enum TaskType {
@@ -77,6 +80,7 @@ message GetCommRankResponse {
   int32 rendezvous_id = 3;
   int32 rendezvous_port = 4;
 }
+<<<<<<< HEAD
 
 service Master {
   rpc get_task(GetTaskRequest) returns (Task);
@@ -84,3 +88,5 @@ service Master {
       returns (google.protobuf.Empty);
   rpc get_comm_rank(GetCommRankRequest) returns (GetCommRankResponse);
 }
+=======
+>>>>>>> develop
