@@ -20,7 +20,7 @@ from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
     AllReduceController,
 )
-from elasticdl.python.common.log_utils import default_logger as logger
+from elasticai_api.common.log_utils import default_logger as logger
 
 try:
     import horovod.tensorflow as hvd

@@ -23,11 +23,11 @@ from elasticai_api.common.base_controller import (
 )
 from elasticai_api.common.data_shard_service import DataShardService
 from elasticai_api.pytorch.optimizer import DistributedOptimizer
-from elasticdl.python.allreduce.pytorch_controller import (
+from elasticai_api.pytorch.pytorch_controller import (
     PyTorchAllReduceController,
     create_elastic_controller,
 )
-from elasticdl.python.allreduce.tensorflow_controller import (
+from elasticai_api.tensorflow.tensorflow_controller import (
     TensorFlowV2AllReduceController,
 )
 from elasticdl.python.tests.test_module import (

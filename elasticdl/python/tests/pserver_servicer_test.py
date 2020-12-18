@@ -20,8 +20,8 @@ import numpy as np
 import tensorflow as tf
 from google.protobuf import empty_pb2
 
+from elasticai_api.common.grpc_utils import build_channel
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
