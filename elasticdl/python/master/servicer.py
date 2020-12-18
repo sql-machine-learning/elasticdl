@@ -83,6 +83,9 @@ class MasterServicer(
         self._lock = threading.Lock()
         self._version = 0
 
+    def get_model_version(self):
+        return self._version
+
     def get_task(self, request, _):
         shard = elasticai_api_pb2.Shard()
         res = elasticai_api_pb2.Task(shard=shard)
@@ -146,20 +149,6 @@ class MasterServicer(
                             )
         return empty_pb2.Empty()
 
-    def get_comm_rank(self, request, _):
-        worker_id = request.worker_id
-        worker_host = self._instance_manager.get_worker_pod_ip(worker_id)
-
-        res = elasticai_api_pb2.GetCommRankResponse()
-        res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
-        res.world_size = self._rendezvous_server.get_size()
-        res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()
-        res.rendezvous_port = self._rendezvous_server.get_rendezvous_port()
-        return res
-
-    def get_model_version(self):
-        return self._version
-
     def report_evaluation_metrics(self, request, _):
         with self._lock:
             self._task_manager.reset_worker_start_task_time(request.worker_id)
@@ -175,3 +164,14 @@ class MasterServicer(
                 model_version=request.model_version
             )
         return empty_pb2.Empty()
+
+    def get_comm_rank(self, request, _):
+        worker_id = request.worker_id
+        worker_host = self._instance_manager.get_worker_pod_ip(worker_id)
+
+        res = elasticai_api_pb2.GetCommRankResponse()
+        res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
+        res.world_size = self._rendezvous_server.get_size()
+        res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()
+        res.rendezvous_port = self._rendezvous_server.get_rendezvous_port()
+        return res
