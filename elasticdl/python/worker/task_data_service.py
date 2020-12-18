@@ -16,7 +16,7 @@ import time
 
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 
@@ -80,10 +80,10 @@ class TaskDataService(object):
     def get_train_end_callback_task(self):
         while True:
             task = self._data_shard_service.get_task()
-            if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
+            if task.type == elasticai_api_pb2.TRAIN_END_CALLBACK:
                 self.train_end_callback_task = task
                 return task
-            elif task.type == elasticdl_pb2.WAIT:
+            elif task.type == elasticai_api_pb2.WAIT:
                 # The worker can only do the callback task until
                 # the training loop finishes.
                 logger.info("Waiting more tasks")
@@ -108,7 +108,7 @@ class TaskDataService(object):
         """
         while True:
             task = self._data_shard_service.get_task()
-            if task.type != elasticdl_pb2.TRAINING:
+            if task.type != elasticai_api_pb2.TRAINING:
                 break
 
             for data in self.data_reader.read_records(task):
@@ -117,8 +117,10 @@ class TaskDataService(object):
 
     def get_eval_dataset(self):
         def _gen():
-            task = self._data_shard_service.get_task(elasticdl_pb2.EVALUATION)
-            if task.type != elasticdl_pb2.EVALUATION:
+            task = self._data_shard_service.get_task(
+                elasticai_api_pb2.EVALUATION
+            )
+            if task.type != elasticai_api_pb2.EVALUATION:
                 return
             logger.info("the evaluation task_id: %d" % task.task_id)
             self.current_eval_task = task
