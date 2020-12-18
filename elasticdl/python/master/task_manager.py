@@ -17,8 +17,8 @@ import random
 import threading
 import time
 
+from elasticai_api.common.constants import TaskExecCounterKey
 from elasticai_api.proto import elasticai_api_pb2
-from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,

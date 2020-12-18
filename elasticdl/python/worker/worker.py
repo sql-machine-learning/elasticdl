@@ -17,6 +17,7 @@ from distutils.version import LooseVersion
 
 import tensorflow as tf
 
+from elasticai_api.common.data_shard_service import DataShardService
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import get_logger
@@ -30,7 +31,6 @@ from elasticdl.python.common.model_utils import (
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
-from elasticdl.python.worker.data_shard_service import DataShardService
 from elasticdl.python.worker.ps_trainer import ParameterServerTrainer
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy

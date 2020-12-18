@@ -12,6 +12,10 @@
 # limitations under the License.
 
 
+class TaskExecCounterKey(object):
+    FAIL_COUNT = "fail_count"
+
+
 class HorovodEnv(object):
     RENDEZVOUS_ADDR = "HOROVOD_GLOO_RENDEZVOUS_ADDR"
     RENDEZVOUS_PORT = "HOROVOD_GLOO_RENDEZVOUS_PORT"

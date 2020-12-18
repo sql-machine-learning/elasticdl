@@ -16,7 +16,7 @@ import time
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
 
-from elasticdl.python.allreduce.base_controller import (
+from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
     AllReduceController,
 )

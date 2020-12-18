@@ -15,14 +15,14 @@ import os
 import time
 import traceback
 
-from elasticai_api.common.constants import WorkerEnv
-from elasticdl.python.allreduce.base_controller import (
+from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
     AllReduceController,
 )
+from elasticai_api.common.constants import WorkerEnv
+from elasticai_api.common.data_shard_service import DataShardService
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.worker.data_shard_service import DataShardService
 from elasticdl.python.worker.master_client import MasterClient
 
 try:

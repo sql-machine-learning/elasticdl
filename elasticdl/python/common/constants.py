@@ -59,10 +59,6 @@ class SaveModelConfig(object):
     SAVED_MODEL_PATH = "saved_model_path"
 
 
-class TaskExecCounterKey(object):
-    FAIL_COUNT = "fail_count"
-
-
 class CollectiveCommunicatorStatus(object):
     SUCCEEDED = "succeeded"
     FAILED = "failed"

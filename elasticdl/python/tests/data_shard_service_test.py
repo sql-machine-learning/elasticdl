@@ -14,9 +14,9 @@
 import unittest
 from unittest.mock import MagicMock, Mock
 
+from elasticai_api.common.data_shard_service import DataShardService
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.master.task_manager import _Task
-from elasticdl.python.worker.data_shard_service import DataShardService
 
 
 class DataShardServiceTest(unittest.TestCase):
