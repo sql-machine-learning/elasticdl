@@ -13,12 +13,12 @@
 
 import numpy as np
 
-from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
+from elasticai_api.common.master_client import MasterClient as BaseMasterClient
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.tensor_utils import serialize_ndarray
 
 
-class MasterClient:
+class MasterClient(BaseMasterClient):
     """MasterClient provides some APIs connect with the master
     service via gRPC call.
 
@@ -41,55 +41,10 @@ class MasterClient:
             the unique and ordered worker ID assigned
             by elasticdl command-line.
         """
+        super(MasterClient, self).__init__(
+            channel=channel, worker_id=worker_id
+        )
         self._train_loop_stub = elasticdl_pb2_grpc.TrainLoopMasterStub(channel)
-        self._stub = elasticai_api_pb2_grpc.MasterStub(channel)
-        self._worker_id = worker_id
-
-    def get_task(self, task_type=None):
-        """Get a task from master.
-
-        Args:
-            task_type: elasticdl_pb.TaskType
-            the training phase, c.f. /elasticdl/proto/elasticdl.proto
-
-        Returns:
-            the task unit assigned by master,
-            c.f. /elasticdl/proto/elasticdl.proto
-        """
-
-        req = elasticai_api_pb2.GetTaskRequest()
-        req.worker_id = self._worker_id
-        if task_type is not None:
-            req.task_type = task_type
-
-        try:
-            res = self._stub.get_task(req)
-        except Exception:
-            # the master node would stop the gRPC service if no more tasks.
-            # And this will result a gRPC call exception.
-            res = elasticai_api_pb2.Task()
-        return res
-
-    def report_task_result(self, task_id, err_msg, exec_counters=None):
-        """Report task result to master.
-
-        Args:
-          task_id: int
-          the task ID assigned by master
-
-          err_msg: string
-          the error message on training.
-
-          exec_counters: dict
-          statistics of the task being executed.
-        """
-
-        report = elasticai_api_pb2.ReportTaskResultRequest()
-        report.task_id = task_id
-        report.err_message = err_msg
-        if isinstance(exec_counters, dict):
-            report.exec_counters.update(exec_counters)
-        return self._stub.report_task_result(report)
 
     def report_evaluation_metrics(self, model_outputs, labels):
         """Report evaluation metrics to master.
@@ -109,8 +64,3 @@ class MasterClient:
         serialize_ndarray(labels, req.labels)
         req.worker_id = self._worker_id
         self._train_loop_stub.report_evaluation_metrics(req)
-
-    def get_comm_rank(self):
-        req = elasticai_api_pb2.GetCommRankRequest()
-        req.worker_id = self._worker_id
-        return self._stub.get_comm_rank(req)
