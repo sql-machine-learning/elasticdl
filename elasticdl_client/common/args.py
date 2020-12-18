@@ -179,10 +179,10 @@ def add_train_params(parser):
     )
     add_bool_param(
         parser=parser,
-        name="--task_timeout_tolerance",
+        name="--relaunch_timeout_worker",
         default=False,
-        help="If true, the master will recover the worker if its task"
-        "execution is timeout.",
+        help="If true, the master will detect the time of worker to "
+        "execute a task and relaunch the worker if timeout",
     )
     parser.add_argument(
         "--job_command",

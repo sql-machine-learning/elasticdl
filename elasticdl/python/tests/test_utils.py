@@ -109,7 +109,7 @@ class TaskManagerArgs(object):
         checkpoint_dir_for_init="",
         custom_training_loop=False,
         task_fault_tolerance=True,
-        task_timeout_tolerance=True,
+        relaunch_timeout_worker=True,
     ):
         self.training_data = training_data
         self.validation_data = validation_data
@@ -124,7 +124,7 @@ class TaskManagerArgs(object):
         self.checkpoint_dir_for_init = checkpoint_dir_for_init
         self.custom_training_loop = custom_training_loop
         self.task_fault_tolerance = task_fault_tolerance
-        self.task_timeout_tolerance = task_timeout_tolerance
+        self.relaunch_timeout_worker = relaunch_timeout_worker
 
 
 class DatasetName(object):
