@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.tensor_utils import ndarray_to_pb
@@ -127,7 +127,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
     def testEvaluationOnly(self):
         task_d = create_task_manager([], [("f1", 0, 10), ("f2", 0, 10)])
-        task_d.create_tasks(elasticdl_pb2.EVALUATION)
+        task_d.create_tasks(elasticai_api_pb2.EVALUATION)
 
         evaluation_service = EvaluationService(
             task_d.create_evaluation_tasks, 0, True, _eval_metrics_fn
