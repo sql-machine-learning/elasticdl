@@ -16,12 +16,15 @@ from concurrent import futures
 import grpc
 from google.protobuf import empty_pb2
 
-from elasticai_api.proto import elasticai_api_pb2
+from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.grpc_utils import find_free_port
 
 
-class MockMasterService(elasticdl_pb2_grpc.MasterServicer):
+class MockMasterService(
+    elasticai_api_pb2_grpc.MasterServicer,
+    elasticdl_pb2_grpc.TrainLoopMasterServicer,
+):
     def report_evaluation_metrics(self, request, _):
         return empty_pb2.Empty()
 
