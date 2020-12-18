@@ -34,7 +34,7 @@ const (
 )
 
 type masterServer struct {
-	proto.UnimplementedMasterServer
+	proto.UnimplementedTrainLoopMasterServer
 	address      string
 	modelVersion int32
 	server       *grpc.Server

@@ -43,8 +43,8 @@ def create_master_service(
     master_servicer = MasterServicer(
         task_manager=task_manager,
         instance_manager=pod_manager,
-        evaluation_service=evaluation_service,
         rendezvous_server=rendezvous_server,
+        evaluation_service=evaluation_service,
     )
     elasticai_api_pb2_grpc.add_MasterServicer_to_server(
         master_servicer, server
