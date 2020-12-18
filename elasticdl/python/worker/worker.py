@@ -470,7 +470,7 @@ class Worker(object):
         Train and evaluate the model on the worker
         """
         if os.getenv("USE_TORCH", None):
-            from elasticai_api.pytorch.pytorch_controller import (
+            from elasticai_api.pytorch.controller import (
                 PyTorchAllReduceController,
             )
 
@@ -478,7 +478,7 @@ class Worker(object):
                 self._mc, self._data_shard_service
             )
         elif _IS_TF2:
-            from elasticai_api.tensorflow.tensorflow_controller import (
+            from elasticai_api.tensorflow.controller import (
                 TensorFlowV2AllReduceController,
             )
 
@@ -486,7 +486,7 @@ class Worker(object):
                 self._mc, self._data_shard_service
             )
         else:
-            from elasticai_api.tensorflow.tensorflow_controller import (
+            from elasticai_api.tensorflow.controller import (
                 TensorFlowV1AllReduceController,
             )
 

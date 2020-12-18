@@ -22,14 +22,12 @@ from elasticai_api.common.base_controller import (
     RendevousManager,
 )
 from elasticai_api.common.data_shard_service import DataShardService
-from elasticai_api.pytorch.optimizer import DistributedOptimizer
-from elasticai_api.pytorch.pytorch_controller import (
+from elasticai_api.pytorch.controller import (
     PyTorchAllReduceController,
     create_elastic_controller,
 )
-from elasticai_api.tensorflow.tensorflow_controller import (
-    TensorFlowV2AllReduceController,
-)
+from elasticai_api.pytorch.optimizer import DistributedOptimizer
+from elasticai_api.tensorflow.controller import TensorFlowV2AllReduceController
 from elasticdl.python.tests.test_module import (
     TorchModel,
     custom_model,
