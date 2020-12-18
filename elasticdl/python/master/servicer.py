@@ -68,8 +68,8 @@ class MasterServicer(
         self,
         task_manager,
         instance_manager,
-        evaluation_service=None,
         rendezvous_server=None,
+        evaluation_service=None,
     ):
         # TODO: group params together into a single object.
         self._task_manager = task_manager
