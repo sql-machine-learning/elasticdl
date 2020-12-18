@@ -35,7 +35,7 @@ const (
 
 // MasterClient contains attributes to call master GRPC services
 type MasterClient struct {
-	client     proto.MasterClient
+	client     proto.TrainLoopMasterClient
 	context    context.Context
 	clientConn *grpc.ClientConn
 }
@@ -77,7 +77,7 @@ func createMasterClient(masterAddr string) *MasterClient {
 	if err != nil {
 		log.Fatalf("failed to connect to master: %v", err)
 	}
-	client := proto.NewMasterClient(conn)
+	client := proto.NewTrainLoopMasterClient(conn)
 	return &MasterClient{
 		client:     client,
 		context:    context.Background(),

@@ -18,7 +18,7 @@ from concurrent import futures
 import grpc
 from google.protobuf import empty_pb2
 
-from elasticai_api.proto import elasticai_api_pb2
+from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -41,46 +41,36 @@ def create_master_service(
         ],
     )
     master_servicer = MasterServicer(
-        evaluation_service=evaluation_service,
         task_manager=task_manager,
         instance_manager=pod_manager,
         rendezvous_server=rendezvous_server,
     )
-    elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
+    train_loop_master_servicer = TrainLoopMasterServicer(
+        task_manager=task_manager, evaluation_service=evaluation_service,
+    )
+    elasticai_api_pb2_grpc.add_MasterServicer_to_server(
+        master_servicer, server
+    )
+    elasticdl_pb2_grpc.add_TrainLoopMasterServicer_to_server(
+        train_loop_master_servicer, server
+    )
     server.add_insecure_port("[::]:{}".format(port))
     logger.info("The port of the master server is: %d", port)
 
     return server
 
 
-class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
+class MasterServicer(elasticai_api_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
     def __init__(
-        self,
-        task_manager,
-        instance_manager,
-        rendezvous_server=None,
-        evaluation_service=None,
+        self, task_manager, instance_manager, rendezvous_server=None,
     ):
         # TODO: group params together into a single object.
         self._task_manager = task_manager
         self._instance_manager = instance_manager
         self._rendezvous_server = rendezvous_server
-        self._evaluation_service = evaluation_service
-        if self._evaluation_service:
-            self._evaluation_service.set_model_version_fn(
-                self.get_model_version
-            )
         self._lock = threading.Lock()
-        self._version = 0
-
-    @staticmethod
-    def var_name_encode(name):
-        return name.replace(":", "-")
-
-    def get_model_version(self):
-        return self._version
 
     def get_task(self, request, _):
         shard = elasticai_api_pb2.Shard()
@@ -145,6 +135,37 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                             )
         return empty_pb2.Empty()
 
+    def get_comm_rank(self, request, _):
+        worker_id = request.worker_id
+        worker_host = self._instance_manager.get_worker_pod_ip(worker_id)
+
+        res = elasticai_api_pb2.GetCommRankResponse()
+        res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
+        res.world_size = self._rendezvous_server.get_size()
+        res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()
+        res.rendezvous_port = self._rendezvous_server.get_rendezvous_port()
+        return res
+
+
+class TrainLoopMasterServicer(elasticdl_pb2_grpc.TrainLoopMasterServicer):
+    """Master service implementation"""
+
+    def __init__(
+        self, task_manager, evaluation_service=None,
+    ):
+        # TODO: group params together into a single object.
+        self._task_manager = task_manager
+        self._evaluation_service = evaluation_service
+        if self._evaluation_service:
+            self._evaluation_service.set_model_version_fn(
+                self.get_model_version
+            )
+        self._lock = threading.Lock()
+        self._version = 0
+
+    def get_model_version(self):
+        return self._version
+
     def report_evaluation_metrics(self, request, _):
         with self._lock:
             self._task_manager.reset_worker_start_task_time(request.worker_id)
@@ -160,14 +181,3 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 model_version=request.model_version
             )
         return empty_pb2.Empty()
-
-    def get_comm_rank(self, request, _):
-        worker_id = request.worker_id
-        worker_host = self._instance_manager.get_worker_pod_ip(worker_id)
-
-        res = elasticai_api_pb2.GetCommRankResponse()
-        res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
-        res.world_size = self._rendezvous_server.get_size()
-        res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()
-        res.rendezvous_port = self._rendezvous_server.get_rendezvous_port()
-        return res
