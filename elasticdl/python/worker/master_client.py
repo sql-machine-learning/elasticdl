@@ -45,25 +45,6 @@ class MasterClient:
         self._stub = elasticai_api_pb2_grpc.MasterStub(channel)
         self._worker_id = worker_id
 
-    def report_evaluation_metrics(self, model_outputs, labels):
-        """Report evaluation metrics to master.
-
-        Args:
-            model_outputs: dict
-            the evaluation result on training.
-
-            labels: numpy array
-            the labels on training dataset.
-        """
-        req = elasticdl_pb2.ReportEvaluationMetricsRequest()
-        for name, output in model_outputs.items():
-            output = np.concatenate(output)
-            serialize_ndarray(output, req.model_outputs[name])
-        labels = np.concatenate(labels)
-        serialize_ndarray(labels, req.labels)
-        req.worker_id = self._worker_id
-        self._train_loop_stub.report_evaluation_metrics(req)
-
     def get_task(self, task_type=None):
         """Get a task from master.
 
@@ -109,6 +90,25 @@ class MasterClient:
         if isinstance(exec_counters, dict):
             report.exec_counters.update(exec_counters)
         return self._stub.report_task_result(report)
+
+    def report_evaluation_metrics(self, model_outputs, labels):
+        """Report evaluation metrics to master.
+
+        Args:
+            model_outputs: dict
+            the evaluation result on training.
+
+            labels: numpy array
+            the labels on training dataset.
+        """
+        req = elasticdl_pb2.ReportEvaluationMetricsRequest()
+        for name, output in model_outputs.items():
+            output = np.concatenate(output)
+            serialize_ndarray(output, req.model_outputs[name])
+        labels = np.concatenate(labels)
+        serialize_ndarray(labels, req.labels)
+        req.worker_id = self._worker_id
+        self._train_loop_stub.report_evaluation_metrics(req)
 
     def get_comm_rank(self):
         req = elasticai_api_pb2.GetCommRankRequest()
