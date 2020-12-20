@@ -13,6 +13,9 @@
 
 from setuptools import find_packages, setup
 
+with open("elasticai_api/requirements.txt") as f:
+    required_deps = f.read().splitlines()
+
 tensorflow_require_list = ["tensorflow"]
 pytorch_require_list = ["torch"]
 
@@ -28,6 +31,7 @@ setup(
     url="https://elasticdl.org",
     python_requires=">=3.5",
     packages=find_packages(include=["elasticai_api*"], exclude=["*test*"]),
+    install_requires=required_deps,
     extras_require={
         "tensorflow": tensorflow_require_list,
         "pytorch": pytorch_require_list,
