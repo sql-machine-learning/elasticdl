@@ -189,6 +189,12 @@ def add_train_params(parser):
         help="The command executed in the pod launched by the master",
         default="",
     )
+    parser.add_argument(
+        "--chief_worker_index",
+        type=int,
+        help="If non-negative, this is the index of chief worker",
+        default=-1,
+    )
 
 
 def add_evaluate_params(parser):
