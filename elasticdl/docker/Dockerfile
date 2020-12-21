@@ -47,6 +47,11 @@ RUN python -m pip install --quiet -r /requirements-dev.txt \
         --extra-index-url=$EXTRA_PYPI_INDEX \
         && rm /requirements-dev.txt
 
+COPY elasticai_api/requirements.txt /requirements.txt
+RUN python -m pip install --quiet -r /requirements.txt \
+        --extra-index-url=$EXTRA_PYPI_INDEX \
+        && rm /requirements.txt
+
 COPY elasticdl/requirements.txt /requirements.txt
 RUN python -m pip install --quiet -r /requirements.txt \
         --extra-index-url=$EXTRA_PYPI_INDEX \
