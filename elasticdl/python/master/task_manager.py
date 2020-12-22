@@ -112,6 +112,7 @@ class TaskManager(object):
 
         self._batch_size = args.minibatch_size
         self._num_epochs = args.num_epochs
+        self._dataset_size = None
         self.support_fault_tolerance = args.task_fault_tolerance
         self.relaunch_timeout_worker = args.relaunch_timeout_worker
         self._epoch = 0
@@ -209,6 +210,29 @@ class TaskManager(object):
         self._completed_steps = CheckpointSaver.get_version_from_checkpoint(
             checkpoint_dir_for_init
         )
+
+    def set_training_params(self, batch_size, num_epochs, dataset_size):
+        with self._lock:
+            if self._training_shards is None:
+                self._batch_size = batch_size
+                self._num_epochs = num_epochs
+                self._dataset_size = dataset_size
+                self._training_shards = self._create_shards_by_dataset_size(
+                    dataset_size
+                )
+
+    def _create_shards_by_dataset_size(self, dataset_size):
+        shards = []
+        num_shards = dataset_size // self._records_per_task
+        start_ind = 0
+        for shard_id in range(num_shards):
+            shards.append(("", start_ind, self._records_per_task,))
+            start_ind += self._records_per_task
+        # Create a shard with the last records
+        num_records_left = dataset_size % self._records_per_task
+        if num_records_left != 0:
+            shards.append(("", start_ind, num_records_left,))
+        return shards
 
     def reset_job_counters(self, task_type):
         """Return record number in specific task_type"""

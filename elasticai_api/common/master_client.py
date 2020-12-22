@@ -90,3 +90,10 @@ class MasterClient:
         req = elasticai_api_pb2.GetCommRankRequest()
         req.worker_id = self._worker_id
         return self._stub.get_comm_rank(req)
+
+    def report_training_params(self, batch_size, num_epoch, dataset_size):
+        report = elasticai_api_pb2.ReportTrainingParamsRequest()
+        report.batch_size = batch_size
+        report.num_epochs = num_epoch
+        report.datset_size = dataset_size
+        return self._stub.report_training_params(report)
