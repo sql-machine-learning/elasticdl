@@ -19,7 +19,7 @@ class MasterClient:
     service via gRPC call.
 
     Usage:
-        channel = elasticai_api.common.grpc_utils.build_channel(
+        channel = elasticai_api.util.grpc_utils.build_channel(
             "localhost:50001"
         )
         mc = MasterClient(channel, work_id=0)

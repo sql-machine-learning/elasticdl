@@ -21,9 +21,9 @@ from elasticai_api.common.base_controller import (
 )
 from elasticai_api.common.constants import WorkerEnv
 from elasticai_api.common.data_shard_service import DataShardService
-from elasticai_api.common.grpc_utils import build_channel
-from elasticai_api.common.log_utils import default_logger as logger
 from elasticai_api.common.master_client import MasterClient
+from elasticai_api.util.grpc_utils import build_channel
+from elasticai_api.util.log_utils import default_logger as logger
 
 try:
     import horovod.torch as hvd
