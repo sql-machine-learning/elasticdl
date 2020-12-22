@@ -91,9 +91,13 @@ class MasterClient:
         req.worker_id = self._worker_id
         return self._stub.get_comm_rank(req)
 
-    def report_training_params(self, batch_size, num_epoch, dataset_size):
+    def report_training_params(
+        self, batch_size, num_epochs=None, dataset_size=None
+    ):
         report = elasticai_api_pb2.ReportTrainingParamsRequest()
         report.batch_size = batch_size
-        report.num_epochs = num_epoch
-        report.datset_size = dataset_size
+        if num_epochs is not None:
+            report.num_epochs = num_epochs
+        if dataset_size is not None:
+            report.dataset_size = dataset_size
         return self._stub.report_training_params(report)

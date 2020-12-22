@@ -169,6 +169,7 @@ class MasterServicer(
         self._task_manager.set_training_params(
             request.batch_size, request.num_epochs, request.dataset_size
         )
+        return empty_pb2.Empty()
 
     def get_comm_rank(self, request, _):
         worker_id = request.worker_id

@@ -89,4 +89,6 @@ service Master {
   rpc report_task_result(ReportTaskResultRequest)
       returns (google.protobuf.Empty);
   rpc get_comm_rank(GetCommRankRequest) returns (GetCommRankResponse);
+  rpc report_training_params(ReportTrainingParamsRequest)
+      returns (google.protobuf.Empty);
 }

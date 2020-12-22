@@ -213,13 +213,21 @@ class TaskManager(object):
 
     def set_training_params(self, batch_size, num_epochs, dataset_size):
         with self._lock:
-            if self._training_shards is None:
+            if not self._training_shards:
+                # The master receives the training params to create shards
                 self._batch_size = batch_size
-                self._num_epochs = num_epochs
-                self._dataset_size = dataset_size
+                self._num_epochs = (
+                    num_epochs if num_epochs > 0 else self._num_epochs
+                )
+                self._dataset_size = (
+                    dataset_size if dataset_size > 0 else self._dataset_size
+                )
                 self._training_shards = self._create_shards_by_dataset_size(
                     dataset_size
                 )
+                if self._training_shards:
+                    logger.info("Starting epoch %d", self._epoch)
+                    self.create_tasks(elasticai_api_pb2.TRAINING)
 
     def _create_shards_by_dataset_size(self, dataset_size):
         shards = []
@@ -232,6 +240,7 @@ class TaskManager(object):
         num_records_left = dataset_size % self._records_per_task
         if num_records_left != 0:
             shards.append(("", start_ind, num_records_left,))
+        logger.info("Create {} shards".format(len(shards)))
         return shards
 
     def reset_job_counters(self, task_type):
