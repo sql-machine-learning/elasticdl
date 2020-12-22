@@ -18,6 +18,7 @@ from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
+    RETRY_ALLREDUCE_INTERVALU_SECS,
     AllReduceController,
 )
 from elasticai_api.common.log_utils import default_logger as logger
@@ -95,11 +96,13 @@ class TensorFlowV1AllReduceController(AllReduceController):
         session.run(self._bcast_op)
 
     def train_one_batch_with_retries(self, func, *args, **kwargs):
+        allreduce_success = False
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
                 self._broadcast_if_needed()
                 result = func(*args, **kwargs)
-                return result
+                allreduce_success = True
+                break
             except UnknownError as e:
                 logger.warning(
                     "Failed to perform allreduce operation on "
@@ -113,5 +116,8 @@ class TensorFlowV1AllReduceController(AllReduceController):
                     or "HorovodAllgather" in e.message
                     or "HorovodBroadcast" in e.message
                 ):
-                    time.sleep(3)
+                    time.sleep(RETRY_ALLREDUCE_INTERVALU_SECS)
                     self._rendezvous_manager.init_horovod_if_needed()
+        if not allreduce_success:
+            raise RuntimeError("Failed to perform allreduce.")
+        return result
