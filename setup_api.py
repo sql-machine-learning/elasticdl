@@ -13,12 +13,15 @@
 
 from setuptools import find_packages, setup
 
+with open("elasticai_api/requirements.txt") as f:
+    required_deps = f.read().splitlines()
+
 tensorflow_require_list = ["tensorflow"]
 pytorch_require_list = ["torch"]
 
 setup(
     name="elasticai-api",
-    version="0.2.0rc3.dev0",
+    version="0.2.0rc5.dev0",
     description="The model development api for ElasticDL.",
     long_description="This is the sdk for developing ElasticDL models."
     " Model developers can use these APIs to support elastic and"
@@ -28,6 +31,7 @@ setup(
     url="https://elasticdl.org",
     python_requires=">=3.5",
     packages=find_packages(include=["elasticai_api*"], exclude=["*test*"]),
+    install_requires=required_deps,
     extras_require={
         "tensorflow": tensorflow_require_list,
         "pytorch": pytorch_require_list,

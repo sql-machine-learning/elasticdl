@@ -16,7 +16,7 @@ from contextlib import closing
 
 import grpc
 
-from elasticdl.python.common.constants import GRPC
+from elasticai_api.common.constants import GRPC
 
 
 def build_channel(addr):

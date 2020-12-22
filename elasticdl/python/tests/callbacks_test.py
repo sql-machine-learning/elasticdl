@@ -19,7 +19,7 @@ from unittest import mock
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.save_utils import (
     save_checkpoint_without_embedding,
@@ -62,7 +62,7 @@ class SavedModelExporterTest(unittest.TestCase):
             "",
             0,
             1,
-            elasticdl_pb2.TRAIN_END_CALLBACK,
+            elasticai_api_pb2.TRAIN_END_CALLBACK,
         )
         task_data_service.get_dataset_by_task = mock.Mock(return_value=dataset)
 

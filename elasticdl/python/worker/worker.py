@@ -17,7 +17,8 @@ from distutils.version import LooseVersion
 
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.common.data_shard_service import DataShardService
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_handler import ModelHandler
@@ -30,7 +31,6 @@ from elasticdl.python.common.model_utils import (
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
-from elasticdl.python.worker.data_shard_service import DataShardService
 from elasticdl.python.worker.ps_trainer import ParameterServerTrainer
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
@@ -208,10 +208,10 @@ class Worker(object):
         self._trainer.init_variables_if_need(features, labels)
         self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
-            if task_type == elasticdl_pb2.EVALUATION:
+            if task_type == elasticai_api_pb2.EVALUATION:
                 self._trainer.evaluate_minibatch(features, labels)
                 break
-            elif task_type == elasticdl_pb2.TRAINING:
+            elif task_type == elasticai_api_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
                 self._callbacks_list.on_train_batch_begin(self._model_version)
@@ -238,7 +238,7 @@ class Worker(object):
                             int(self._model_version / self._log_loss_steps) + 1
                         )
                     break
-            elif task_type == elasticdl_pb2.PREDICTION:
+            elif task_type == elasticai_api_pb2.PREDICTION:
                 accepted = self._trainer.predict_minibatch(features)
                 if accepted:
                     break
@@ -264,7 +264,7 @@ class Worker(object):
         for dataset_batch in dataset:
             evaluation_exist = True
             data_err_msg = self._safe_process_minibatch(
-                dataset_batch, elasticdl_pb2.EVALUATION, None
+                dataset_batch, elasticai_api_pb2.EVALUATION, None
             )
             if data_err_msg:
                 err_msg = data_err_msg
@@ -470,7 +470,7 @@ class Worker(object):
         Train and evaluate the model on the worker
         """
         if os.getenv("USE_TORCH", None):
-            from elasticdl.python.allreduce.pytorch_controller import (
+            from elasticai_api.pytorch.controller import (
                 PyTorchAllReduceController,
             )
 
@@ -478,7 +478,7 @@ class Worker(object):
                 self._mc, self._data_shard_service
             )
         elif _IS_TF2:
-            from elasticdl.python.allreduce.tensorflow_controller import (
+            from elasticai_api.tensorflow.controller import (
                 TensorFlowV2AllReduceController,
             )
 
@@ -486,7 +486,7 @@ class Worker(object):
                 self._mc, self._data_shard_service
             )
         else:
-            from elasticdl.python.allreduce.tensorflow_controller import (
+            from elasticai_api.tensorflow.controller import (
                 TensorFlowV1AllReduceController,
             )
 

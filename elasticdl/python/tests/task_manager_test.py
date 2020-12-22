@@ -15,7 +15,7 @@ import threading
 import time
 import unittest
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.tests.test_utils import create_task_manager
 
 
@@ -24,14 +24,14 @@ class TaskManagerTest(unittest.TestCase):
         task_d = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
 
         all_tasks = [
-            ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
-            ("f1", 3, 6, elasticdl_pb2.TRAINING, -1),
-            ("f1", 6, 9, elasticdl_pb2.TRAINING, -1),
-            ("f1", 9, 10, elasticdl_pb2.TRAINING, -1),
-            ("f2", 0, 3, elasticdl_pb2.TRAINING, -1),
-            ("f2", 3, 6, elasticdl_pb2.TRAINING, -1),
-            ("f2", 6, 9, elasticdl_pb2.TRAINING, -1),
-            ("f2", 9, 10, elasticdl_pb2.TRAINING, -1),
+            ("f1", 0, 3, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 3, 6, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 6, 9, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 9, 10, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 0, 3, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 3, 6, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 6, 9, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 9, 10, elasticai_api_pb2.TRAINING, -1),
         ]
 
         # get all tasks out, each worker is assigned 2 tasks.
@@ -46,7 +46,7 @@ class TaskManagerTest(unittest.TestCase):
         # no todo tasks, should return None
         self.assertEqual((-1, None), task_d.get(10))
 
-        request = elasticdl_pb2.ReportTaskResultRequest()
+        request = elasticai_api_pb2.ReportTaskResultRequest()
         # report 6 task successes.
         for t in (1, 3, 5, 7, 2, 8):
             request.task_id = t
@@ -79,14 +79,14 @@ class TaskManagerTest(unittest.TestCase):
         task_d = create_task_manager([("f1", 0, 10), ("f2", 10, 10)], [])
 
         all_tasks = [
-            ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
-            ("f1", 3, 6, elasticdl_pb2.TRAINING, -1),
-            ("f1", 6, 9, elasticdl_pb2.TRAINING, -1),
-            ("f1", 9, 10, elasticdl_pb2.TRAINING, -1),
-            ("f2", 10, 13, elasticdl_pb2.TRAINING, -1),
-            ("f2", 13, 16, elasticdl_pb2.TRAINING, -1),
-            ("f2", 16, 19, elasticdl_pb2.TRAINING, -1),
-            ("f2", 19, 20, elasticdl_pb2.TRAINING, -1),
+            ("f1", 0, 3, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 3, 6, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 6, 9, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 9, 10, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 10, 13, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 13, 16, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 16, 19, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 19, 20, elasticai_api_pb2.TRAINING, -1),
         ]
 
         # get all tasks out, each worker is assigned 2 tasks.
@@ -102,14 +102,14 @@ class TaskManagerTest(unittest.TestCase):
         task_d = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [], 2)
 
         epoch_tasks = [
-            ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
-            ("f1", 3, 6, elasticdl_pb2.TRAINING, -1),
-            ("f1", 6, 9, elasticdl_pb2.TRAINING, -1),
-            ("f1", 9, 10, elasticdl_pb2.TRAINING, -1),
-            ("f2", 0, 3, elasticdl_pb2.TRAINING, -1),
-            ("f2", 3, 6, elasticdl_pb2.TRAINING, -1),
-            ("f2", 6, 9, elasticdl_pb2.TRAINING, -1),
-            ("f2", 9, 10, elasticdl_pb2.TRAINING, -1),
+            ("f1", 0, 3, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 3, 6, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 6, 9, elasticai_api_pb2.TRAINING, -1),
+            ("f1", 9, 10, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 0, 3, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 3, 6, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 6, 9, elasticai_api_pb2.TRAINING, -1),
+            ("f2", 9, 10, elasticai_api_pb2.TRAINING, -1),
         ]
 
         # get first epoch tasks
@@ -131,12 +131,12 @@ class TaskManagerTest(unittest.TestCase):
         task_d.invoke_deferred_callback()
         self.assertEqual(len(task_d._todo), 1)
         self.assertEqual(
-            task_d._todo[0].type, elasticdl_pb2.TRAIN_END_CALLBACK
+            task_d._todo[0].type, elasticai_api_pb2.TRAIN_END_CALLBACK
         )
 
     def test_check_and_reassign_timeout_tasks(self):
         task_manager = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
-        task_manager.create_tasks(elasticdl_pb2.TRAINING)
+        task_manager.create_tasks(elasticai_api_pb2.TRAINING)
         task_count = len(task_manager._todo)
         task_start_time = time.time() - 1000
         task_manager._worker_start_task_time[0] = task_start_time
@@ -155,14 +155,16 @@ class TaskManagerTest(unittest.TestCase):
         task_manager = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
         self.assertEqual(
             task_manager._max_task_completed_times,
-            {elasticdl_pb2.TRAINING: 0, elasticdl_pb2.EVALUATION: 0},
+            {elasticai_api_pb2.TRAINING: 0, elasticai_api_pb2.EVALUATION: 0},
         )
-        task_manager.record_task_completed_time(elasticdl_pb2.TRAINING, 10)
-        task_manager.record_task_completed_time(elasticdl_pb2.EVALUATION, 5)
+        task_manager.record_task_completed_time(elasticai_api_pb2.TRAINING, 10)
+        task_manager.record_task_completed_time(
+            elasticai_api_pb2.EVALUATION, 5
+        )
 
         self.assertEqual(
             task_manager._max_task_completed_times,
-            {elasticdl_pb2.TRAINING: 10, elasticdl_pb2.EVALUATION: 5},
+            {elasticai_api_pb2.TRAINING: 10, elasticai_api_pb2.EVALUATION: 5},
         )
 
 

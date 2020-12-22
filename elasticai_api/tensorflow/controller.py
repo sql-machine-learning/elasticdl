@@ -16,11 +16,11 @@ import time
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
 
-from elasticdl.python.allreduce.base_controller import (
+from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
     AllReduceController,
 )
-from elasticdl.python.common.log_utils import default_logger as logger
+from elasticai_api.util.log_utils import default_logger as logger
 
 try:
     import horovod.tensorflow as hvd
@@ -73,7 +73,6 @@ class TensorFlowV2AllReduceController(AllReduceController):
                 ):
                     time.sleep(3)
                     self._rendezvous_manager.init_horovod_if_needed()
-        self.data_shard_service.report_batch_done()
         return result
 
 

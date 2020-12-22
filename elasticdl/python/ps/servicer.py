@@ -50,7 +50,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         if master_channel is None:
             self._master_stub = None
         else:
-            self._master_stub = elasticdl_pb2_grpc.MasterStub(master_channel)
+            self._master_stub = elasticdl_pb2_grpc.TrainLoopMasterStub(
+                master_channel
+            )
 
         self._parameters = parameters
         self._grads_to_wait = grads_to_wait

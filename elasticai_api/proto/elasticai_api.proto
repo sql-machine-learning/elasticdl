@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "elasticdl/go/pkg/proto";
+
+enum TaskType {
+  NONE = 0;
+  TRAINING = 1;
+  EVALUATION = 2;
+  PREDICTION = 3;
+  WAIT = 4;
+  TRAIN_END_CALLBACK = 5;
+}
+
+message Shard {
+  // Name for the shard. If RecordIO file format is used, this should be the
+  // filename for a RecordIO shard. An empty shard name signifies that the
+  // master has no pending tasks to assign to the requesting worker.
+  string name = 1;
+
+  // Starting and ending (non-inclusive) record number.
+  int64 start = 2;
+  int64 end = 3;
+}
+
+// A task is a unit of work for ElasticDL training workers, assigned by master.
+// Worker divides a task into multiple minibatches and compute a gradient for
+// each minibatch. For now, only RecordIO file format is supported.
+message Task {
+  // Unique id assigned by master.
+  int32 task_id = 1;
+
+  Shard shard = 2;
+
+  // Current model version on master
+  int32 model_version = 3;
+
+  // Whether this is training or evaluation task.
+  TaskType type = 4;
+
+  // Extended task configuration as a list of key-value pair.
+  // The task message is mainly targeted to data and model.
+  // What's more, we also leverage task mechanism to complete
+  // some work such as saving the model. To keep the message
+  // fields clean, we put the additional configurations of these
+  // task type into this field.
+  // For example:
+  // SAVE_MODEL task: saved_model_path
+  map<string, string> extended_config = 5;
+}
+
+message GetTaskRequest {
+  int32 worker_id = 1;
+  TaskType task_type = 2;
+}
+
+message ReportTaskResultRequest {
+  // Task id assigned by master.
+  int32 task_id = 1;
+
+  // When error occurred, err_message contains error message in plain text.
+  string err_message = 2;
+  // statistics of the task being executed.
+  map<string, int32> exec_counters = 3;
+}
+
+message GetCommRankRequest {
+  int32 worker_id = 1;
+}
+
+message GetCommRankResponse {
+  int32 rank_id = 1;
+  int32 world_size = 2;
+  int32 rendezvous_id = 3;
+  int32 rendezvous_port = 4;
+}
+
+service Master {
+  rpc get_task(GetTaskRequest) returns (Task);
+  rpc report_task_result(ReportTaskResultRequest)
+      returns (google.protobuf.Empty);
+  rpc get_comm_rank(GetCommRankRequest) returns (GetCommRankResponse);
+}

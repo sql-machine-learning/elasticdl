@@ -18,7 +18,7 @@ from threading import Thread
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
+from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
@@ -74,7 +74,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 "--worker_id",
                 i,
                 "--job_type",
-                elasticdl_pb2.TRAINING,
+                elasticai_api_pb2.TRAINING,
                 "--minibatch_size",
                 self._batch_size,
                 "--model_zoo",
@@ -159,7 +159,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             "--worker_id",
             0,
             "--job_type",
-            elasticdl_pb2.TRAINING,
+            elasticai_api_pb2.TRAINING,
             "--minibatch_size",
             self._batch_size,
             "--model_zoo",
@@ -213,7 +213,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             "--worker_id",
             0,
             "--job_type",
-            elasticdl_pb2.TRAINING,
+            elasticai_api_pb2.TRAINING,
             "--minibatch_size",
             self._batch_size,
             "--model_zoo",
@@ -374,7 +374,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 "--worker_id",
                 0,
                 "--job_type",
-                elasticdl_pb2.TRAINING,
+                elasticai_api_pb2.TRAINING,
                 "--minibatch_size",
                 self._batch_size,
                 "--model_zoo",

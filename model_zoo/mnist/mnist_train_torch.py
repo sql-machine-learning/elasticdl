@@ -64,7 +64,7 @@ def train(dataset, elastic_controller):
 
     # op must be sum to keep the batch size fixed
     optimizer = DistributedOptimizer(
-        optimizer, op=hvd.Average, fixed_batch_size=True,
+        optimizer, op=hvd.Average, fixed_global_batch_size=True,
     )
 
     # Set the model and optimizer to broadcast.

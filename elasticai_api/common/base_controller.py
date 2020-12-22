@@ -16,8 +16,8 @@ import time
 from abc import abstractmethod
 from functools import wraps
 
-from elasticdl.python.common.constants import HorovodEnv, WorkerEnv
-from elasticdl.python.common.log_utils import default_logger as logger
+from elasticai_api.common.constants import HorovodEnv, WorkerEnv
+from elasticai_api.util.log_utils import default_logger as logger
 
 try:
     if os.getenv("USE_TORCH", None):
@@ -34,8 +34,8 @@ except ImportError:
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 # The default timeout is 30s in Horovod.
 # https://github.com/horovod/horovod/blob/2fdea15bc6317848944c72cf8dd0aaa98b2e1a2a/horovod/common/gloo/gloo_context.cc#L59
-DEFAULT_SECS_TO_CHECK_RENDEZVOUS = os.getenv(
-    HorovodEnv.GLOO_TIMEOUT_SECONDS, 30
+DEFAULT_SECS_TO_CHECK_RENDEZVOUS = min(
+    60, int(os.getenv(HorovodEnv.GLOO_TIMEOUT_SECONDS, 30))
 )
 
 
@@ -106,7 +106,6 @@ class AllReduceController(object):
 
         self._rendezvous_manager = RendevousManager(master_client)
         self.data_shard_service = data_shard_service
-        self._step = 0
         self._last_init_time = 0
         self._first_call = True
         self._need_broadcast = True
@@ -117,7 +116,7 @@ class AllReduceController(object):
             self._init_variables_before_first_calling(func, *args, **kwargs)
             self._init_horovod_periodically()
             result = self.train_one_batch_with_retries(func, *args, **kwargs)
-            self._step += 1
+            self.data_shard_service.report_batch_done()
             return result
 
         return wrapper

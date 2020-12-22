@@ -12,13 +12,6 @@
 # limitations under the License.
 
 
-class GRPC(object):
-    # gRPC limits the size of message by default to 4MB.
-    # It's too small to send model parameters.
-    MAX_SEND_MESSAGE_LENGTH = 256 * 1024 * 1024
-    MAX_RECEIVE_MESSAGE_LENGTH = 256 * 1024 * 1024
-
-
 class PodManagerStatus(object):
     PENDING = "Pending"
     RUNNING = "Running"
@@ -59,10 +52,6 @@ class SaveModelConfig(object):
     SAVED_MODEL_PATH = "saved_model_path"
 
 
-class TaskExecCounterKey(object):
-    FAIL_COUNT = "fail_count"
-
-
 class CollectiveCommunicatorStatus(object):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
@@ -86,21 +75,3 @@ class ReaderType(object):
 
 class Initializer(object):
     UNIFORM = "uniform"
-
-
-class HorovodEnv(object):
-    RENDEZVOUS_ADDR = "HOROVOD_GLOO_RENDEZVOUS_ADDR"
-    RENDEZVOUS_PORT = "HOROVOD_GLOO_RENDEZVOUS_PORT"
-    RANK = "HOROVOD_RANK"
-    SIZE = "HOROVOD_SIZE"
-    CONTROLLER = "HOROVOD_CONTROLLER"
-    CPU_OPERATIONS = "HOROVOD_CPU_OPERATIONS"
-    HOSTNAME = "HOROVOD_HOSTNAME"
-    ELASTIC = "HOROVOD_ELASTIC"
-    GLOO_TIMEOUT_SECONDS = "HOROVOD_GLOO_TIMEOUT_SECONDS"
-
-
-class WorkerEnv(object):
-    MASTER_ADDR = "MASTER_ADDR"
-    WORKER_ID = "WORKER_ID"
-    WORKER_NUM = "WORKER_NUM"
