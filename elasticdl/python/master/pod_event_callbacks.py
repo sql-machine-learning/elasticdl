@@ -100,6 +100,9 @@ class RendezvousServiceRefreshCallback(PodEventCallback):
         super(RendezvousServiceRefreshCallback, self).__init__()
         self._rendezvous_server = rendezvous_server
 
+    def on_pod_started(self, pod_info, cluster_context):
+        pass
+
     def on_pod_succeeded(self, pod_info, cluster_context):
         self._rendezvous_server.remove_worker(pod_info.pod_ip)
 
