@@ -18,7 +18,7 @@ import grpc
 from kubernetes import client, config
 
 from elasticai_api.common.constants import GRPC
-from elasticai_api.common.grpc_utils import build_channel
+from elasticai_api.util.grpc_utils import build_channel
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.log_utils import get_logger
