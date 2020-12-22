@@ -104,7 +104,7 @@ class Master(object):
         try:
             while True:
                 if self.pod_manager and self.pod_manager.all_workers_exited:
-                    if not self.task_manager.finished():
+                    if self.task_manager and not self.task_manager.finished():
                         raise Exception(
                             "All workers exited but there also are",
                             "unfinished tasks",
