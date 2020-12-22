@@ -17,7 +17,7 @@ import traceback
 
 from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
-    RETRY_ALLREDUCE_INTERVALU_SECS,
+    RETRY_ALLREDUCE_INTERVAL_SECS,
     AllReduceController,
 )
 from elasticai_api.common.constants import WorkerEnv
@@ -140,7 +140,7 @@ class PyTorchAllReduceController(AllReduceController):
         return result
 
     def restore(self):
-        time.sleep(RETRY_ALLREDUCE_INTERVALU_SECS)
+        time.sleep(RETRY_ALLREDUCE_INTERVAL_SECS)
         # Call `load_state_dict` to reset the state of Horovod optimizer
         self._optimizer.load_state_dict(self._optimizer.state_dict())
         self._optimizer.zero_grad()
