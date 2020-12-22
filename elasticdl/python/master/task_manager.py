@@ -118,7 +118,7 @@ class TaskManager(object):
         self._epoch = 0
         self._max_step = args.max_step
         self._completed_steps = 0
-
+        self._num_minibatches_per_task = args.num_minibatches_per_task
         self._records_per_task = (
             args.minibatch_size * args.num_minibatches_per_task
         )
@@ -216,6 +216,9 @@ class TaskManager(object):
             if not self._training_shards:
                 # The master receives the training params to create shards
                 self._batch_size = batch_size
+                self._records_per_task = (
+                    batch_size * self._num_minibatches_per_task
+                )
                 self._num_epochs = (
                     num_epochs if num_epochs > 0 else self._num_epochs
                 )
