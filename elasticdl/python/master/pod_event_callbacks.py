@@ -100,18 +100,11 @@ class RendezvousServiceRefreshCallback(PodEventCallback):
         super(RendezvousServiceRefreshCallback, self).__init__()
         self._rendezvous_server = rendezvous_server
 
-    def on_pod_started(self, pod_info, cluster_context):
-        self._refresh_rendezvous_service(cluster_context.pod_manager)
-
     def on_pod_succeeded(self, pod_info, cluster_context):
-        self._refresh_rendezvous_service(cluster_context.pod_manager)
+        self._rendezvous_server.remove_worker(pod_info.pod_ip)
 
     def on_pod_failed(self, pod_info, cluster_context):
-        self._refresh_rendezvous_service(cluster_context.pod_manager)
+        self._rendezvous_server.remove_worker(pod_info.pod_ip)
 
     def on_pod_deleted(self, pod_info, cluster_context):
-        self._refresh_rendezvous_service(cluster_context.pod_manager)
-
-    def _refresh_rendezvous_service(self, pod_manager):
-        worker_name_addrs = pod_manager.get_alive_worker_name_addr()
-        self._rendezvous_server.set_worker_hosts(worker_name_addrs)
+        self._rendezvous_server.remove_worker(pod_info.pod_ip)

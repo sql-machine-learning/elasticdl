@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 
 
@@ -39,6 +40,7 @@ class MasterClient:
         """
         self._stub = elasticai_api_pb2_grpc.MasterStub(channel)
         self._worker_id = worker_id
+        self._worker_host = os.getenv("MY_POD_IP", "localhost")
 
     def get_task(self, task_type=None):
         """Get a task from master.
@@ -88,10 +90,11 @@ class MasterClient:
 
     def get_comm_rank(self):
         req = elasticai_api_pb2.GetCommRankRequest()
-        req.worker_id = self._worker_id
+        req.worker_host = self._worker_host
         return self._stub.get_comm_rank(req)
 
     def report_training_loop_status(self, status):
         req = elasticai_api_pb2.ReportTrainingLoopStatusRequest()
-        req.worker_id = self._worker_id
+        req.worker_host = self._worker_host
         req.status = status
+        return self._stub.report_training_loop_status(req)

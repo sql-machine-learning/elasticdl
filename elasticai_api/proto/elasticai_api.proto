@@ -68,7 +68,7 @@ message ReportTaskResultRequest {
 }
 
 message GetCommRankRequest {
-  int32 worker_id = 1;
+  string worker_host = 1;
 }
 
 message GetCommRankResponse {
@@ -79,7 +79,7 @@ message GetCommRankResponse {
 }
 
 message ReportTrainingLoopStatusRequest{
-  int32 worker_id = 1;
+  string worker_host = 1;
   int32 status = 2;
 }
 

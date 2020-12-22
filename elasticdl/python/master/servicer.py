@@ -166,9 +166,7 @@ class MasterServicer(
         return empty_pb2.Empty()
 
     def get_comm_rank(self, request, _):
-        worker_id = request.worker_id
-        worker_host = self._instance_manager.get_worker_pod_ip(worker_id)
-
+        worker_host = request.worker_host
         res = elasticai_api_pb2.GetCommRankResponse()
         res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
         res.world_size = self._rendezvous_server.get_size()
@@ -182,3 +180,4 @@ class MasterServicer(
             self._rendezvous_server.add_worker(request.worker_id)
         elif training_loop_status == TrainingLoopStatus.END:
             self._rendezvous_server.remove_worker(request.worker_id)
+        return empty_pb2.Empty()
