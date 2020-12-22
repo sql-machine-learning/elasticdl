@@ -91,7 +91,7 @@ class MasterClient:
         req.worker_id = self._worker_id
         return self._stub.get_comm_rank(req)
 
-    def notify_training_loop_status(self, status):
+    def report_training_loop_status(self, status):
         req = elasticai_api_pb2.ReportTrainingLoopStatusRequest()
-        req.worker = self._worker_id
+        req.worker_id = self._worker_id
         req.status = status
