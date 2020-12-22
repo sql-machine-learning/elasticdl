@@ -46,7 +46,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, IterableDataset
 
 from elasticai_api.pytorch.optimizer import DistributedOptimizer
-from elasticdl.python.allreduce.pytorch_controller import (
+from elasticai_api.pytorch.controller import (
     create_elastic_controller,
 )
 
