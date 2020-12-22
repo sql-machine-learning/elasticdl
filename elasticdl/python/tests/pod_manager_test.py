@@ -246,22 +246,16 @@ class PodManagerTest(unittest.TestCase):
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.PS)
 
     def test_parse_worker_pod_priority(self):
-        worker_priorities = _parse_worker_pod_priority(10, "0.5", -1)
+        worker_priorities = _parse_worker_pod_priority(10, "0.5")
         expected = {}
-        for i in range(5):
+        for i in range(3):
             expected[i] = "high"
-        for i in range(5, 10):
+        for i in range(3, 8):
             expected[i] = "low"
-        self.assertDictEqual(worker_priorities, expected)
-        worker_priorities = _parse_worker_pod_priority(10, "0.5", 6)
-        expected = {}
-        for i in range(4):
+        for i in range(8, 10):
             expected[i] = "high"
-        for i in range(5, 10):
-            expected[i] = "low"
-        expected[6] = "high"
         self.assertDictEqual(worker_priorities, expected)
-        worker_priorities = _parse_worker_pod_priority(1, "0.5", -1)
+        worker_priorities = _parse_worker_pod_priority(1, "0.5")
         self.assertDictEqual(worker_priorities, {0: "high"})
 
 

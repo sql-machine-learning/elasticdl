@@ -64,27 +64,17 @@ def _is_float_str(str_number):
         return False
 
 
-def _parse_worker_pod_priority(
-    num_workers, worker_pod_priority, chief_worker_index
-):
+def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     res = {}
     if _is_float_str(worker_pod_priority):
         fraction = float(worker_pod_priority)
         high_count = math.ceil(num_workers * fraction)
         for i in range(num_workers):
+            index = i / 2 if i % 2 == 0 else num_workers - 1 - i / 2
             if i < high_count:
-                res[i] = "high"
+                res[index] = "high"
             else:
-                res[i] = "low"
-        # Set chief worker priority to high if needed.
-        if (
-            chief_worker_index >= 0
-            and chief_worker_index < num_workers
-            and high_count > 0
-            and res[chief_worker_index] != "high"
-        ):
-            res[chief_worker_index] = "high"
-            res[high_count - 1] = "low"
+                res[index] = "low"
     elif worker_pod_priority in [None, "", "high", "low"]:
         for i in range(num_workers):
             res[i] = worker_pod_priority
@@ -159,7 +149,6 @@ def create_pod_manager(args):
             image_name=args.worker_image,
             namespace=args.namespace,
             num_workers=args.num_workers,
-            chief_worker_index=args.chief_worker_index,
             worker_resource_request=args.worker_resource_request,
             worker_resource_limit=args.worker_resource_limit,
             worker_pod_priority=args.worker_pod_priority,
@@ -184,7 +173,6 @@ class PodManager(object):
     def __init__(
         self,
         num_workers=1,
-        chief_worker_index=-1,
         worker_resource_request="cpu=1,memory=4096Mi",
         worker_resource_limit="cpu=1,memory=4096Mi",
         worker_pod_priority=None,
@@ -201,11 +189,10 @@ class PodManager(object):
         **kwargs
     ):
         self._num_workers = num_workers
-        self._chief_worker_index = chief_worker_index
         self._worker_resource_request = worker_resource_request
         self._worker_resource_limit = worker_resource_limit
         self._worker_pod_priority = _parse_worker_pod_priority(
-            self._num_workers, worker_pod_priority, self._chief_worker_index
+            self._num_workers, worker_pod_priority
         )
 
         self._num_ps = num_ps
