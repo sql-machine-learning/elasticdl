@@ -78,9 +78,16 @@ message GetCommRankResponse {
   int32 rendezvous_port = 4;
 }
 
+message ReportTrainingLoopStatusRequest{
+  int32 worker_id = 1;
+  int32 status = 2;
+}
+
 service Master {
   rpc get_task(GetTaskRequest) returns (Task);
   rpc report_task_result(ReportTaskResultRequest)
       returns (google.protobuf.Empty);
   rpc get_comm_rank(GetCommRankRequest) returns (GetCommRankResponse);
+  rpc report_training_loop_status(ReportTrainingLoopStatusRequest)
+      returns (google.protobuf.Empty);
 }

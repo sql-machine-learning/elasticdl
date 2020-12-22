@@ -18,7 +18,7 @@ from concurrent import futures
 import grpc
 from google.protobuf import empty_pb2
 
-from elasticai_api.common.constants import GRPC
+from elasticai_api.common.constants import GRPC, TrainingLoopStatus
 from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -175,3 +175,10 @@ class MasterServicer(
         res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()
         res.rendezvous_port = self._rendezvous_server.get_rendezvous_port()
         return res
+
+    def report_training_loop_status(self, request, _):
+        training_loop_status = request.status
+        if training_loop_status == TrainingLoopStatus.START:
+            self._rendezvous_server.add_worker(request.worker_id)
+        elif training_loop_status == TrainingLoopStatus.END:
+            self._rendezvous_server.remove_worker(request.worker_id)

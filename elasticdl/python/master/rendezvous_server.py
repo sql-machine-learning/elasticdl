@@ -10,6 +10,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import time
 from threading import Lock
 
@@ -35,33 +36,35 @@ class HorovodRendezvousServer(object):
 
     def _init_attributes(self):
         self._rendezvous_id = 0
-        self._worker_name_hosts = []
-        self._worker_hosts = []
+        self._cur_rendezvous_hosts = []
         self._rendezvous_server = RendezvousServer(verbose=True)
         self._rendezvous_port = None
-        self._next_worker_name_hosts = None
+        self._next_rendezvous_hosts = None
         self._ready_worker_hosts = set()
         self._rendezvous_completed = True
         self._lock = Lock()
+        self._living_worker_id_hosts = []
 
     def start(self):
         self._rendezvous_port = self._rendezvous_server.start()
 
-    def set_worker_hosts(self, worker_name_hosts):
+    def set_worker_hosts(self, worker_id_hosts):
         """
         Set worker hosts into RendezvousServer.
 
         Args:
-            worker_hosts: List of host string.
+            worker_hosts: List of (id, host).
         """
-
-        if sorted(worker_name_hosts) != sorted(self._worker_name_hosts):
-            self._next_worker_name_hosts = worker_name_hosts
+        self._living_worker_id_hosts = worker_id_hosts
+        # Some workers are preempted
+        if len(self._living_worker_id_hosts) < len(self._cur_rendezvous_hosts):
+            self._next_rendezvous_hosts = []
+            for _, host in self._living_worker_id_hosts:
+                self._next_rendezvous_hosts.append(host)
 
     def _init_rendezvous_server(self):
-        self._worker_name_hosts = self._next_worker_name_hosts
-        self._next_worker_name_hosts = None
-        self._worker_hosts = []
+        self._cur_rendezvous_hosts = self._next_rendezvous_hosts
+        self._next_rendezvous_hosts = None
         host_alloc_plan = self._get_host_plan()
         self._rendezvous_server.init(host_alloc_plan)
         self._rendezvous_id += 1
@@ -69,8 +72,7 @@ class HorovodRendezvousServer(object):
 
     def _get_host_plan(self):
         hosts = []
-        for _, host in self._worker_name_hosts:
-            self._worker_hosts.append(host)
+        for host in self._cur_rendezvous_hosts:
             hosts.append(host + ":" + str(_WORKER_SLOT_NUMBER))
 
         host_infos = parse_hosts(_HOST_SEP.join(hosts))
@@ -85,26 +87,56 @@ class HorovodRendezvousServer(object):
 
     def get_worker_host_rank(self, host):
         with self._lock:
-            if self._next_worker_name_hosts and self._rendezvous_completed:
+            if self._next_rendezvous_hosts and self._rendezvous_completed:
                 time.sleep(2)  # Wait 2s for workers to complete rendezvous.
                 self._init_rendezvous_server()
 
             # -1 if host not in worker_hosts list.
-            if host not in self._worker_hosts:
+            if host not in self._cur_rendezvous_hosts:
                 return -1
 
             if not self._rendezvous_completed:
                 self._ready_worker_hosts.add(host)
                 # If all active workers in the rendezvous are ready,
                 # the server can start to set hosts for the next rendezvous
-                if self._ready_worker_hosts == set(self._worker_hosts):
+                if self._ready_worker_hosts == set(self._cur_rendezvous_hosts):
                     self._rendezvous_completed = True
                     self._ready_worker_hosts = set()
 
-            return self._worker_hosts.index(host)
+            return self._cur_rendezvous_hosts.index(host)
 
     def get_size(self):
         return len(self._worker_hosts)
 
     def get_rendezvous_id(self):
         return self._rendezvous_id
+
+    def add_worker(self, worker_id):
+        with self._lock:
+            worker_host = self._get_worker_host_by_id(worker_id)
+            if worker_host and worker_host not in self._cur_rendezvous_hosts:
+                if self._next_rendezvous_hosts is None:
+                    self._next_rendezvous_hosts = copy.deepcopy(
+                        self._cur_rendezvous_hosts
+                    )
+                self._next_rendezvous_hosts.append(worker_host)
+
+    def remove_worker(self, worker_id):
+        with self._lock:
+            worker_host = self._get_worker_host_by_id(worker_id)
+            if worker_host in self._cur_rendezvous_hosts:
+                if self._next_rendezvous_hosts is None:
+                    self._next_rendezvous_hosts = copy.deepcopy(
+                        self._cur_rendezvous_hosts
+                    )
+                self._next_rendezvous_hosts.pop(
+                    self._next_rendezvous_hosts.index(worker_host)
+                )
+
+    def _get_worker_host_by_id(self, worker_id):
+        worker_host = None
+        for i, host in self._living_worker_id_hosts:
+            if worker_id == i:
+                worker_host = host
+                break
+        return worker_host
