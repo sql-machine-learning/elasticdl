@@ -17,6 +17,7 @@ import traceback
 
 from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
+    RETRY_ALLREDUCE_INTERVAL_SECS,
     AllReduceController,
 )
 from elasticai_api.common.constants import WorkerEnv
@@ -114,10 +115,12 @@ class PyTorchAllReduceController(AllReduceController):
 
     def train_one_batch_with_retries(self, func, *args, **kwargs):
         self.reset_backward_passes_per_step()
+        allreduce_success = False
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM):
             try:
                 self._broadcast_if_needed()
                 result = func(*args, **kwargs)
+                allreduce_success = True
                 break
             except HorovodInternalError:
                 logger.warning(
@@ -131,11 +134,13 @@ class PyTorchAllReduceController(AllReduceController):
             except RuntimeError:
                 traceback.print_exc()
                 self.restore()
+        if not allreduce_success:
+            raise RuntimeError("Failed to perform allreduce.")
         self._update_completed_minibatches()
         return result
 
     def restore(self):
-        time.sleep(3)
+        time.sleep(RETRY_ALLREDUCE_INTERVAL_SECS)
         # Call `load_state_dict` to reset the state of Horovod optimizer
         self._optimizer.load_state_dict(self._optimizer.state_dict())
         self._optimizer.zero_grad()
