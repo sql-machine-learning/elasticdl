@@ -52,7 +52,7 @@ message Task {
   map<string, string> extended_config = 5;
 }
 
-message TrainingParams {
+message ReportTrainingParamsRequest {
   int32 batch_size = 1;
   int32 num_epochs = 2;
   int32 dataset_size = 3;

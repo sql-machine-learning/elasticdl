@@ -83,8 +83,7 @@ def create_elastic_controller(batch_size, num_epochs, dataset_size):
     worker_id = int(os.getenv("WORKER_ID", 0))
 
     master_client = MasterClient(build_channel(master_addr), worker_id)
-    master_client.report_training_params(batch_size, num_epochs, dataset_size)
-    data_shard_service = DataShardService(batch_size, master_client)
+    data_shard_service = DataShardService(master_client, batch_size, num_epochs, dataset_size)
 
     controller = PyTorchAllReduceController(master_client, data_shard_service)
     controller.init_horovod_locally()

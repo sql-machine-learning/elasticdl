@@ -128,18 +128,6 @@ def _build_master_args_parser():
 
 
 def _check_master_args_validity(args):
-    if all(
-        v == "" or v is None
-        for v in [
-            args.training_data,
-            args.validation_data,
-            args.prediction_data,
-        ]
-    ):
-        raise ValueError(
-            "At least one of the data directories needs to be provided"
-        )
-
     if args.prediction_data and (args.training_data or args.validation_data):
         raise ValueError(
             "Running prediction together with training or evaluation "
