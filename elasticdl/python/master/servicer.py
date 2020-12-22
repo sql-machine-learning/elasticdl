@@ -177,7 +177,7 @@ class MasterServicer(
     def report_training_loop_status(self, request, _):
         training_loop_status = request.status
         if training_loop_status == TrainingLoopStatus.START:
-            self._rendezvous_server.add_worker(request.worker_id)
+            self._rendezvous_server.add_worker(request.worker_host)
         elif training_loop_status == TrainingLoopStatus.END:
-            self._rendezvous_server.remove_worker(request.worker_id)
+            self._rendezvous_server.remove_worker(request.worker_host)
         return empty_pb2.Empty()
