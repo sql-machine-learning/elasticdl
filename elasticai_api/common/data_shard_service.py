@@ -34,9 +34,10 @@ class DataShardService(object):
         self._report_training_params()
 
     def _report_training_params(self):
-        self._mc.report_training_params(
-            self._batch_size, self._num_epochs, self._dataset_size
-        )
+        if self._num_epochs and self._dataset_size:
+            self._mc.report_training_params(
+                self._batch_size, self._num_epochs, self._dataset_size
+            )
 
     def get_current_task(self):
         return self._current_task

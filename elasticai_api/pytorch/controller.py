@@ -38,7 +38,7 @@ except ImportError:
     hvd = None
 
 
-def create_elastic_controller(batch_size, num_epochs, dataset_size):
+def create_elastic_controller(batch_size, num_epochs=None, dataset_size=None):
     """Create an elastic AllReduce controller with data shard service.
     Users can use the `controller.data_shard_service` to get data
     shards like:
