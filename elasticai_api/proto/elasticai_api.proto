@@ -78,7 +78,7 @@ message GetCommRankResponse {
   int32 rendezvous_port = 4;
 }
 
-message ReportTrainingLoopStatusRequest{
+message ReportTrainingLoopStatusRequest {
   string worker_host = 1;
   int32 status = 2;
 }
