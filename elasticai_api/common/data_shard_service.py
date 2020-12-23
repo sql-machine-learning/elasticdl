@@ -37,6 +37,8 @@ class DataShardService(object):
     ):
         self._mc = master_client
         self._batch_size = batch_size
+        self._num_epochs = num_epochs
+        self._dataset_size = dataset_size
         self._task_type = task_type
         self._lock = threading.Lock()
         self._failed_record_count = 0
