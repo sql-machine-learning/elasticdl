@@ -176,11 +176,11 @@ class PyTorchAllReduceController(AllReduceController):
                 self.backward_passes_per_step
                 != self._optimizer.backward_passes_per_step
             ):
-                self._optimizer.backward_passes_per_step = (
+                self._optimizer.set_backward_passes_per_step(
                     self.backward_passes_per_step
                 )
                 logger.info(
-                    "Backward passes = {}".format(
+                    "Backward passes per step = {}".format(
                         self._optimizer.backward_passes_per_step
                     )
                 )
