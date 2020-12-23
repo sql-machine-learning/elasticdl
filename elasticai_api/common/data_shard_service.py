@@ -42,9 +42,10 @@ class DataShardService(object):
     def get_task(self, task_type=None):
         task = self._mc.get_task(task_type)
         if task.type == elasticai_api_pb2.TRAINING:
-            self._pending_tasks.append(task)
-            if len(self._pending_tasks) == 1:
-                self._current_task = task
+            with self._lock:
+                self._pending_tasks.append(task)
+                if len(self._pending_tasks) == 1:
+                    self._current_task = task
         return task
 
     def _report_task(self, task, err_msg=""):
@@ -89,7 +90,7 @@ class DataShardService(object):
                         self._pending_tasks[0].shard.end
                         - self._pending_tasks[0].shard.start
                     )
-                    self._pending_tasks.popleft()
+                    task = self._pending_tasks.popleft()
                     self._report_task(task, err_msg)
                     self._failed_record_count = 0
                 if self._pending_tasks:
