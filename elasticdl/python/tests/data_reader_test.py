@@ -134,11 +134,11 @@ class ODPSDataReaderTest(unittest.TestCase):
         )
 
     def test_odps_data_reader_shards_creation(self):
-        expected_shards = {
-            self.test_table: (0, self.records_per_task),
-            self.test_table: (50, self.records_per_task),
-            self.test_table: (100, 10),
-        }
+        expected_shards = [
+            (self.test_table, 0, self.records_per_task),
+            (self.test_table, 50, self.records_per_task),
+            (self.test_table, 100, 10),
+        ]
         self.assertEqual(expected_shards, self.reader.create_shards())
 
     def test_odps_data_reader_records_reading(self):
