@@ -14,6 +14,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.args import parse_master_args
@@ -62,6 +63,8 @@ class MasterTest(unittest.TestCase):
             args = parse_master_args(args)
             master = Master(args)
             master.task_manager._todo.clear()
+            master.pod_manager = Mock()
+            master.pod_manager.all_workers_exited = True
             exit_code = master.run()
             master.stop()
             self.assertEqual(exit_code, 0)
