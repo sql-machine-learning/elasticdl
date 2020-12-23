@@ -104,10 +104,10 @@ class RendezvousServiceRefreshCallback(PodEventCallback):
         pass
 
     def on_pod_succeeded(self, pod_info, cluster_context):
-        self._rendezvous_server.remove_worker(pod_info.pod_ip)
+        self._rendezvous_server.remove_worker(pod_info.ip)
 
     def on_pod_failed(self, pod_info, cluster_context):
-        self._rendezvous_server.remove_worker(pod_info.pod_ip)
+        self._rendezvous_server.remove_worker(pod_info.ip)
 
     def on_pod_deleted(self, pod_info, cluster_context):
-        self._rendezvous_server.remove_worker(pod_info.pod_ip)
+        self._rendezvous_server.remove_worker(pod_info.ip)
