@@ -17,12 +17,12 @@ import traceback
 
 from elasticai_api.common.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
+    RETRY_ALLREDUCE_INTERVAL_SECS,
     AllReduceController,
 )
 from elasticai_api.common.constants import WorkerEnv
 from elasticai_api.common.data_shard_service import DataShardService
-from elasticai_api.common.master_client import MasterClient
-from elasticai_api.util.grpc_utils import build_channel
+from elasticai_api.common.master_client import build_master_client
 from elasticai_api.util.log_utils import default_logger as logger
 
 try:
@@ -79,10 +79,7 @@ def create_elastic_controller(batch_size, num_epochs=None, dataset_size=None):
         num_epochs: The number of epochs.
         dataset_size: The total size of dataset.
     """
-    master_addr = os.getenv("MASTER_ADDR", "localhost:12345")
-    worker_id = int(os.getenv("WORKER_ID", 0))
-
-    master_client = MasterClient(build_channel(master_addr), worker_id)
+    master_client = build_master_client()
     data_shard_service = DataShardService(
         master_client, batch_size, num_epochs, dataset_size
     )
@@ -121,10 +118,12 @@ class PyTorchAllReduceController(AllReduceController):
 
     def train_one_batch_with_retries(self, func, *args, **kwargs):
         self.reset_backward_passes_per_step()
+        allreduce_success = False
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM):
             try:
                 self._broadcast_if_needed()
                 result = func(*args, **kwargs)
+                allreduce_success = True
                 break
             except HorovodInternalError:
                 logger.warning(
@@ -138,11 +137,13 @@ class PyTorchAllReduceController(AllReduceController):
             except RuntimeError:
                 traceback.print_exc()
                 self.restore()
+        if not allreduce_success:
+            raise RuntimeError("Failed to perform allreduce.")
         self._update_completed_minibatches()
         return result
 
     def restore(self):
-        time.sleep(3)
+        time.sleep(RETRY_ALLREDUCE_INTERVAL_SECS)
         # Call `load_state_dict` to reset the state of Horovod optimizer
         self._optimizer.load_state_dict(self._optimizer.state_dict())
         self._optimizer.zero_grad()
@@ -178,11 +179,11 @@ class PyTorchAllReduceController(AllReduceController):
                 self.backward_passes_per_step
                 != self._optimizer.backward_passes_per_step
             ):
-                self._optimizer.backward_passes_per_step = (
+                self._optimizer.set_backward_passes_per_step(
                     self.backward_passes_per_step
                 )
                 logger.info(
-                    "Backward passes = {}".format(
+                    "Backward passes per step = {}".format(
                         self._optimizer.backward_passes_per_step
                     )
                 )

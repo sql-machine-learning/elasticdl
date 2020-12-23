@@ -11,7 +11,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
+from elasticai_api.util.grpc_utils import build_channel
+
+
+def build_master_client():
+    master_addr = os.getenv("MASTER_ADDR", "localhost:12345")
+    worker_id = int(os.getenv("WORKER_ID", 0))
+
+    master_client = MasterClient(build_channel(master_addr), worker_id)
+
+    return master_client
 
 
 class MasterClient:

@@ -248,10 +248,12 @@ class PodManagerTest(unittest.TestCase):
     def test_parse_worker_pod_priority(self):
         worker_priorities = _parse_worker_pod_priority(10, "0.5")
         expected = {}
-        for i in range(5):
+        for i in range(3):
             expected[i] = "high"
-        for i in range(5, 10):
+        for i in range(3, 8):
             expected[i] = "low"
+        for i in range(8, 10):
+            expected[i] = "high"
         self.assertDictEqual(worker_priorities, expected)
         worker_priorities = _parse_worker_pod_priority(1, "0.5")
         self.assertDictEqual(worker_priorities, {0: "high"})
