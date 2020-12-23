@@ -34,13 +34,13 @@ class DataShardService(object):
         return self._current_task
 
     def get_task(self, task_type=None):
-        with self._lock:
-            task = self._mc.get_task(task_type)
-            if task.type == elasticai_api_pb2.TRAINING:
+        task = self._mc.get_task(task_type)
+        if task.type == elasticai_api_pb2.TRAINING:
+            with self._lock:
                 self._pending_tasks.append(task)
                 if len(self._pending_tasks) == 1:
                     self._current_task = task
-            return task
+        return task
 
     def _report_task(self, task, err_msg=""):
         if self._failed_record_count != 0:
