@@ -1,4 +1,4 @@
-# Copyright 2020 The ElasticDL Authors. All rights reserved.
+git # Copyright 2020 The ElasticDL Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -144,12 +144,7 @@ class ODPSDataReaderTest(unittest.TestCase):
     def test_odps_data_reader_records_reading(self):
         records = list(
             self.reader.read_records(
-                _Task(
-                    self.test_table,
-                    0,
-                    2,
-                    elasticai_api_pb2.TRAINING,
-                )
+                _Task(self.test_table, 0, 2, elasticai_api_pb2.TRAINING,)
             )
         )
         records = np.array(records, dtype="float").tolist()
