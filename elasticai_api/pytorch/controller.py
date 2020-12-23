@@ -22,8 +22,7 @@ from elasticai_api.common.base_controller import (
 )
 from elasticai_api.common.constants import WorkerEnv
 from elasticai_api.common.data_shard_service import DataShardService
-from elasticai_api.common.master_client import MasterClient
-from elasticai_api.util.grpc_utils import build_channel
+from elasticai_api.common.master_client import build_master_client
 from elasticai_api.util.log_utils import default_logger as logger
 
 try:
@@ -75,10 +74,7 @@ def create_elastic_controller(batch_size):
         return loss
     ```
     """
-    master_addr = os.getenv("MASTER_ADDR", "localhost:12345")
-    worker_id = int(os.getenv("WORKER_ID", 0))
-
-    master_client = MasterClient(build_channel(master_addr), worker_id)
+    master_client = build_master_client()
     data_shard_service = DataShardService(batch_size, master_client)
 
     controller = PyTorchAllReduceController(master_client, data_shard_service)

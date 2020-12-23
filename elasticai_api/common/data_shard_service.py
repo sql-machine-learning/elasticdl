@@ -15,7 +15,13 @@ import threading
 from collections import deque
 
 from elasticai_api.common.constants import TaskExecCounterKey
+from elasticai_api.common.master_client import build_master_client
 from elasticai_api.proto import elasticai_api_pb2
+
+
+def build_data_shard_service(batch_size):
+    master_client = build_master_client()
+    return DataShardService(batch_size=batch_size, master_client=master_client)
 
 
 class DataShardService(object):
