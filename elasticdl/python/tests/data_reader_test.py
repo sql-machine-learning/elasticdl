@@ -135,9 +135,9 @@ class ODPSDataReaderTest(unittest.TestCase):
 
     def test_odps_data_reader_shards_creation(self):
         expected_shards = {
-            self.test_table + ":shard_0": (0, self.records_per_task),
-            self.test_table + ":shard_1": (50, self.records_per_task),
-            self.test_table + ":shard_2": (100, 10),
+            self.test_table: (0, self.records_per_task),
+            self.test_table: (50, self.records_per_task),
+            self.test_table: (100, 10),
         }
         self.assertEqual(expected_shards, self.reader.create_shards())
 
@@ -145,7 +145,7 @@ class ODPSDataReaderTest(unittest.TestCase):
         records = list(
             self.reader.read_records(
                 _Task(
-                    self.test_table + ":shard_0",
+                    self.test_table,
                     0,
                     2,
                     elasticai_api_pb2.TRAINING,
@@ -224,7 +224,7 @@ class ODPSDataReaderTest(unittest.TestCase):
         def _gen():
             for data in self.reader.read_records(
                 _Task(
-                    self.test_table + ":shard_0",
+                    self.test_table,
                     0,
                     num_records,
                     elasticai_api_pb2.TRAINING,
