@@ -55,7 +55,7 @@ class RendevousManager(object):
                     "The master has not added the worker host into "
                     "rendezvous yet. Retrying to get rank"
                 )
-                time.sleep(5)
+                time.sleep(RETRY_ALLREDUCE_INTERVAL_SECS)
             else:
                 break
 
