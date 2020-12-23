@@ -91,7 +91,7 @@ class HorovodRendezvousServer(object):
             return self._cur_rendezvous_hosts.index(host)
 
     def get_size(self):
-        return len(self._worker_hosts)
+        return len(self._cur_rendezvous_hosts)
 
     def get_rendezvous_id(self):
         return self._rendezvous_id

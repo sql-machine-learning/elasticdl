@@ -129,9 +129,8 @@ class ServicerTest(unittest.TestCase):
             server_host="localhost"
         )
         self.master.rendezvous_server.start()
-        self.master.rendezvous_server.set_worker_hosts(
-            [("worker-0", "172.0.0.1"), ("worker-1", "172.0.0.2")]
-        )
+        self.master.rendezvous_server.add_worker("172.0.0.1")
+        self.master.rendezvous_server.add_worker("172.0.0.2")
 
         mock_instance_manager = Mock()
         mock_instance_manager.get_worker_pod_ip = MagicMock(
@@ -145,7 +144,7 @@ class ServicerTest(unittest.TestCase):
             None,
         )
         request = elasticai_api_pb2.GetCommRankRequest()
-        request.worker_id = 0
+        request.worker_host = "172.0.0.1"
         rank_response = master_servicer.get_comm_rank(request, None)
         self.assertEqual(rank_response.world_size, 2)
         self.assertEqual(rank_response.rank_id, 0)
