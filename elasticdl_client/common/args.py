@@ -150,7 +150,7 @@ def add_train_params(parser):
     add_bool_param(
         parser=parser,
         name="--need_elasticdl_job_service",
-        default=True,
+        default=False,
         help="If true, users use ElasticDL worker framework. "
         "Otherwise, master only launch pod manager and/or other services to "
         "provide elastic training feature to other DL framework or customized "

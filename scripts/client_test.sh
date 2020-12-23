@@ -47,6 +47,7 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --log_level=INFO \
       --image_pull_policy=Never \
       --output=/data/saved_model/model_output \
+      --need_elasticdl_job_service=true \
       --volume="host_path=${DATA_PATH},mount_path=/data"
 elif [[ "$JOB_TYPE" == "evaluate" ]]; then
     elasticdl evaluate \
@@ -135,6 +136,7 @@ elif [[ "$JOB_TYPE" == "allreduce" ]]; then
       --job_name=test-allreduce \
       --log_level=INFO \
       --image_pull_policy=Never \
+      --need_elasticdl_job_service=true \
       --volume="host_path=${DATA_PATH},mount_path=/data"
 else
     echo "Unsupported job type specified: $JOB_TYPE"

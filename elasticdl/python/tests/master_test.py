@@ -37,6 +37,7 @@ class MasterTest(unittest.TestCase):
             "model_def": "mnist.mnist_functional_api.custom_model",
             "job_name": "test",
             "worker_image": "ubuntu:18.04",
+            "need_elasticdl_job_service": "True",
         }
         self._num_records = 128
 
