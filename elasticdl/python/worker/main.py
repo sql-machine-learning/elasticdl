@@ -14,7 +14,7 @@
 import os
 
 from elasticai_api.common.constants import WorkerEnv
-from elasticai_api.common.grpc_utils import build_channel
+from elasticai_api.util.grpc_utils import build_channel
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.worker.master_client import MasterClient

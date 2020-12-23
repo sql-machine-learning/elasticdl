@@ -17,7 +17,7 @@ from abc import abstractmethod
 from functools import wraps
 
 from elasticai_api.common.constants import HorovodEnv, WorkerEnv
-from elasticai_api.common.log_utils import default_logger as logger
+from elasticai_api.util.log_utils import default_logger as logger
 
 try:
     if os.getenv("USE_TORCH", None):
@@ -37,6 +37,7 @@ DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 DEFAULT_SECS_TO_CHECK_RENDEZVOUS = min(
     60, int(os.getenv(HorovodEnv.GLOO_TIMEOUT_SECONDS, 30))
 )
+RETRY_ALLREDUCE_INTERVAL_SECS = 30
 
 
 class RendevousManager(object):
@@ -54,7 +55,7 @@ class RendevousManager(object):
                     "The master has not added the worker host into "
                     "rendezvous yet. Retrying to get rank"
                 )
-                time.sleep(5)
+                time.sleep(RETRY_ALLREDUCE_INTERVAL_SECS)
             else:
                 break
 
