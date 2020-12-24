@@ -134,8 +134,7 @@ class ClusterSpec(object):
     def patch_pod(self, pod, pod_type):
         if self._cluster:
             pod = self._cluster.with_pod(pod)
-
-        if self._cluster_spec:
+        elif self._cluster_spec:
             if ClusterSpecConfig.POD_SPEC in self._cluster_spec:
                 pod = self._patch_pod_with_spec(
                     pod, self._cluster_spec[ClusterSpecConfig.POD_SPEC]
