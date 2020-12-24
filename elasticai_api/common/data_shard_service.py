@@ -29,18 +29,29 @@ def build_data_shard_service(batch_size, task_type=elasticai_api_pb2.TRAINING):
 class DataShardService(object):
     def __init__(
         self,
+        master_client,
         batch_size,
-        master_client=None,
+        num_epochs=None,
+        dataset_size=None,
         task_type=elasticai_api_pb2.TRAINING,
     ):
         self._mc = master_client
         self._batch_size = batch_size
+        self._num_epochs = num_epochs
+        self._dataset_size = dataset_size
         self._task_type = task_type
         self._lock = threading.Lock()
         self._failed_record_count = 0
         self._reported_record_count = 0
         self._current_task = None
         self._pending_tasks = deque()
+        self._report_training_params()
+
+    def _report_training_params(self):
+        if self._num_epochs and self._dataset_size:
+            self._mc.report_training_params(
+                self._batch_size, self._num_epochs, self._dataset_size
+            )
 
     def get_current_task(self):
         return self._current_task

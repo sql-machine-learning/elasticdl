@@ -165,6 +165,12 @@ class MasterServicer(
             )
         return empty_pb2.Empty()
 
+    def report_training_params(self, request, _):
+        self._task_manager.set_training_params(
+            request.batch_size, request.num_epochs, request.dataset_size
+        )
+        return empty_pb2.Empty()
+
     def get_comm_rank(self, request, _):
         worker_id = request.worker_id
         worker_host = self._instance_manager.get_worker_pod_ip(worker_id)

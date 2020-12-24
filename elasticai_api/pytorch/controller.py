@@ -38,7 +38,7 @@ except ImportError:
     hvd = None
 
 
-def create_elastic_controller(batch_size):
+def create_elastic_controller(batch_size, num_epochs=None, dataset_size=None):
     """Create an elastic AllReduce controller with data shard service.
     Users can use the `controller.data_shard_service` to get data
     shards like:
@@ -73,9 +73,16 @@ def create_elastic_controller(batch_size):
         optimizer.step()
         return loss
     ```
+
+    Args:
+        batch_size: The batch size of a single worker.
+        num_epochs: The number of epochs.
+        dataset_size: The total size of dataset.
     """
     master_client = build_master_client()
-    data_shard_service = DataShardService(batch_size, master_client)
+    data_shard_service = DataShardService(
+        master_client, batch_size, num_epochs, dataset_size
+    )
 
     controller = PyTorchAllReduceController(master_client, data_shard_service)
     controller.init_horovod_locally()
