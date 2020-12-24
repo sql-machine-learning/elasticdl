@@ -29,8 +29,8 @@ def build_data_shard_service(batch_size, task_type=elasticai_api_pb2.TRAINING):
 class DataShardService(object):
     def __init__(
         self,
+        master_client,
         batch_size,
-        master_client=None,
         num_epochs=None,
         dataset_size=None,
         task_type=elasticai_api_pb2.TRAINING,
