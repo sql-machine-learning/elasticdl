@@ -106,7 +106,7 @@ class Master(object):
                 if self.pod_manager and self.pod_manager.all_workers_exited:
                     if self.task_manager and not self.task_manager.finished():
                         logger.warning(
-                            "All workers exited but there also are",
+                            "All workers exited but there also are "
                             "unfinished tasks",
                         )
                     self.pod_manager.update_status(PodManagerStatus.FINISHED)
