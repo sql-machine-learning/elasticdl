@@ -19,10 +19,19 @@ from elasticai_api.common.master_client import build_master_client
 from elasticai_api.proto import elasticai_api_pb2
 
 
-def build_data_shard_service(batch_size, task_type=elasticai_api_pb2.TRAINING):
+def build_data_shard_service(
+    batch_size,
+    num_epochs=None,
+    dataset_size=None,
+    task_type=elasticai_api_pb2.TRAINING,
+):
     master_client = build_master_client()
     return DataShardService(
-        batch_size=batch_size, master_client=master_client, task_type=task_type
+        batch_size=batch_size,
+        master_client=master_client,
+        num_epochs=num_epochs,
+        dataset_size=dataset_size,
+        task_type=task_type,
     )
 
 
