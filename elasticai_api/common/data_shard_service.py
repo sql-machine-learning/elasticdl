@@ -139,7 +139,7 @@ class RecordIndexService(DataShardService):
         task_type=elasticai_api_pb2.TRAINING,
         shuffle=False,
     ):
-        super(self, RecordIndexService).__init__(
+        super(RecordIndexService, self).__init__(
             master_client, batch_size, num_epochs, dataset_size, task_type
         )
         self._shard_queue = Queue()
