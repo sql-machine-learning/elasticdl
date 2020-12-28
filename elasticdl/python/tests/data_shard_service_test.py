@@ -28,7 +28,7 @@ class DataShardServiceTest(unittest.TestCase):
         self._master_client.report_task_result = MagicMock(return_value=True)
 
     def test_get_task(self):
-        data_shard_service = DataShardService(1, self._master_client)
+        data_shard_service = DataShardService(self._master_client, 1)
         task = data_shard_service.get_task()
         self.assertEqual(task, data_shard_service.get_current_task())
         self.assertEqual(task.shard.start, 0)
@@ -36,14 +36,14 @@ class DataShardServiceTest(unittest.TestCase):
         self.assertEqual(len(data_shard_service._pending_tasks), 1)
 
     def test_fetch_shard(self):
-        data_shard_service = DataShardService(1, self._master_client)
+        data_shard_service = DataShardService(self._master_client, 1)
         shard = data_shard_service.fetch_shard()
         self.assertEqual(shard.name, "test_file")
         self.assertEqual(shard.start, 0)
         self.assertEqual(shard.end, 1)
 
     def test_report_batch_done(self):
-        data_shard_service = DataShardService(1, self._master_client)
+        data_shard_service = DataShardService(self._master_client, 1)
         task = data_shard_service.get_task()
         task.task_id = 0
         reported = data_shard_service.report_batch_done()

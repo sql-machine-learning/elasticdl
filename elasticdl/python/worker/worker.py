@@ -88,7 +88,7 @@ class Worker(object):
         self._job_type = args.job_type
         self._minibatch_size = args.minibatch_size
         self._data_shard_service = DataShardService(
-            self._minibatch_size, self._mc
+            self._mc, self._minibatch_size
         )
         if self._custom_training_loop:
             self._init_training_func_from_args(args)

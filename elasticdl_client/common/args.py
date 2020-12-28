@@ -150,7 +150,7 @@ def add_train_params(parser):
     add_bool_param(
         parser=parser,
         name="--need_elasticdl_job_service",
-        default=True,
+        default=False,
         help="If true, users use ElasticDL worker framework. "
         "Otherwise, master only launch pod manager and/or other services to "
         "provide elastic training feature to other DL framework or customized "
@@ -233,6 +233,13 @@ def add_common_params(parser):
         type=str,
         default="",
         help="The docker image for this job.",
+    )
+    parser.add_argument(
+        "--worker_image",
+        type=str,
+        default="",
+        help="The docker image for workers. If not specified, "
+        "it will use the value of `image_name`.",
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(

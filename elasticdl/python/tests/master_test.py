@@ -14,6 +14,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.args import parse_master_args
@@ -36,6 +37,7 @@ class MasterTest(unittest.TestCase):
             "model_def": "mnist.mnist_functional_api.custom_model",
             "job_name": "test",
             "worker_image": "ubuntu:18.04",
+            "need_elasticdl_job_service": "True",
         }
         self._num_records = 128
 
@@ -62,6 +64,8 @@ class MasterTest(unittest.TestCase):
             args = parse_master_args(args)
             master = Master(args)
             master.task_manager._todo.clear()
+            master.pod_manager = Mock()
+            master.pod_manager.all_workers_exited = True
             exit_code = master.run()
             master.stop()
             self.assertEqual(exit_code, 0)

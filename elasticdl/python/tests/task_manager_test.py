@@ -167,6 +167,15 @@ class TaskManagerTest(unittest.TestCase):
             {elasticai_api_pb2.TRAINING: 10, elasticai_api_pb2.EVALUATION: 5},
         )
 
+    def test_set_training_params(self):
+        task_manager = create_task_manager([], [])
+        task_manager.set_training_params(1, 1, 10)
+        self.assertEqual(
+            task_manager._training_shards,
+            [("", 0, 3), ("", 3, 3), ("", 6, 3), ("", 9, 1)],
+        )
+        self.assertEqual(len(task_manager._todo), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -112,12 +112,13 @@ class TaskManager(object):
 
         self._batch_size = args.minibatch_size
         self._num_epochs = args.num_epochs
+        self._dataset_size = None
         self.support_fault_tolerance = args.task_fault_tolerance
         self.relaunch_timeout_worker = args.relaunch_timeout_worker
         self._epoch = 0
         self._max_step = args.max_step
         self._completed_steps = 0
-
+        self._num_minibatches_per_task = args.num_minibatches_per_task
         self._records_per_task = (
             args.minibatch_size * args.num_minibatches_per_task
         )
@@ -209,6 +210,41 @@ class TaskManager(object):
         self._completed_steps = CheckpointSaver.get_version_from_checkpoint(
             checkpoint_dir_for_init
         )
+
+    def set_training_params(self, batch_size, num_epochs, dataset_size):
+        with self._lock:
+            if not self._training_shards:
+                # The master receives the training params to create shards
+                self._batch_size = batch_size
+                self._records_per_task = (
+                    batch_size * self._num_minibatches_per_task
+                )
+                self._num_epochs = (
+                    num_epochs if num_epochs > 0 else self._num_epochs
+                )
+                self._dataset_size = (
+                    dataset_size if dataset_size > 0 else self._dataset_size
+                )
+                self._training_shards = self._create_shards_by_dataset_size(
+                    dataset_size
+                )
+                if self._training_shards:
+                    logger.info("Starting epoch %d", self._epoch)
+                    self.create_tasks(elasticai_api_pb2.TRAINING)
+
+    def _create_shards_by_dataset_size(self, dataset_size):
+        shards = []
+        num_shards = dataset_size // self._records_per_task
+        start_ind = 0
+        for shard_id in range(num_shards):
+            shards.append(("", start_ind, self._records_per_task,))
+            start_ind += self._records_per_task
+        # Create a shard with the last records
+        num_records_left = dataset_size % self._records_per_task
+        if num_records_left != 0:
+            shards.append(("", start_ind, num_records_left,))
+        logger.info("Create {} shards".format(len(shards)))
+        return shards
 
     def reset_job_counters(self, task_type):
         """Return record number in specific task_type"""

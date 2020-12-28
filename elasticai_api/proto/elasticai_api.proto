@@ -52,6 +52,12 @@ message Task {
   map<string, string> extended_config = 5;
 }
 
+message ReportTrainingParamsRequest {
+  int32 batch_size = 1;
+  int32 num_epochs = 2;
+  int32 dataset_size = 3;
+}
+
 message GetTaskRequest {
   int32 worker_id = 1;
   TaskType task_type = 2;
@@ -89,5 +95,7 @@ service Master {
       returns (google.protobuf.Empty);
   rpc get_comm_rank(GetCommRankRequest) returns (GetCommRankResponse);
   rpc report_training_loop_status(ReportTrainingLoopStatusRequest)
+      returns (google.protobuf.Empty);
+  rpc report_training_params(ReportTrainingParamsRequest)
       returns (google.protobuf.Empty);
 }

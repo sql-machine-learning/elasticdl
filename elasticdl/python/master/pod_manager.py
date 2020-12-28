@@ -70,10 +70,11 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
         fraction = float(worker_pod_priority)
         high_count = math.ceil(num_workers * fraction)
         for i in range(num_workers):
+            index = int(i / 2) if i % 2 == 0 else num_workers - 1 - int(i / 2)
             if i < high_count:
-                res[i] = "high"
+                res[index] = "high"
             else:
-                res[i] = "low"
+                res[index] = "low"
     elif worker_pod_priority in [None, "", "high", "low"]:
         for i in range(num_workers):
             res[i] = worker_pod_priority
