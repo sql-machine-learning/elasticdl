@@ -21,7 +21,7 @@ from elasticai_api.common.base_controller import (
     AllReduceController,
 )
 from elasticai_api.common.constants import WorkerEnv
-from elasticai_api.common.data_shard_service import DataShardService
+from elasticai_api.common.data_shard_service import RecordIndexService
 from elasticai_api.common.master_client import build_master_client
 from elasticai_api.util.log_utils import default_logger as logger
 
@@ -38,15 +38,14 @@ except ImportError:
     hvd = None
 
 
-def create_elastic_controller(batch_size, num_epochs=None, dataset_size=None):
-    """Create an elastic AllReduce controller with data shard service.
+def create_elastic_controller(
+    batch_size, num_epochs=None, dataset_size=None, shuffle=False
+):
+    """Create an elastic AllReduce controller with record index service.
     Users can use the `controller.data_shard_service` to get data
     shards like:
     ```python
-    while True:
-        shard = controller.data_shard_service.fetch_shard()
-        for i in range(shard.start, shard.end):
-            yield i
+    index = controller.data_shard_service.fetch_record_index()
     ```
 
     Users also can use the controller to do an elastic training.
@@ -80,11 +79,17 @@ def create_elastic_controller(batch_size, num_epochs=None, dataset_size=None):
         dataset_size: The total size of dataset.
     """
     master_client = build_master_client()
-    data_shard_service = DataShardService(
-        master_client, batch_size, num_epochs, dataset_size
+    record_index_service = RecordIndexService(
+        master_client=master_client,
+        batch_size=batch_size,
+        num_epochs=num_epochs,
+        dataset_size=dataset_size,
+        shuffle=shuffle,
     )
 
-    controller = PyTorchAllReduceController(master_client, data_shard_service)
+    controller = PyTorchAllReduceController(
+        master_client, record_index_service
+    )
     controller.init_horovod_locally()
     return controller
 

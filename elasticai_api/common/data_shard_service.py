@@ -11,8 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 import threading
+import time
 from collections import deque
+from multiprocessing import Queue
 
 from elasticai_api.common.constants import TaskExecCounterKey
 from elasticai_api.common.master_client import build_master_client
@@ -125,12 +128,40 @@ class DataShardService(object):
             return True
         return False
 
-    def fetch_shard(self):
-        """Fetch data shard and each shard contains the name,
-        start and end index.
-        """
-        task = self.get_task(self._task_type)
-        if task.type != self._task_type:
-            return None
 
-        return task.shard
+class RecordIndexService(DataShardService):
+    def __init__(
+        self,
+        master_client,
+        batch_size,
+        num_epochs=None,
+        dataset_size=None,
+        task_type=elasticai_api_pb2.TRAINING,
+        shuffle=False,
+    ):
+        super(self, RecordIndexService).__init__(
+            master_client, batch_size, num_epochs, dataset_size, task_type
+        )
+        self._shard_queue = Queue()
+        threading.Thread(target=self._get_shard_indices).start()
+
+    def _get_shard_indices(self):
+        while True:
+            if self._shard_queue.empty():
+                task = self.get_task(self._task_type)
+                if not task.shard or task.type != self._task_type:
+                    break
+                ids = list(range(task.shard.start, task.shard.end))
+                if self._shuffle:
+                    random.shuffle(ids)
+                for i in ids:
+                    self._shard_queue.put(i)
+            else:
+                time.sleep(1)
+
+    def fetch_record_index(self):
+        """Fetch an index of the record. The function get an index
+        from a queue because there may be multiple sub-process to call
+        the function.
+        """
+        return self._shard_queue.get(timeout=2)
