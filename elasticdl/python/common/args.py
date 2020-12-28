@@ -56,8 +56,6 @@ ALL_ARGS_GROUPS = [
     CHECKPOINT_GROUP,
 ]
 
-EXCLUDE_ARGS_GROUP = ["envs"]
-
 
 def pos_int(arg):
     res = int(arg)
@@ -75,7 +73,7 @@ def non_neg_int(arg):
     return res
 
 
-def print_args(args, groups=None, exclude_group=[]):
+def print_args(args, groups=None):
     """
     Args:
         args: parsing results returned from `parser.parse_args`
@@ -100,7 +98,7 @@ def print_args(args, groups=None, exclude_group=[]):
     other_options = [
         (key, value)
         for (key, value) in args.__dict__.items()
-        if key not in dedup and key not in exclude_group
+        if key not in dedup
     ]
     for key, value in other_options:
         logger.info("%s = %s", key, value)
@@ -113,6 +111,9 @@ def _build_master_args_parser():
         default=50001,
         type=pos_int,
         help="The listening port of master",
+    )
+    parser.add_argument(
+        "--worker_image", help="Docker image for workers", default=None
     )
     parser.add_argument(
         "--prediction_data",
@@ -160,7 +161,7 @@ def parse_master_args(master_args=None):
     parser = _build_master_args_parser()
 
     args, unknown_args = parser.parse_known_args(args=master_args)
-    print_args(args, groups=ALL_ARGS_GROUPS, exclude_group=EXCLUDE_ARGS_GROUP)
+    print_args(args, groups=ALL_ARGS_GROUPS)
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
 
