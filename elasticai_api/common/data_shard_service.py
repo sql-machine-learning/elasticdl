@@ -142,6 +142,7 @@ class RecordIndexService(DataShardService):
         super(RecordIndexService, self).__init__(
             master_client, batch_size, num_epochs, dataset_size, task_type
         )
+        self._shuffle = shuffle
         self._shard_queue = Queue()
         threading.Thread(target=self._get_shard_indices).start()
 
