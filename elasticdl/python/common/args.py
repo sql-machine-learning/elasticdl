@@ -113,9 +113,6 @@ def _build_master_args_parser():
         help="The listening port of master",
     )
     parser.add_argument(
-        "--worker_image", help="Docker image for workers", default=None
-    )
-    parser.add_argument(
         "--prediction_data",
         help="Either the data directory that contains RecordIO files "
         "or an ODPS table name used for prediction.",
