@@ -187,4 +187,3 @@ class RecordIndexService(DataShardService):
             return index
         except queue.Empty:
             logger.info("No more data")
-            sys.exit(0)
