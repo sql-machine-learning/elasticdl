@@ -11,11 +11,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import json
 import threading
 import time
 
 from kubernetes import client, watch
+from kubernetes.client import V1EnvVar
 
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.k8s_client import (
@@ -88,7 +90,7 @@ class Client(BaseClient):
         if self._need_tf_config:
             self._init_tf_config_data(num_workers, num_ps)
 
-    def _init_tf_config_data(num_workers, num_ps):
+    def _init_tf_config_data(self, num_workers, num_ps):
         cluster_dict = {}
         if num_ps > 0:
             cluster_dict["ps"] = []
@@ -108,6 +110,25 @@ class Client(BaseClient):
                 )
         self._tf_config_data = {"cluster": cluster_dict, "task": {}}
         self._master_pod = self.get_master_pod()
+
+    def _append_tf_config_to_env_if_needed(self, env, type_key, index_key):
+        if not self._need_tf_config:
+            return env
+
+        tf_config = copy.deepcopy(self._tf_config_data)
+        if type_key == PodType.PS:
+            tf_config["task"]["type"] = "ps"
+        elif type_key == PodType.WORKER:
+            tf_config["task"]["type"] = "worker"
+        else:
+            return env
+        tf_config["task"]["index"] = index_key
+        tf_config_var = V1EnvVar(name="MY_POD_IP", value=json.dumps(tf_config))
+        if env:
+            env.append(tf_config_var)
+        else:
+            env = [tf_config_var]
+        return env
 
     def start_watch_events(self):
         if self._event_cb:
@@ -202,6 +223,7 @@ class Client(BaseClient):
         master_pod = self.get_master_pod()
         env = kargs["envs"] if "envs" in kargs else None
         env = append_pod_ip_to_env(env)
+        env = self._append_tf_config_to_env_if_needed(env, type_key, index_key)
         pod = self.create_pod(
             pod_name=pod_name,
             job_name=self.job_name,
