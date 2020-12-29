@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import queue
 import random
 import threading
 import time
@@ -21,7 +20,6 @@ from multiprocessing import SimpleQueue
 from elasticai_api.common.constants import TaskExecCounterKey
 from elasticai_api.common.master_client import build_master_client
 from elasticai_api.proto import elasticai_api_pb2
-from elasticai_api.util.log_utils import default_logger as logger
 
 
 def build_data_shard_service(
@@ -181,8 +179,9 @@ class RecordIndexService(DataShardService):
         from a queue because there may be multiple sub-process to call
         the function.
         """
-        try:
-            index = self._shard_queue.get(timeout=5)
-            return index
-        except queue.Empty:
-            logger.info("No more data")
+        for _ in range(30):
+            if not self._shard_queue.empty():
+                return self._shard_queue.get()
+            else:
+                time.sleep(1)
+        raise StopIteration
