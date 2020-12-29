@@ -191,7 +191,7 @@ def add_train_params(parser):
     )
     add_bool_param(
         parser=parser,
-        name="--need_tf_config_env",
+        name="--need_tf_config",
         default=False,
         help="If true, needs to set TF_CONFIG env for ps/worker. Also "
         "need to use fixed service name for workers",

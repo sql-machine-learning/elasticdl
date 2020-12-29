@@ -162,7 +162,7 @@ def create_pod_manager(args):
             cluster_spec=cluster_spec,
             cluster_spec_json=args.cluster_spec_json,
             envs=env,
-            need_tf_config_env=args.need_tf_config_env,
+            need_tf_config=args.need_tf_config,
             disable_relaunch=disable_relaunch,
             log_file_path=args.log_file_path,
         )
@@ -185,7 +185,7 @@ class PodManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
-        need_tf_config_env=False,
+        need_tf_config=False,
         disable_relaunch=False,
         log_file_path=None,
         **kwargs
@@ -206,7 +206,7 @@ class PodManager(object):
         self._volume = volume
         self._image_pull_policy = image_pull_policy
         self._envs = envs
-        self._need_tf_config_env = need_tf_config_env
+        self._need_tf_config = need_tf_config
         self._next_worker_id_fn = itertools.count().__next__
         self._log_file_path = log_file_path
 
