@@ -59,6 +59,7 @@ the start message|                                  a rank |
                     |next_hosts=cur_hosts+[2] |  ready_hosts=cur_hosts   |
                     | ------------------------|  ----------------------->|
     """
+
     def __init__(self, server_host):
         self._rendezvous_host = server_host
         self._init_attributes()

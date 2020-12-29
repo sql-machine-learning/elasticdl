@@ -43,7 +43,9 @@ class HorovodRendezvousServerTest(unittest.TestCase):
         rank_1 = self.rendezvous_server.get_worker_host_rank("127.0.0.3")
         self.assertEqual(rank_0, 0)
         self.assertEqual(rank_1, 1)
-        self.assertEqual(self.rendezvous_server._cur_rendezvous_completed, True)
+        self.assertEqual(
+            self.rendezvous_server._cur_rendezvous_completed, True
+        )
         self.assertEqual(self.rendezvous_server._rendezvous_id, 1)
 
         self.rendezvous_server.remove_worker("127.0.0.2")
