@@ -14,9 +14,14 @@ import os
 import socket
 import time
 from abc import abstractmethod
+from contextlib import contextmanager
 from functools import wraps
 
-from elasticai_api.common.constants import HorovodEnv, WorkerEnv
+from elasticai_api.common.constants import (
+    HorovodEnv,
+    TrainingLoopStatus,
+    WorkerEnv,
+)
 from elasticai_api.util.log_utils import default_logger as logger
 
 try:
@@ -92,6 +97,9 @@ class RendevousManager(object):
         domain_ip = socket.gethostbyname(socket.gethostname())
         os.environ[HorovodEnv.HOSTNAME] = domain_ip
 
+    def notify_training_loop_status(self, status):
+        self._master_client.report_training_loop_status(status)
+
 
 class AllReduceController(object):
     """The controller initializes Horovod and calls the function with forward
@@ -147,6 +155,22 @@ class AllReduceController(object):
             logger.info("Broadcast models")
             self.broadcast()
             self._rendezvous_manager.need_broadcast = False
+
+    def notify_train_loop_start(self):
+        self._rendezvous_manager.notify_training_loop_status(
+            TrainingLoopStatus.START
+        )
+
+    def notify_train_loop_end(self):
+        self._rendezvous_manager.notify_training_loop_status(
+            TrainingLoopStatus.END
+        )
+
+    @contextmanager
+    def scope(self):
+        self.notify_train_loop_start()
+        yield
+        self.notify_train_loop_end()
 
     @abstractmethod
     def train_one_batch_with_retries(self, func, *args, **kwargs):

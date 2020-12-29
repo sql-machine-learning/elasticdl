@@ -97,7 +97,7 @@ class PodManagerTest(unittest.TestCase):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
             if counters[PodStatus.RUNNING]:
-                worker_addrs = pod_manager.get_alive_worker_name_addr()
+                worker_addrs = pod_manager.get_alive_worker_id_addr()
                 self.assertEqual(
                     len(worker_addrs), counters[PodStatus.RUNNING]
                 )
