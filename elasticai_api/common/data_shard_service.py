@@ -13,6 +13,7 @@
 
 import queue
 import random
+import sys
 import threading
 import time
 from collections import deque
@@ -156,7 +157,11 @@ class RecordIndexService(DataShardService):
         )
         self._shuffle = shuffle
         self._shard_queue = Queue()
-        threading.Thread(target=self._get_shard_indices).start()
+        threading.Thread(
+            target=self._get_shard_indices,
+            name="check_timeout_tasks",
+            daemon=True,
+        ).start()
 
     def _get_shard_indices(self):
         while True:
@@ -164,6 +169,11 @@ class RecordIndexService(DataShardService):
                 task = self.get_task(self._task_type)
                 if not task.shard or task.type != self._task_type:
                     break
+                logger.info(
+                    "start = {}, end = {}".format(
+                        task.shard.start, task.shard.end
+                    )
+                )
                 ids = list(range(task.shard.start, task.shard.end))
                 if self._shuffle:
                     random.shuffle(ids)
@@ -182,3 +192,4 @@ class RecordIndexService(DataShardService):
             return index
         except queue.Empty:
             logger.info("No more data")
+            sys.exit(0)
