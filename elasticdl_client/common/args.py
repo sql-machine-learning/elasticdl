@@ -241,6 +241,13 @@ def add_common_params(parser):
         default="",
         help="The docker image for this job.",
     )
+    parser.add_argument(
+        "--worker_image",
+        type=str,
+        default="",
+        help="The docker image for workers. If not specified, "
+        "it will use the value of `image_name`.",
+    )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
         "--master_resource_request",
