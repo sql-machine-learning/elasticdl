@@ -14,6 +14,7 @@
 
 import copy
 import itertools
+import json
 import math
 import os
 import threading
@@ -185,6 +186,7 @@ class PodManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
+        need_tf_config=False,
         disable_relaunch=False,
         log_file_path=None,
         **kwargs
@@ -207,6 +209,7 @@ class PodManager(object):
         self._envs = envs
         self._next_worker_id_fn = itertools.count().__next__
         self._log_file_path = log_file_path
+        self._need_tf_config = need_tf_config
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -214,13 +217,9 @@ class PodManager(object):
         self._init_pod_status()
 
         if disable_relaunch:
-            self._k8s_client = k8s.Client(
-                num_workers=num_workers, num_ps=num_ps, **kwargs
-            )
+            self._k8s_client = k8s.Client(**kwargs)
         else:
             self._k8s_client = k8s.Client(
-                num_workers=num_workers,
-                num_ps=num_ps,
                 event_callback=self._event_cb,
                 periodic_call_func=self._process_worker,
                 **kwargs
@@ -284,6 +283,13 @@ class PodManager(object):
         worker_args = [self._worker_args[0], job_command]
         envs = copy.deepcopy(self._envs)
         envs.append(V1EnvVar(name=WorkerEnv.WORKER_ID, value=str(worker_id)))
+        if self._need_tf_config:
+            tf_config = self._k8s_client.get_tf_config_data(
+                self._num_workers, self._num_ps, PodType.WORKER, worker_id
+            )
+            envs.append(
+                V1EnvVar(name="TF_CONFIG", value=json.dumps(tf_config))
+            )
         with self._lock:
             pod = self._k8s_client.create_worker(
                 worker_id=worker_id,
@@ -344,6 +350,14 @@ class PodManager(object):
             time.sleep(15)
 
     def _create_ps_pod(self, ps_id, ps_args):
+        envs = copy.deepcopy(self._envs)
+        if self._need_tf_config:
+            tf_config = self._k8s_client.get_tf_config_data(
+                self._num_workers, self._num_ps, PodType.PS, ps_id
+            )
+            envs.append(
+                V1EnvVar(name="TF_CONFIG", value=json.dumps(tf_config))
+            )
         return self._k8s_client.create_ps(
             ps_id=ps_id,
             resource_requests=self._ps_resource_request,
@@ -354,7 +368,7 @@ class PodManager(object):
             command=self._ps_command,
             args=ps_args,
             restart_policy=self._restart_policy,
-            envs=copy.deepcopy(self._envs),
+            envs=envs,
         )
 
     def update_status(self, status):

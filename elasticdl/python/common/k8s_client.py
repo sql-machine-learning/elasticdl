@@ -11,13 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
-import json
+
 import threading
 import time
 
 from kubernetes import client, watch
-from kubernetes.client import V1EnvVar
 
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.k8s_client import (
@@ -48,9 +46,6 @@ class Client(BaseClient):
         image_name,
         namespace,
         job_name,
-        need_tf_config,
-        num_workers=1,
-        num_ps=0,
         event_callback=None,
         periodic_call_func=None,
         cluster_spec="",
@@ -66,8 +61,6 @@ class Client(BaseClient):
                 pods will be created.
             job_name: ElasticDL job name, should be unique in the namespace.
                 Used as pod name prefix and value for "elasticdl" label.
-            need_tf_config： If True, set TF_CONFIG env for ps/worker. Also
-                create worker services for fixed worker domain names.
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
             periodic_call_func: If not None, call this method periodically.
@@ -86,11 +79,9 @@ class Client(BaseClient):
         )
         self._event_cb = event_callback
         self._periodic_call_func = periodic_call_func
-        self._need_tf_config = need_tf_config
-        if self._need_tf_config:
-            self._init_tf_config_data(num_workers, num_ps)
+        self._master_pod = self.get_master_pod()
 
-    def _init_tf_config_data(self, num_workers, num_ps):
+    def get_tf_config_data(self, num_workers, num_ps, type_key, index_key):
         cluster_dict = {}
         if num_ps > 0:
             cluster_dict["ps"] = []
@@ -108,27 +99,10 @@ class Client(BaseClient):
                     + ":"
                     + str(_WORKER_SERVICE_PORT)
                 )
-        self._tf_config_data = {"cluster": cluster_dict, "task": {}}
-        self._master_pod = self.get_master_pod()
-
-    def _append_tf_config_to_env_if_needed(self, env, type_key, index_key):
-        if not self._need_tf_config:
-            return env
-
-        tf_config = copy.deepcopy(self._tf_config_data)
-        if type_key == PodType.PS:
-            tf_config["task"]["type"] = "ps"
-        elif type_key == PodType.WORKER:
-            tf_config["task"]["type"] = "worker"
-        else:
-            return env
-        tf_config["task"]["index"] = index_key
-        tf_config_var = V1EnvVar(name="MY_POD_IP", value=json.dumps(tf_config))
-        if env:
-            env.append(tf_config_var)
-        else:
-            env = [tf_config_var]
-        return env
+        task_dict = {}
+        task_dict["type"] = type_key
+        task_dict["index"] = index_key
+        self._tf_config_data = {"cluster": cluster_dict, "task": task_dict}
 
     def start_watch_events(self):
         if self._event_cb:
