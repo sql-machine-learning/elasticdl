@@ -182,6 +182,9 @@ class MasterServicer(
 
     def report_training_loop_status(self, request, _):
         training_loop_status = request.status
+        if not self._rendezvous_server:
+            logger.warning("The rendezvous server does not exit")
+            return empty_pb2.Empty()
         if training_loop_status == TrainingLoopStatus.START:
             self._rendezvous_server.add_worker(request.worker_host)
         elif training_loop_status == TrainingLoopStatus.END:

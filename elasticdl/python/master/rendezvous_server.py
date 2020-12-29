@@ -30,6 +30,35 @@ _HOST_SEP = ","
 
 
 class HorovodRendezvousServer(object):
+    """The rendezvous server can collect the worker hosts (ip) to
+    help those workers to build an AllReduce ring using `hvd.init`.
+
+    The state transition diagram of the server is:
+
+                    |------------------|
+                    |       start      |
+                    |next_hosts = None |
+                    |------------------|
+                            | worker-0 sends the start
+                            | message
+                            |
+                     |------------------|
+                 |-- |next_hosts = [0]  |------------------|
+                 |   |------------------|                  |
+worker-1 sends   |                        worker-0 queries |
+the start message|                                  a rank |
+    |---------------------| worker-0 queries   |--------------------|
+    |next_hosts = [0, 1]  |     a rank         |cur_hosts=next_hosts|
+    |                     | ---------------->  |next_hosts=None     |
+    |---------------------|                    | ready_hosts adds    |
+                                               | the worker         |<---|
+                                  |<---------  |--------------------|    |
+                worker-2 sends    |                                      |
+                the start message |              worker-2 quries         |
+                    |-------------------------|  a rank and              |
+                    |next_hosts=cur_hosts+[2] |  ready_hosts=cur_hosts   |
+                    | ------------------------|  ----------------------->|
+    """
     def __init__(self, server_host):
         self._rendezvous_host = server_host
         self._init_attributes()
@@ -41,7 +70,7 @@ class HorovodRendezvousServer(object):
         self._rendezvous_port = None
         self._next_rendezvous_hosts = None
         self._ready_worker_hosts = set()
-        self._rendezvous_completed = True
+        self._cur_rendezvous_completed = True
         self._lock = Lock()
 
     def start(self):
@@ -53,7 +82,7 @@ class HorovodRendezvousServer(object):
         host_alloc_plan = self._get_host_plan()
         self._rendezvous_server.init(host_alloc_plan)
         self._rendezvous_id += 1
-        self._rendezvous_completed = False
+        self._cur_rendezvous_completed = False
 
     def _get_host_plan(self):
         hosts = []
@@ -72,7 +101,7 @@ class HorovodRendezvousServer(object):
 
     def get_worker_host_rank(self, host):
         with self._lock:
-            if self._next_rendezvous_hosts and self._rendezvous_completed:
+            if self._next_rendezvous_hosts and self._cur_rendezvous_completed:
                 time.sleep(2)  # Wait 2s for workers to complete rendezvous.
                 self._init_rendezvous_server()
 
@@ -80,12 +109,12 @@ class HorovodRendezvousServer(object):
             if host not in self._cur_rendezvous_hosts:
                 return -1
 
-            if not self._rendezvous_completed:
+            if not self._cur_rendezvous_completed:
                 self._ready_worker_hosts.add(host)
                 # If all active workers in the rendezvous are ready,
                 # the server can start to set hosts for the next rendezvous
                 if self._ready_worker_hosts == set(self._cur_rendezvous_hosts):
-                    self._rendezvous_completed = True
+                    self._cur_rendezvous_completed = True
                     self._ready_worker_hosts = set()
 
             return self._cur_rendezvous_hosts.index(host)
