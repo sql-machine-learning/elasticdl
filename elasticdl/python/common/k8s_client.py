@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import threading
 import time
 
@@ -27,6 +28,7 @@ from elasticdl_client.common.k8s_client import Client as BaseClient
 from elasticdl_client.common.k8s_client import PodType, append_pod_ip_to_env
 
 _PS_SERVICE_PORT = 2222
+_WORKER_SERVICE_PORT = 3333
 
 
 def get_worker_pod_name(job_name, worker_id):
@@ -44,6 +46,9 @@ class Client(BaseClient):
         image_name,
         namespace,
         job_name,
+        need_tf_config,
+        num_workers=1,
+        num_ps=0,
         event_callback=None,
         periodic_call_func=None,
         cluster_spec="",
@@ -59,6 +64,8 @@ class Client(BaseClient):
                 pods will be created.
             job_name: ElasticDL job name, should be unique in the namespace.
                 Used as pod name prefix and value for "elasticdl" label.
+            need_tf_config： If True, set TF_CONFIG env for ps/worker. Also
+                create worker services for fixed worker domain names.
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
             periodic_call_func: If not None, call this method periodically.
@@ -77,6 +84,30 @@ class Client(BaseClient):
         )
         self._event_cb = event_callback
         self._periodic_call_func = periodic_call_func
+        self._need_tf_config = need_tf_config
+        if self._need_tf_config:
+            self._init_tf_config_data(num_workers, num_ps)
+
+    def _init_tf_config_data(num_workers, num_ps):
+        cluster_dict = {}
+        if num_ps > 0:
+            cluster_dict["ps"] = []
+            for ps_id in range(num_ps):
+                cluster_dict["ps"].append(
+                    self.get_ps_service_name(ps_id)
+                    + ":"
+                    + str(_PS_SERVICE_PORT)
+                )
+        if num_workers > 0:
+            cluster_dict["worker"] = []
+            for worker_id in range(num_workers):
+                cluster_dict["worker"].append(
+                    self.get_worker_service_name(worker_id)
+                    + ":"
+                    + str(_WORKER_SERVICE_PORT)
+                )
+        self._tf_config_data = {"cluster": cluster_dict, "task": {}}
+        self._master_pod = self.get_master_pod()
 
     def start_watch_events(self):
         if self._event_cb:
@@ -124,6 +155,14 @@ class Client(BaseClient):
     def get_ps_service_address(self, ps_id):
         return self._get_service_address(
             self.get_ps_service_name(ps_id), _PS_SERVICE_PORT
+        )
+
+    def get_worker_service_name(self, worker_id):
+        return self.get_worker_pod_name(worker_id)
+
+    def get_worker_service_address(self, worker_id):
+        return self._get_service_address(
+            self.get_worker_service_name(worker_id), _WORKER_SERVICE_PORT
         )
 
     def get_master_pod(self):
@@ -225,7 +264,34 @@ class Client(BaseClient):
             owner=self.get_ps_pod(ps_id),
         )
 
-    def _create_service(self, **kargs):
+    def create_worker_service(self, worker_id):
+        # Use master pod as worker service owner so the worker
+        # service will not be deleted if the corresponding worker
+        # pod is deleted.
+        return self._create_service(
+            name=self.get_worker_service_name(worker_id),
+            port=_WORKER_SERVICE_PORT,
+            target_port=_WORKER_SERVICE_PORT,
+            replica_type="worker",
+            replica_index=worker_id,
+            owner=self._master_pod,
+        )
+
+    def patch_worker_service(self, original_worker_id, worker_id):
+        service_name = self.get_worker_service_name(original_worker_id)
+        service = self._create_service_obj(
+            name=service_name,
+            port=_WORKER_SERVICE_PORT,
+            target_port=_WORKER_SERVICE_PORT,
+            replica_type="worker",
+            replica_index=worker_id,
+            owner=self._master_pod,
+        )
+        return self.client.patch_namespaced_service(
+            service_name, self.namespace, service
+        )
+
+    def _create_service_obj(self, **kargs):
         labels = self._get_common_labels()
 
         metadata = client.V1ObjectMeta(
@@ -260,6 +326,10 @@ class Client(BaseClient):
             api_version="v1", kind="Service", metadata=metadata, spec=spec
         )
         service = self.cluster_spec.patch_service(service)
+        return service
+
+    def _create_service(self, **kargs):
+        service = self._create_service_obj(**kargs)
         return self.client.create_namespaced_service(self.namespace, service)
 
     def get_master_log(self):

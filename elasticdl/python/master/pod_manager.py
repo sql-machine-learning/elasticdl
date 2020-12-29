@@ -185,7 +185,6 @@ class PodManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
-        need_tf_config=False,
         disable_relaunch=False,
         log_file_path=None,
         **kwargs
@@ -206,7 +205,6 @@ class PodManager(object):
         self._volume = volume
         self._image_pull_policy = image_pull_policy
         self._envs = envs
-        self._need_tf_config = need_tf_config
         self._next_worker_id_fn = itertools.count().__next__
         self._log_file_path = log_file_path
 
@@ -216,9 +214,13 @@ class PodManager(object):
         self._init_pod_status()
 
         if disable_relaunch:
-            self._k8s_client = k8s.Client(**kwargs)
+            self._k8s_client = k8s.Client(
+                num_workers=num_workers, num_ps=num_ps, **kwargs
+            )
         else:
             self._k8s_client = k8s.Client(
+                num_workers=num_workers,
+                num_ps=num_ps,
                 event_callback=self._event_cb,
                 periodic_call_func=self._process_worker,
                 **kwargs
