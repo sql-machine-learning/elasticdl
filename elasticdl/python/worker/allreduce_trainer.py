@@ -136,11 +136,11 @@ class AllReduceTrainer(Trainer):
         return self._optimizer.iterations.numpy()
 
     def notify_training_loop_start(self):
-        self._rendezvous_manager.report_training_loop_status(
+        self._rendezvous_manager.notify_training_loop_status(
             TrainingLoopStatus.START
         )
 
     def notify_training_loop_end(self):
-        self._rendezvous_manager.report_training_loop_status(
+        self._rendezvous_manager.notify_training_loop_status(
             TrainingLoopStatus.END
         )

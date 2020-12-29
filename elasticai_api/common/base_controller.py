@@ -162,7 +162,7 @@ class AllReduceController(object):
         )
 
     def notify_train_loop_end(self):
-        self._rendezvous_manager.report_training_loop_status(
+        self._rendezvous_manager.notify_training_loop_status(
             TrainingLoopStatus.END
         )
 
