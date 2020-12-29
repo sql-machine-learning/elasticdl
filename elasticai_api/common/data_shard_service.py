@@ -13,11 +13,10 @@
 
 import queue
 import random
-import sys
 import threading
 import time
 from collections import deque
-from multiprocessing import Queue
+from multiprocessing import SimpleQueue
 
 from elasticai_api.common.constants import TaskExecCounterKey
 from elasticai_api.common.master_client import build_master_client
@@ -156,7 +155,7 @@ class RecordIndexService(DataShardService):
             master_client, batch_size, num_epochs, dataset_size, task_type
         )
         self._shuffle = shuffle
-        self._shard_queue = Queue()
+        self._shard_queue = SimpleQueue()
         threading.Thread(
             target=self._get_shard_indices,
             name="check_timeout_tasks",
