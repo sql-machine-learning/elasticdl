@@ -30,8 +30,8 @@ _HOST_SEP = ","
 
 
 class HorovodRendezvousServer(object):
-    """The rendezvous server can collect the worker hosts (ip) to
-    help those workers to build an AllReduce ring using `hvd.init`.
+    """The rendezvous server can collect worker hosts (ip) to
+    help these workers to build an AllReduce ring using `hvd.init`.
 
     The state transition diagram of the server is:
 
