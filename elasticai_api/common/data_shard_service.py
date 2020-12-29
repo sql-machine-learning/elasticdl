@@ -169,11 +169,6 @@ class RecordIndexService(DataShardService):
                 task = self.get_task(self._task_type)
                 if not task.shard or task.type != self._task_type:
                     break
-                logger.info(
-                    "start = {}, end = {}".format(
-                        task.shard.start, task.shard.end
-                    )
-                )
                 ids = list(range(task.shard.start, task.shard.end))
                 if self._shuffle:
                     random.shuffle(ids)
