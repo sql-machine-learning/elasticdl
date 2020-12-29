@@ -197,7 +197,6 @@ class Client(BaseClient):
         master_pod = self.get_master_pod()
         env = kargs["envs"] if "envs" in kargs else None
         env = append_pod_ip_to_env(env)
-        env = self._append_tf_config_to_env_if_needed(env, type_key, index_key)
         pod = self.create_pod(
             pod_name=pod_name,
             job_name=self.job_name,
