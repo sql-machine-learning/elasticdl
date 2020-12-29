@@ -130,6 +130,16 @@ class DataShardService(object):
             return True
         return False
 
+    def fetch_shard(self):
+        """Fetch data shard and each shard contains the name,
+        start and end index.
+        """
+        task = self.get_task(self._task_type)
+        if task.type != self._task_type:
+            return None
+
+        return task.shard
+
 
 class RecordIndexService(DataShardService):
     def __init__(
