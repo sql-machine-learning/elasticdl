@@ -56,7 +56,7 @@ ALL_ARGS_GROUPS = [
     CHECKPOINT_GROUP,
 ]
 
-EXCLUDE_ARGS_GROUP = ["envs"]
+EXCLUDE_PRINT_ARGS = ["envs"]
 
 
 def pos_int(arg):
@@ -75,10 +75,11 @@ def non_neg_int(arg):
     return res
 
 
-def print_args(args, groups=None, exclude_group=[]):
+def print_args(args, exclude_args=[], groups=None):
     """
     Args:
         args: parsing results returned from `parser.parse_args`
+        exclude_args: the arguments which won't be printed.
         groups: It is a list of a list. It controls which options should be
         printed together. For example, we expect all model specifications such
         as `optimizer`, `loss` are better printed together.
@@ -100,7 +101,7 @@ def print_args(args, groups=None, exclude_group=[]):
     other_options = [
         (key, value)
         for (key, value) in args.__dict__.items()
-        if key not in dedup and key not in exclude_group
+        if key not in dedup and key not in exclude_args
     ]
     for key, value in other_options:
         logger.info("%s = %s", key, value)
@@ -160,7 +161,7 @@ def parse_master_args(master_args=None):
     parser = _build_master_args_parser()
 
     args, unknown_args = parser.parse_known_args(args=master_args)
-    print_args(args, groups=ALL_ARGS_GROUPS, exclude_group=EXCLUDE_ARGS_GROUP)
+    print_args(args, exclude_args=EXCLUDE_PRINT_ARGS, groups=ALL_ARGS_GROUPS)
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
 
