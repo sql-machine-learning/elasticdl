@@ -73,12 +73,12 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
         for i in range(num_workers):
             index = int(i / 2) if i % 2 == 0 else num_workers - 1 - int(i / 2)
             if i < high_count:
-                res[index] = ("high", index)
+                res[index] = "high"
             else:
-                res[index] = ("low", index)
+                res[index] = "low"
     elif worker_pod_priority in [None, "", "high", "low"]:
         for i in range(num_workers):
-            res[i] = (worker_pod_priority, i)
+            res[i] = worker_pod_priority
     else:
         raise ValueError(
             "Not support priority = {}, please set priority = "
@@ -194,9 +194,12 @@ class PodManager(object):
         self._num_workers = num_workers
         self._worker_resource_request = worker_resource_request
         self._worker_resource_limit = worker_resource_limit
-        self._worker_pod_priority_and_ori_index = _parse_worker_pod_priority(
+        worker_pod_priority = _parse_worker_pod_priority(
             self._num_workers, worker_pod_priority
         )
+        self._worker_pod_priority_and_ori_index = {}
+        for (k, v) in worker_pod_priority.items():
+            self._worker_pod_priority_and_ori_index[k] = (v, k)
 
         self._num_ps = num_ps
         self._ps_resource_request = ps_resource_request
