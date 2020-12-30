@@ -293,9 +293,7 @@ class PodManager(object):
             original_index = self._worker_pod_priority_and_original_index[
                 worker_id
             ][1]
-            tf_config = self._k8s_client.get_tf_config_data(
-                self._num_workers, self._num_ps, PodType.WORKER, original_index
-            )
+            tf_config = self.get_tf_config_data(PodType.WORKER, original_index)
             envs.append(
                 V1EnvVar(name="TF_CONFIG", value=json.dumps(tf_config))
             )
