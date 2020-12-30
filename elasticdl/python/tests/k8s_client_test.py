@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import random
 import time
@@ -194,6 +195,47 @@ class K8sClientTest(unittest.TestCase):
         # wait for all ps, workers and services to be deleted
         while tracker._count > 0:
             time.sleep(1)
+
+    def test_get_tf_config_data(self):
+        c = k8s.Client(
+            image_name="gcr.io/google-samples/hello-app:1.0",
+            namespace="default",
+            job_name="test-job-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
+        )
+
+        tf_config_cluster = "'cluster': \
+          {'ps': \
+              ['elasticdl-JOBNAME-ps-0.NAMESPACE.svc:PSPORT', \
+              'elasticdl-JOBNAME-ps-1.NAMESPACE.svc:PSPORT'], \
+           'worker': \
+              ['elasticdl-JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT', \
+              'elasticdl-JOBNAME-worker-1.NAMESPACE-ps-1.svc:WORKERPORT'] \
+           } "
+        tf_config_cluster = tf_config_cluster.replace("JOBNAME", c.job_name)
+        tf_config_cluster = tf_config_cluster.replace("NAMESPACE", c.namespace)
+        tf_config_cluster = tf_config_cluster.replace(
+            "PSPORT", k8s._PS_SERVICE_PORT
+        )
+        tf_config_cluster = tf_config_cluster.replace(
+            "WORKERPORT", k8s._WORKER_SERVICE_PORT
+        )
+
+        tf_config_cluster_dict = json.loads(tf_config_cluster)
+
+        ps0_config = c.get_tf_config_data(2, 2, k8s.PodType.PS, 0)
+        ps0_config_dict = json.loads(ps0_config)
+        self.assertEqual(tf_config_cluster_dict, ps0_config_dict["cluster"])
+        self.assertEqual(ps0_config_dict["task"]["type"], "ps")
+        self.assertEqual(ps0_config_dict["task"]["index"], 0)
+
+        worker1_config = c.get_tf_config_data(2, 2, k8s.PodType.WORKER, 1)
+        worker1_config_dict = json.loads(worker1_config)
+        self.assertEqual(
+            tf_config_cluster_dict, worker1_config_dict["cluster"]
+        )
+        self.assertEqual(worker1_config_dict["task"]["type"], "worker")
+        self.assertEqual(worker1_config_dict["task"]["index"], 1)
 
     def test_patch_labels_to_pod(self):
         tracker = WorkerTracker()
