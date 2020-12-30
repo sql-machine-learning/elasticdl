@@ -156,6 +156,38 @@ class K8sClientTest(unittest.TestCase):
                 service.spec.selector[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
             )
 
+        # Start 2 worker services
+        for i in range(2):
+            c.create_worker_service(i)
+
+        # Check worker services
+        for i in range(2):
+            service = c.get_worker_service(i)
+            self.assertIsNotNone(service)
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_JOB_KEY], c.job_name
+            )
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_REPLICA_TYPE_KEY], "worker"
+            )
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
+            )
+
+        # patch worker service
+        c.patch_worker_service(0, 3)
+        service = c.get_worker_service(0)
+        self.assertIsNotNone(service)
+        self.assertEqual(
+            service.spec.selector[k8s.ELASTICDL_JOB_KEY], c.job_name
+        )
+        self.assertEqual(
+            service.spec.selector[k8s.ELASTICDL_REPLICA_TYPE_KEY], "worker"
+        )
+        self.assertEqual(
+            service.spec.selector[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(3)
+        )
+
         # Delete master and all ps and workers should also be deleted
         c.delete_master()
 

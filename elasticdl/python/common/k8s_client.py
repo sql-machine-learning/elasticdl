@@ -191,6 +191,17 @@ class Client(BaseClient):
             logger.warning("Exception when reading PS service: %s\n" % e)
             return None
 
+    def get_worker_service(self, worker_id):
+        try:
+            return self.client.read_namespaced_service(
+                # worker service has the same name as pod name
+                name=self.get_worker_service_name(worker_id),
+                namespace=self.namespace,
+            )
+        except client.ApiException as e:
+            logger.warning("Exception when reading worker service: %s\n" % e)
+            return None
+
     def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
         # Find that master pod that will be used as the owner reference
         # for the ps or worker pod.
