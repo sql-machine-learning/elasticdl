@@ -120,6 +120,7 @@ elif [[ "$JOB_TYPE" == "odps" ]]; then
       --log_level=INFO \
       --image_pull_policy=Never \
       --need_elasticdl_job_service=true \
+      --need_tf_config=true \
       --output=model_output
 elif [[ "$JOB_TYPE" == "allreduce" ]]; then
     elasticdl train \
