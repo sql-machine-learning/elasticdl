@@ -145,7 +145,7 @@ class Client(BaseClient):
         return get_ps_pod_name(self.job_name, ps_id)
 
     def get_ps_service_name(self, ps_id):
-        return self.get_ps_pod_name(ps_id)
+        return "%s.%s.svc" % (self.get_ps_pod_name(ps_id), self.namespace)
 
     def get_ps_service_address(self, ps_id):
         return self._get_service_address(
@@ -153,11 +153,9 @@ class Client(BaseClient):
         )
 
     def get_worker_service_name(self, worker_id):
-        return self.get_worker_pod_name(worker_id)
-
-    def get_worker_service_address(self, worker_id):
-        return self._get_service_address(
-            self.get_worker_service_name(worker_id), _WORKER_SERVICE_PORT
+        return "%s.%s.svc" % (
+            self.get_worker_pod_name(worker_id),
+            self.namespace,
         )
 
     def get_master_pod(self):
@@ -183,9 +181,7 @@ class Client(BaseClient):
     def get_ps_service(self, ps_id):
         try:
             return self.client.read_namespaced_service(
-                # PS service has the same name as pod name
-                name=self.get_ps_service_name(ps_id),
-                namespace=self.namespace,
+                name=self.get_ps_service_name(ps_id), namespace=self.namespace,
             )
         except client.ApiException as e:
             logger.warning("Exception when reading PS service: %s\n" % e)
