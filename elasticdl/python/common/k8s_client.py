@@ -78,7 +78,6 @@ class Client(BaseClient):
         )
         self._event_cb = event_callback
         self._periodic_call_func = periodic_call_func
-        self._master_pod = self.get_master_pod()
 
     def get_tf_config_data(self, num_workers, num_ps, type_key, index_key):
         cluster_dict = {}
@@ -274,7 +273,7 @@ class Client(BaseClient):
             target_port=_WORKER_SERVICE_PORT,
             replica_type="worker",
             replica_index=worker_id,
-            owner=self._master_pod,
+            owner=self.get_master_pod(),
         )
 
     def patch_worker_service(self, original_worker_id, worker_id):
@@ -285,7 +284,7 @@ class Client(BaseClient):
             target_port=_WORKER_SERVICE_PORT,
             replica_type="worker",
             replica_index=worker_id,
-            owner=self._master_pod,
+            owner=self.get_master_pod(),
         )
         return self.client.patch_namespaced_service(
             service_name, self.namespace, service
