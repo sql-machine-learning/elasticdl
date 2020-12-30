@@ -197,9 +197,9 @@ class PodManager(object):
         worker_pod_priority = _parse_worker_pod_priority(
             self._num_workers, worker_pod_priority
         )
-        self._worker_pod_priority_and_ori_index = {}
+        self._worker_pod_priority_and_original_index = {}
         for (k, v) in worker_pod_priority.items():
-            self._worker_pod_priority_and_ori_index[k] = (v, k)
+            self._worker_pod_priority_and_original_index[k] = (v, k)
 
         self._num_ps = num_ps
         self._ps_resource_request = ps_resource_request
@@ -288,16 +288,18 @@ class PodManager(object):
         envs.append(V1EnvVar(name=WorkerEnv.WORKER_ID, value=str(worker_id)))
         need_create_service = False
         need_patch_service = False
-        ori_index = worker_id
+        original_index = worker_id
         if self._need_tf_config:
-            ori_index = self._worker_pod_priority_and_ori_index[worker_id][1]
+            original_index = self._worker_pod_priority_and_original_index[
+                worker_id
+            ][1]
             tf_config = self._k8s_client.get_tf_config_data(
-                self._num_workers, self._num_ps, PodType.WORKER, ori_index
+                self._num_workers, self._num_ps, PodType.WORKER, original_index
             )
             envs.append(
                 V1EnvVar(name="TF_CONFIG", value=json.dumps(tf_config))
             )
-            if ori_index == worker_id:
+            if original_index == worker_id:
                 need_create_service = True
             else:
                 need_patch_service = True
@@ -306,7 +308,7 @@ class PodManager(object):
                 worker_id=worker_id,
                 resource_requests=self._worker_resource_request,
                 resource_limits=self._worker_resource_limit,
-                pod_priority=self._worker_pod_priority_and_ori_index[
+                pod_priority=self._worker_pod_priority_and_original_index[
                     worker_id
                 ][0],
                 termination_period=1,
@@ -325,7 +327,9 @@ class PodManager(object):
             if need_create_service:
                 self._k8s_client.create_worker_service(worker_id)
             if need_patch_service:
-                self._k8s_client.patch_worker_service(ori_index, worker_id)
+                self._k8s_client.patch_worker_service(
+                    original_index, worker_id
+                )
 
             return True
 
@@ -548,9 +552,9 @@ class PodManager(object):
 
             new_worker_id = self._next_worker_id_fn()
             with self._lock:
-                self._worker_pod_priority_and_ori_index[
+                self._worker_pod_priority_and_original_index[
                     new_worker_id
-                ] = self._worker_pod_priority_and_ori_index[pod_id]
+                ] = self._worker_pod_priority_and_original_index[pod_id]
             self._start_worker(new_worker_id)
 
     @property

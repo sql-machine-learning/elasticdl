@@ -61,7 +61,7 @@ class PodManagerTest(unittest.TestCase):
                 break
 
         pod_manager._not_created_worker_id = [2]
-        pod_manager._worker_pod_priority_and_ori_index[2][0] = None
+        pod_manager._worker_pod_priority_and_original_index[2] = (None, 1)
         pod_manager._process_worker()
         for _ in range(max_check_num):
             time.sleep(3)
@@ -289,7 +289,7 @@ class PodManagerTest(unittest.TestCase):
                "elasticdl-JOBNAME-ps-1.NAMESPACE.svc:PSPORT"], \
              "worker": \
               ["elasticdl-JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT", \
-               "elasticdl-JOBNAME-worker-1.NAMESPACE-ps-1.svc:WORKERPORT"] \
+               "elasticdl-JOBNAME-worker-1.NAMESPACE.svc:WORKERPORT"] \
             }}'
         tf_config_cluster = tf_config_cluster.replace("JOBNAME", job_name)
         tf_config_cluster = tf_config_cluster.replace("NAMESPACE", namespace)
@@ -303,19 +303,18 @@ class PodManagerTest(unittest.TestCase):
         tf_config_cluster_dict = json.loads(tf_config_cluster)
 
         ps0_config = pod_manager.get_tf_config_data(PodType.PS, 0)
-        self.assertEqual(tf_config_cluster_dict, ps0_config["cluster"])
+        self.assertEqual(
+            tf_config_cluster_dict["cluster"], ps0_config["cluster"]
+        )
         self.assertEqual(ps0_config["task"]["type"], "ps")
         self.assertEqual(ps0_config["task"]["index"], 0)
 
-        worker1_config = pod_manager.get_tf_config_data(
-            2, 2, PodType.WORKER, 1
-        )
-        worker1_config_dict = json.loads(worker1_config)
+        worker1_config = pod_manager.get_tf_config_data(PodType.WORKER, 1)
         self.assertEqual(
-            tf_config_cluster_dict, worker1_config_dict["cluster"]
+            tf_config_cluster_dict["cluster"], worker1_config["cluster"]
         )
-        self.assertEqual(worker1_config_dict["task"]["type"], "worker")
-        self.assertEqual(worker1_config_dict["task"]["index"], 1)
+        self.assertEqual(worker1_config["task"]["type"], "worker")
+        self.assertEqual(worker1_config["task"]["index"], 1)
 
 
 if __name__ == "__main__":
