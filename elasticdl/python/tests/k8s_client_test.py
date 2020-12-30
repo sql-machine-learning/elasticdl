@@ -215,10 +215,10 @@ class K8sClientTest(unittest.TestCase):
         tf_config_cluster = tf_config_cluster.replace("JOBNAME", c.job_name)
         tf_config_cluster = tf_config_cluster.replace("NAMESPACE", c.namespace)
         tf_config_cluster = tf_config_cluster.replace(
-            "PSPORT", k8s._PS_SERVICE_PORT
+            "PSPORT", str(k8s._PS_SERVICE_PORT)
         )
         tf_config_cluster = tf_config_cluster.replace(
-            "WORKERPORT", k8s._WORKER_SERVICE_PORT
+            "WORKERPORT", str(k8s._WORKER_SERVICE_PORT)
         )
 
         tf_config_cluster_dict = json.loads(tf_config_cluster)
