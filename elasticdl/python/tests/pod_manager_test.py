@@ -61,7 +61,7 @@ class PodManagerTest(unittest.TestCase):
                 break
 
         pod_manager._not_created_worker_id = [2]
-        pod_manager._worker_pod_priority[2] = None
+        pod_manager._worker_pod_priority_and_ori_index[2][0] = None
         pod_manager._process_worker()
         for _ in range(max_check_num):
             time.sleep(3)
@@ -270,11 +270,15 @@ class PodManagerTest(unittest.TestCase):
     def test_get_tf_config_data(self):
         num_ps = 2
         num_workers = 2
+        job_name = "test-tf_config-%d-%d" % (
+            int(time.time()),
+            random.randint(1, 101),
+        )
+        namespace = "default"
         pod_manager = PodManager(
-            job_name="test-tf_config-%d-%d"
-            % (int(time.time()), random.randint(1, 101)),
+            job_name=job_name,
             image_name="ubuntu:18.04",
-            namespace="default",
+            namespace=namespace,
             num_ps=num_ps,
             num_workers=num_workers,
         )
@@ -287,12 +291,8 @@ class PodManagerTest(unittest.TestCase):
               ["elasticdl-JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT", \
                "elasticdl-JOBNAME-worker-1.NAMESPACE-ps-1.svc:WORKERPORT"] \
             }}'
-        tf_config_cluster = tf_config_cluster.replace(
-            "JOBNAME", pod_manager.job_name
-        )
-        tf_config_cluster = tf_config_cluster.replace(
-            "NAMESPACE", pod_manager.namespace
-        )
+        tf_config_cluster = tf_config_cluster.replace("JOBNAME", job_name)
+        tf_config_cluster = tf_config_cluster.replace("NAMESPACE", namespace)
         tf_config_cluster = tf_config_cluster.replace(
             "PSPORT", str(_PS_SERVICE_PORT)
         )
