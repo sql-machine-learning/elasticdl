@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import random
 import time
@@ -19,7 +20,11 @@ from time import sleep
 from unittest.mock import MagicMock, call
 
 from elasticdl.python.common.constants import PodStatus
-from elasticdl.python.common.k8s_client import PodType
+from elasticdl.python.common.k8s_client import (
+    _PS_SERVICE_PORT,
+    _WORKER_SERVICE_PORT,
+    PodType,
+)
 from elasticdl.python.master.pod_event_callbacks import TaskRescheduleCallback
 from elasticdl.python.master.pod_manager import (
     PodManager,
@@ -257,6 +262,60 @@ class PodManagerTest(unittest.TestCase):
         self.assertDictEqual(worker_priorities, expected)
         worker_priorities = _parse_worker_pod_priority(1, "0.5")
         self.assertDictEqual(worker_priorities, {0: "high"})
+
+    @unittest.skipIf(
+        os.environ.get("K8S_TESTS", "True") == "False",
+        "No Kubernetes cluster available",
+    )
+    def test_get_tf_config_data(self):
+        num_ps = 2
+        num_workers = 2
+        pod_manager = PodManager(
+            job_name="test-tf_config-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
+            image_name="ubuntu:18.04",
+            namespace="default",
+            num_ps=num_ps,
+            num_workers=num_workers,
+        )
+
+        tf_config_cluster = '{"cluster": \
+            {"ps": \
+              ["elasticdl-JOBNAME-ps-0.NAMESPACE.svc:PSPORT", \
+               "elasticdl-JOBNAME-ps-1.NAMESPACE.svc:PSPORT"], \
+             "worker": \
+              ["elasticdl-JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT", \
+               "elasticdl-JOBNAME-worker-1.NAMESPACE-ps-1.svc:WORKERPORT"] \
+            }}'
+        tf_config_cluster = tf_config_cluster.replace(
+            "JOBNAME", pod_manager.job_name
+        )
+        tf_config_cluster = tf_config_cluster.replace(
+            "NAMESPACE", pod_manager.namespace
+        )
+        tf_config_cluster = tf_config_cluster.replace(
+            "PSPORT", str(_PS_SERVICE_PORT)
+        )
+        tf_config_cluster = tf_config_cluster.replace(
+            "WORKERPORT", str(_WORKER_SERVICE_PORT)
+        )
+
+        tf_config_cluster_dict = json.loads(tf_config_cluster)
+
+        ps0_config = pod_manager.get_tf_config_data(PodType.PS, 0)
+        self.assertEqual(tf_config_cluster_dict, ps0_config["cluster"])
+        self.assertEqual(ps0_config["task"]["type"], "ps")
+        self.assertEqual(ps0_config["task"]["index"], 0)
+
+        worker1_config = pod_manager.get_tf_config_data(
+            2, 2, PodType.WORKER, 1
+        )
+        worker1_config_dict = json.loads(worker1_config)
+        self.assertEqual(
+            tf_config_cluster_dict, worker1_config_dict["cluster"]
+        )
+        self.assertEqual(worker1_config_dict["task"]["type"], "worker")
+        self.assertEqual(worker1_config_dict["task"]["index"], 1)
 
 
 if __name__ == "__main__":

@@ -364,12 +364,29 @@ class PodManager(object):
             )
             time.sleep(15)
 
+    def get_tf_config_data(self, type_key, index_key):
+        cluster_dict = {}
+        if self._num_ps > 0:
+            cluster_dict["ps"] = []
+            for ps_id in range(self._num_ps):
+                cluster_dict["ps"].append(
+                    self._k8s_client.get_ps_service_address(ps_id)
+                )
+        if self._num_workers > 0:
+            cluster_dict["worker"] = []
+            for worker_id in range(self._num_workers):
+                cluster_dict["worker"].append(
+                    self._k8s_client.get_worker_service_address(worker_id)
+                )
+        task_dict = {}
+        task_dict["type"] = type_key
+        task_dict["index"] = index_key
+        return {"cluster": cluster_dict, "task": task_dict}
+
     def _create_ps_pod(self, ps_id, ps_args):
         envs = copy.deepcopy(self._envs)
         if self._need_tf_config:
-            tf_config = self._k8s_client.get_tf_config_data(
-                self._num_workers, self._num_ps, PodType.PS, ps_id
-            )
+            tf_config = self.get_tf_config_data(PodType.PS, ps_id)
             envs.append(
                 V1EnvVar(name="TF_CONFIG", value=json.dumps(tf_config))
             )

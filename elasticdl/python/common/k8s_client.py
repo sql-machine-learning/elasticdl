@@ -79,29 +79,6 @@ class Client(BaseClient):
         self._event_cb = event_callback
         self._periodic_call_func = periodic_call_func
 
-    def get_tf_config_data(self, num_workers, num_ps, type_key, index_key):
-        cluster_dict = {}
-        if num_ps > 0:
-            cluster_dict["ps"] = []
-            for ps_id in range(num_ps):
-                cluster_dict["ps"].append(
-                    self.get_ps_service_name(ps_id)
-                    + ":"
-                    + str(_PS_SERVICE_PORT)
-                )
-        if num_workers > 0:
-            cluster_dict["worker"] = []
-            for worker_id in range(num_workers):
-                cluster_dict["worker"].append(
-                    self.get_worker_service_name(worker_id)
-                    + ":"
-                    + str(_WORKER_SERVICE_PORT)
-                )
-        task_dict = {}
-        task_dict["type"] = type_key
-        task_dict["index"] = index_key
-        return {"cluster": cluster_dict, "task": task_dict}
-
     def start_watch_events(self):
         if self._event_cb:
             threading.Thread(
@@ -152,6 +129,11 @@ class Client(BaseClient):
 
     def get_worker_service_name(self, worker_id):
         return self.get_worker_pod_name(worker_id)
+
+    def get_worker_service_address(self, worker_id):
+        return self._get_service_address(
+            self.get_worker_service_name(worker_id), _WORKER_SERVICE_PORT
+        )
 
     def get_master_pod(self):
         return self.get_pod(self.get_master_pod_name())
