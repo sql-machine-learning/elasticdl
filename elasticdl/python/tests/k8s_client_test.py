@@ -204,14 +204,14 @@ class K8sClientTest(unittest.TestCase):
             % (int(time.time()), random.randint(1, 101)),
         )
 
-        tf_config_cluster = "'cluster': \
-          {'ps': \
-              ['elasticdl-JOBNAME-ps-0.NAMESPACE.svc:PSPORT', \
-              'elasticdl-JOBNAME-ps-1.NAMESPACE.svc:PSPORT'], \
-           'worker': \
-              ['elasticdl-JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT', \
-              'elasticdl-JOBNAME-worker-1.NAMESPACE-ps-1.svc:WORKERPORT'] \
-           } "
+        tf_config_cluster = '{"cluster": \
+            {"ps": \
+              ["elasticdl-JOBNAME-ps-0.NAMESPACE.svc:PSPORT", \
+               "elasticdl-JOBNAME-ps-1.NAMESPACE.svc:PSPORT"], \
+             "worker": \
+              ["elasticdl-JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT", \
+               "elasticdl-JOBNAME-worker-1.NAMESPACE-ps-1.svc:WORKERPORT"] \
+            }}'
         tf_config_cluster = tf_config_cluster.replace("JOBNAME", c.job_name)
         tf_config_cluster = tf_config_cluster.replace("NAMESPACE", c.namespace)
         tf_config_cluster = tf_config_cluster.replace(

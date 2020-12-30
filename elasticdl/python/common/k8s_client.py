@@ -100,7 +100,7 @@ class Client(BaseClient):
         task_dict = {}
         task_dict["type"] = type_key
         task_dict["index"] = index_key
-        self._tf_config_data = {"cluster": cluster_dict, "task": task_dict}
+        return {"cluster": cluster_dict, "task": task_dict}
 
     def start_watch_events(self):
         if self._event_cb:
