@@ -166,6 +166,7 @@ def create_pod_manager(args):
             need_tf_config=args.need_tf_config,
             disable_relaunch=disable_relaunch,
             log_file_path=args.log_file_path,
+            need_elasticdl_job_args=args.need_elasticdl_job_service,
         )
 
     return pod_manager
@@ -189,6 +190,7 @@ class PodManager(object):
         need_tf_config=False,
         disable_relaunch=False,
         log_file_path=None,
+        need_elasticdl_job_args=False,
         **kwargs
     ):
         self._num_workers = num_workers
@@ -213,6 +215,7 @@ class PodManager(object):
         self._next_worker_id_fn = itertools.count().__next__
         self._log_file_path = log_file_path
         self._need_tf_config = need_tf_config
+        self._need_elasticdl_job_args = need_elasticdl_job_args
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -336,7 +339,7 @@ class PodManager(object):
         # the second string is the shell command to run, like
         # ["-c", "python -m elasticdl.python.worker.main --minibatch_size 64"]
         job_command = self._worker_args[1]
-        if self._ps_addrs:
+        if self._ps_addrs and self._need_elasticdl_job_args:
             job_command += " --ps_addrs {}".format(self._ps_addrs)
         if self._log_file_path:
             job_command += BashCommandTemplate.REDIRECTION.format(
@@ -349,7 +352,8 @@ class PodManager(object):
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
         bash_command = self._ps_args[1]
-        bash_command += " --ps_id {}".format(ps_id)
+        if self._need_elasticdl_job_args:
+            bash_command += " --ps_id {}".format(ps_id)
         if self._log_file_path:
             bash_command += BashCommandTemplate.REDIRECTION.format(
                 self._log_file_path
