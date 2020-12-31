@@ -189,6 +189,13 @@ def add_train_params(parser):
         help="The command executed in the pod launched by the master",
         default="",
     )
+    add_bool_param(
+        parser=parser,
+        name="--need_tf_config",
+        default=False,
+        help="If true, needs to set TF_CONFIG env for ps/worker. Also "
+        "need to use fixed service name for workers",
+    )
 
 
 def add_evaluate_params(parser):
