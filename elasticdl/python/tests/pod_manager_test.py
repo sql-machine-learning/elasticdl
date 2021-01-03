@@ -322,7 +322,10 @@ class PodManagerTest(unittest.TestCase):
     def test_build_environment_variables(self):
         os.environ["ELASTICDL_abc"] = "abc"
         args = argparse.Namespace(
-            envs="a=1,b=2", num_workers=2, populate_env_names="ELASTICDL_.*"
+            envs="a=1,b=2",
+            num_workers=2,
+            port=50001,
+            populate_env_names="ELASTICDL_.*",
         )
         envs = build_environment_variables(args)
         env_dict = {env.name: env.value for env in envs}
