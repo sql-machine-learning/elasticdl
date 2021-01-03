@@ -126,16 +126,19 @@ def get_image_cluster_spec(cluster_spec):
 
 
 def build_environment_variables(args):
+    env = []
+
+    env_dict = parse_envs(args.envs)
+    for key, value in env_dict.items():
+        env.append(V1EnvVar(name=key, value=value))
+
     master_ip = os.getenv("MY_POD_IP", "localhost")
     master_addr = "%s:%d" % (master_ip, args.port)
-    env_dict = parse_envs(args.envs)
-    env = []
-    for key in env_dict:
-        env.append(V1EnvVar(name=key, value=env_dict[key]))
     env.append(V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=master_addr))
     env.append(
         V1EnvVar(name=WorkerEnv.WORKER_NUM, value=str(args.num_workers))
     )
+
     if args.populate_env_names:
         regex = re.compile(args.populate_env_names)
         for key, value in os.environ.items():
