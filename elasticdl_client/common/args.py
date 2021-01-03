@@ -350,6 +350,14 @@ def add_common_params(parser):
         "comma is supported in value field",
     )
     parser.add_argument(
+        "--populate_env_names",
+        type=str,
+        default="",
+        help="The names of environment variables which master pod populates "
+        "from it to its created pods such as pservers and workers. The value "
+        "can be a string or a regex expression",
+    )
+    parser.add_argument(
         "--extra_pypi_index",
         default="https://pypi.org/simple",
         help="The extra URLs of Python package repository indexes",
