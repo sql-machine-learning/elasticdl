@@ -17,6 +17,7 @@ import itertools
 import json
 import math
 import os
+import re
 import threading
 import time
 from collections import Counter
@@ -124,23 +125,33 @@ def get_image_cluster_spec(cluster_spec):
     return cluster_spec
 
 
+def build_environment_variables(args):
+    master_ip = os.getenv("MY_POD_IP", "localhost")
+    master_addr = "%s:%d" % (master_ip, args.port)
+    env_dict = parse_envs(args.envs)
+    env = []
+    for key in env_dict:
+        env.append(V1EnvVar(name=key, value=env_dict[key]))
+    env.append(V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=master_addr))
+    env.append(
+        V1EnvVar(name=WorkerEnv.WORKER_NUM, value=str(args.num_workers))
+    )
+    if args.populate_env_names:
+        regex = re.compile(args.populate_env_names)
+        for key, value in os.environ.items():
+            if regex.fullmatch(key):
+                env.append(V1EnvVar(name=key, value=value))
+
+    return env
+
+
 def create_pod_manager(args):
     pod_manager = None
 
-    master_ip = os.getenv("MY_POD_IP", "localhost")
-    master_addr = "%s:%d" % (master_ip, args.port)
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
 
-        env_dict = parse_envs(args.envs)
-        env = []
-        for key in env_dict:
-            env.append(V1EnvVar(name=key, value=env_dict[key]))
-        env.append(V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=master_addr))
-        env.append(
-            V1EnvVar(name=WorkerEnv.WORKER_NUM, value=str(args.num_workers))
-        )
-
+        env = build_environment_variables(args)
         kwargs = get_dict_from_params_str(args.aux_params)
         disable_relaunch = kwargs.get("disable_relaunch", False)
         cluster_spec = get_image_cluster_spec(args.cluster_spec)
