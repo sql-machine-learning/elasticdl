@@ -320,9 +320,9 @@ class PodManagerTest(unittest.TestCase):
         self.assertEqual(worker1_config["task"]["index"], 1)
 
     def test_build_environment_variables(self):
-        os.environ["ENV_abc"] = "abc"
+        os.environ["ELASTICDL_abc"] = "abc"
         args = argparse.Namespace(
-            envs="a=1,b=2", num_workers=2, populate_env_names="ENV_.*"
+            envs="a=1,b=2", num_workers=2, populate_env_names="ELASTICDL_.*"
         )
         envs = build_environment_variables(args)
         env_dict = {env.name: env.value for env in envs}
@@ -330,7 +330,7 @@ class PodManagerTest(unittest.TestCase):
         self.assertTrue("b" in env_dict)
         self.assertTrue(WorkerEnv.MASTER_ADDR in env_dict)
         self.assertTrue(WorkerEnv.WORKER_NUM in env_dict)
-        self.assertTrue("ENV_abc" in env_dict)
+        self.assertTrue("ELASTICDL_abc" in env_dict)
 
 
 if __name__ == "__main__":
