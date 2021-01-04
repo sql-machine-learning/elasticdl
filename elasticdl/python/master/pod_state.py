@@ -48,6 +48,20 @@ POD_STATE_FLOWS = [
         should_relaunch=False,
     ),
     PodStateFlow(
+        from_status=PodStatus.PENDING,
+        to_status=PodStatus.SUCCEEDED,
+        event_type="MODIFIED",
+        phase="Succeeded",
+        should_relaunch=False,
+    ),
+    PodStateFlow(
+        from_status=PodStatus.PENDING,
+        to_status=PodStatus.FAILED,
+        event_type="MODIFIED",
+        phase="Failed",
+        should_relaunch=True,
+    ),
+    PodStateFlow(
         from_status=PodStatus.RUNNING,
         to_status=PodStatus.SUCCEEDED,
         event_type="MODIFIED",
