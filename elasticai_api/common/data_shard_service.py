@@ -156,7 +156,7 @@ class RecordIndexService(DataShardService):
         self._shard_queue = SimpleQueue()
         threading.Thread(
             target=self._get_shard_indices,
-            name="check_timeout_tasks",
+            name="fetch_shard_indices",
             daemon=True,
         ).start()
 
