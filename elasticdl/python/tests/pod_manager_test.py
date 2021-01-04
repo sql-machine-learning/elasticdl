@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
 import json
 import os
 import random
@@ -19,6 +20,7 @@ import unittest
 from time import sleep
 from unittest.mock import MagicMock, call
 
+from elasticai_api.common.constants import WorkerEnv
 from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.k8s_client import (
     _PS_SERVICE_PORT,
@@ -29,6 +31,7 @@ from elasticdl.python.master.pod_event_callbacks import TaskRescheduleCallback
 from elasticdl.python.master.pod_manager import (
     PodManager,
     _parse_worker_pod_priority,
+    build_environment_variables,
 )
 from elasticdl.python.tests.test_utils import create_task_manager
 
@@ -315,6 +318,22 @@ class PodManagerTest(unittest.TestCase):
         )
         self.assertEqual(worker1_config["task"]["type"], "worker")
         self.assertEqual(worker1_config["task"]["index"], 1)
+
+    def test_build_environment_variables(self):
+        os.environ["ELASTICDL_abc"] = "abc"
+        args = argparse.Namespace(
+            envs="a=1,b=2",
+            num_workers=2,
+            port=50001,
+            populate_env_names="ELASTICDL_.*",
+        )
+        envs = build_environment_variables(args)
+        env_dict = {env.name: env.value for env in envs}
+        self.assertTrue("a" in env_dict)
+        self.assertTrue("b" in env_dict)
+        self.assertTrue(WorkerEnv.MASTER_ADDR in env_dict)
+        self.assertTrue(WorkerEnv.WORKER_NUM in env_dict)
+        self.assertTrue("ELASTICDL_abc" in env_dict)
 
 
 if __name__ == "__main__":

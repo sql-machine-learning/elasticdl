@@ -190,7 +190,7 @@ class EvaluationServiceTest(unittest.TestCase):
         auc.reset_states()
         EvaluationMetrics._update_metric_by_small_chunk(auc, labels, preds)
         auc_value_1 = auc.result()
-        self.assertEquals(auc_value_0, auc_value_1)
+        self.assertEqual(auc_value_0, auc_value_1)
 
 
 if __name__ == "__main__":
