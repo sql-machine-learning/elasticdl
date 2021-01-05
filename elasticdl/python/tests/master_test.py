@@ -66,6 +66,7 @@ class MasterTest(unittest.TestCase):
             master.task_manager._todo.clear()
             master.pod_manager = Mock()
             master.pod_manager.all_workers_exited = True
+            master.pod_manager.all_workers_failed = False
             exit_code = master.run()
             master.stop()
             self.assertEqual(exit_code, 0)

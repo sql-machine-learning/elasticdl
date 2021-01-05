@@ -596,6 +596,7 @@ class PodManager(object):
 
         return all_exited
 
+    @property
     def all_workers_failed(self):
         with self._lock:
             all_failed = all(
