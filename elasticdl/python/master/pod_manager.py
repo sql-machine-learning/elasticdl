@@ -596,6 +596,19 @@ class PodManager(object):
 
         return all_exited
 
+    def all_workers_failed(self):
+        with self._lock:
+            all_failed = all(
+                [
+                    pod_info.status in [PodStatus.FAILED, PodStatus.DELETED]
+                    for pod_info in self._pod_info_cache[
+                        PodType.WORKER
+                    ].values()
+                ]
+            )
+
+        return all_failed
+
     def get_alive_workers(self):
         with self._lock:
             return [
