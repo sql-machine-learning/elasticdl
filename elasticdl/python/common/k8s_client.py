@@ -27,6 +27,7 @@ from elasticdl_client.common.k8s_client import Client as BaseClient
 from elasticdl_client.common.k8s_client import PodType, append_pod_ip_to_env
 
 _PS_SERVICE_PORT = 2222
+_WORKER_SERVICE_PORT = 3333
 
 
 def get_worker_pod_name(job_name, worker_id):
@@ -126,6 +127,14 @@ class Client(BaseClient):
             self.get_ps_service_name(ps_id), _PS_SERVICE_PORT
         )
 
+    def get_worker_service_name(self, worker_id):
+        return self.get_worker_pod_name(worker_id)
+
+    def get_worker_service_address(self, worker_id):
+        return self._get_service_address(
+            self.get_worker_service_name(worker_id), _WORKER_SERVICE_PORT
+        )
+
     def get_master_pod(self):
         return self.get_pod(self.get_master_pod_name())
 
@@ -155,6 +164,17 @@ class Client(BaseClient):
             )
         except client.ApiException as e:
             logger.warning("Exception when reading PS service: %s\n" % e)
+            return None
+
+    def get_worker_service(self, worker_id):
+        try:
+            return self.client.read_namespaced_service(
+                # worker service has the same name as pod name
+                name=self.get_worker_service_name(worker_id),
+                namespace=self.namespace,
+            )
+        except client.ApiException as e:
+            logger.warning("Exception when reading worker service: %s\n" % e)
             return None
 
     def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
@@ -225,7 +245,34 @@ class Client(BaseClient):
             owner=self.get_ps_pod(ps_id),
         )
 
-    def _create_service(self, **kargs):
+    def create_worker_service(self, worker_id):
+        # Use master pod as worker service owner so the worker
+        # service will not be deleted if the corresponding worker
+        # pod is deleted.
+        return self._create_service(
+            name=self.get_worker_service_name(worker_id),
+            port=_WORKER_SERVICE_PORT,
+            target_port=_WORKER_SERVICE_PORT,
+            replica_type="worker",
+            replica_index=worker_id,
+            owner=self.get_master_pod(),
+        )
+
+    def patch_worker_service(self, original_worker_id, worker_id):
+        service_name = self.get_worker_service_name(original_worker_id)
+        service = self._create_service_obj(
+            name=service_name,
+            port=_WORKER_SERVICE_PORT,
+            target_port=_WORKER_SERVICE_PORT,
+            replica_type="worker",
+            replica_index=worker_id,
+            owner=self.get_master_pod(),
+        )
+        return self.client.patch_namespaced_service(
+            service_name, self.namespace, service
+        )
+
+    def _create_service_obj(self, **kargs):
         labels = self._get_common_labels()
 
         metadata = client.V1ObjectMeta(
@@ -260,6 +307,10 @@ class Client(BaseClient):
             api_version="v1", kind="Service", metadata=metadata, spec=spec
         )
         service = self.cluster_spec.patch_service(service)
+        return service
+
+    def _create_service(self, **kargs):
+        service = self._create_service_obj(**kargs)
         return self.client.create_namespaced_service(self.namespace, service)
 
     def get_master_log(self):

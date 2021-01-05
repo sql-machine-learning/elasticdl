@@ -39,3 +39,8 @@ class WorkerEnv(object):
     MASTER_ADDR = "MASTER_ADDR"
     WORKER_ID = "WORKER_ID"
     WORKER_NUM = "WORKER_NUM"
+
+
+class TrainingLoopStatus(object):
+    START = 1
+    END = 2

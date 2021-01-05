@@ -150,7 +150,7 @@ def add_train_params(parser):
     add_bool_param(
         parser=parser,
         name="--need_elasticdl_job_service",
-        default=True,
+        default=False,
         help="If true, users use ElasticDL worker framework. "
         "Otherwise, master only launch pod manager and/or other services to "
         "provide elastic training feature to other DL framework or customized "
@@ -188,6 +188,13 @@ def add_train_params(parser):
         "--job_command",
         help="The command executed in the pod launched by the master",
         default="",
+    )
+    add_bool_param(
+        parser=parser,
+        name="--need_tf_config",
+        default=False,
+        help="If true, needs to set TF_CONFIG env for ps/worker. Also "
+        "need to use fixed service name for workers",
     )
 
 
@@ -233,6 +240,13 @@ def add_common_params(parser):
         type=str,
         default="",
         help="The docker image for this job.",
+    )
+    parser.add_argument(
+        "--worker_image",
+        type=str,
+        default="",
+        help="The docker image for workers. If not specified, "
+        "it will use the value of `image_name`.",
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
@@ -334,6 +348,14 @@ def add_common_params(parser):
         default="",
         help="Runtime environment variables. (key1=value1,key2=value2), "
         "comma is supported in value field",
+    )
+    parser.add_argument(
+        "--populate_env_names",
+        type=str,
+        default="",
+        help="The names of environment variables which master pod populates "
+        "from it to its created pods such as pservers and workers. The value "
+        "can be a string or a regex expression",
     )
     parser.add_argument(
         "--extra_pypi_index",

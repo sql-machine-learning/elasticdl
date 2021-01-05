@@ -88,7 +88,7 @@ class Worker(object):
         self._job_type = args.job_type
         self._minibatch_size = args.minibatch_size
         self._data_shard_service = DataShardService(
-            self._minibatch_size, self._mc
+            self._mc, self._minibatch_size
         )
         if self._custom_training_loop:
             self._init_training_func_from_args(args)
@@ -352,6 +352,8 @@ class Worker(object):
         )
         dataset = dataset.batch(self._minibatch_size).prefetch(1)
         self._timing.start_record_time("task_process")
+        if isinstance(self._trainer, AllReduceTrainer):
+            self._trainer.notify_training_loop_start()
         for dataset_batch in dataset:
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 # Give the worker a chance to process an evaluation task
@@ -391,6 +393,9 @@ class Worker(object):
                 self._timing.end_record_time("task_process")
                 self._timing.report_timing(reset=True)
                 self._timing.start_record_time("task_process")
+
+        if isinstance(self._trainer, AllReduceTrainer):
+            self._trainer.notify_training_loop_end()
 
         del dataset
         # New evaluation tasks may be created after this worker's

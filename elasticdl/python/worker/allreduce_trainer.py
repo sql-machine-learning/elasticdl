@@ -22,6 +22,7 @@ from elasticai_api.common.base_controller import (
     DEFAULT_SECS_TO_CHECK_RENDEZVOUS,
     RendevousManager,
 )
+from elasticai_api.common.constants import TrainingLoopStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.worker.trainer import Trainer
 
@@ -133,3 +134,13 @@ class AllReduceTrainer(Trainer):
 
     def get_model_version(self):
         return self._optimizer.iterations.numpy()
+
+    def notify_training_loop_start(self):
+        self._rendezvous_manager.notify_training_loop_status(
+            TrainingLoopStatus.START
+        )
+
+    def notify_training_loop_end(self):
+        self._rendezvous_manager.notify_training_loop_status(
+            TrainingLoopStatus.END
+        )

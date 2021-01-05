@@ -14,8 +14,10 @@
 
 import copy
 import itertools
+import json
 import math
 import os
+import re
 import threading
 import time
 from collections import Counter
@@ -70,10 +72,11 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
         fraction = float(worker_pod_priority)
         high_count = math.ceil(num_workers * fraction)
         for i in range(num_workers):
+            index = int(i / 2) if i % 2 == 0 else num_workers - 1 - int(i / 2)
             if i < high_count:
-                res[i] = "high"
+                res[index] = "high"
             else:
-                res[i] = "low"
+                res[index] = "low"
     elif worker_pod_priority in [None, "", "high", "low"]:
         for i in range(num_workers):
             res[i] = worker_pod_priority
@@ -122,23 +125,36 @@ def get_image_cluster_spec(cluster_spec):
     return cluster_spec
 
 
-def create_pod_manager(args):
-    pod_manager = None
+def build_environment_variables(args):
+    env = []
+
+    env_dict = parse_envs(args.envs)
+    for key, value in env_dict.items():
+        env.append(V1EnvVar(name=key, value=value))
 
     master_ip = os.getenv("MY_POD_IP", "localhost")
     master_addr = "%s:%d" % (master_ip, args.port)
+    env.append(V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=master_addr))
+    env.append(
+        V1EnvVar(name=WorkerEnv.WORKER_NUM, value=str(args.num_workers))
+    )
+
+    if args.populate_env_names:
+        regex = re.compile(args.populate_env_names)
+        for key, value in os.environ.items():
+            if regex.fullmatch(key):
+                env.append(V1EnvVar(name=key, value=value))
+
+    return env
+
+
+def create_pod_manager(args):
+    pod_manager = None
+
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
 
-        env_dict = parse_envs(args.envs)
-        env = []
-        for key in env_dict:
-            env.append(V1EnvVar(name=key, value=env_dict[key]))
-        env.append(V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=master_addr))
-        env.append(
-            V1EnvVar(name=WorkerEnv.WORKER_NUM, value=str(args.num_workers))
-        )
-
+        env = build_environment_variables(args)
         kwargs = get_dict_from_params_str(args.aux_params)
         disable_relaunch = kwargs.get("disable_relaunch", False)
         cluster_spec = get_image_cluster_spec(args.cluster_spec)
@@ -161,8 +177,10 @@ def create_pod_manager(args):
             cluster_spec=cluster_spec,
             cluster_spec_json=args.cluster_spec_json,
             envs=env,
+            need_tf_config=args.need_tf_config,
             disable_relaunch=disable_relaunch,
             log_file_path=args.log_file_path,
+            need_elasticdl_job_args=args.need_elasticdl_job_service,
         )
 
     return pod_manager
@@ -183,16 +201,21 @@ class PodManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
+        need_tf_config=False,
         disable_relaunch=False,
         log_file_path=None,
+        need_elasticdl_job_args=False,
         **kwargs
     ):
         self._num_workers = num_workers
         self._worker_resource_request = worker_resource_request
         self._worker_resource_limit = worker_resource_limit
-        self._worker_pod_priority = _parse_worker_pod_priority(
+        worker_pod_priority = _parse_worker_pod_priority(
             self._num_workers, worker_pod_priority
         )
+        self._worker_pod_priority_and_original_index = {}
+        for (k, v) in worker_pod_priority.items():
+            self._worker_pod_priority_and_original_index[k] = (v, k)
 
         self._num_ps = num_ps
         self._ps_resource_request = ps_resource_request
@@ -205,6 +228,8 @@ class PodManager(object):
         self._envs = envs
         self._next_worker_id_fn = itertools.count().__next__
         self._log_file_path = log_file_path
+        self._need_tf_config = need_tf_config
+        self._need_elasticdl_job_args = need_elasticdl_job_args
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -278,12 +303,29 @@ class PodManager(object):
         worker_args = [self._worker_args[0], job_command]
         envs = copy.deepcopy(self._envs)
         envs.append(V1EnvVar(name=WorkerEnv.WORKER_ID, value=str(worker_id)))
+        need_create_service = False
+        need_patch_service = False
+        original_index = worker_id
+        if self._need_tf_config:
+            original_index = self._worker_pod_priority_and_original_index[
+                worker_id
+            ][1]
+            tf_config = self.get_tf_config_data(PodType.WORKER, original_index)
+            envs.append(
+                V1EnvVar(name="TF_CONFIG", value=json.dumps(tf_config))
+            )
+            if original_index == worker_id:
+                need_create_service = True
+            else:
+                need_patch_service = True
         with self._lock:
             pod = self._k8s_client.create_worker(
                 worker_id=worker_id,
                 resource_requests=self._worker_resource_request,
                 resource_limits=self._worker_resource_limit,
-                pod_priority=self._worker_pod_priority[worker_id],
+                pod_priority=self._worker_pod_priority_and_original_index[
+                    worker_id
+                ][0],
                 termination_period=1,
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
@@ -296,6 +338,13 @@ class PodManager(object):
             if pod is None:
                 self._not_created_worker_id.append(worker_id)
                 return False
+            # create or patch worker service
+            if need_create_service:
+                self._k8s_client.create_worker_service(worker_id)
+            if need_patch_service:
+                self._k8s_client.patch_worker_service(
+                    original_index, worker_id
+                )
 
             return True
 
@@ -304,7 +353,7 @@ class PodManager(object):
         # the second string is the shell command to run, like
         # ["-c", "python -m elasticdl.python.worker.main --minibatch_size 64"]
         job_command = self._worker_args[1]
-        if self._ps_addrs:
+        if self._ps_addrs and self._need_elasticdl_job_args:
             job_command += " --ps_addrs {}".format(self._ps_addrs)
         if self._log_file_path:
             job_command += BashCommandTemplate.REDIRECTION.format(
@@ -317,7 +366,8 @@ class PodManager(object):
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
         bash_command = self._ps_args[1]
-        bash_command += " --ps_id {}".format(ps_id)
+        if self._need_elasticdl_job_args:
+            bash_command += " --ps_id {}".format(ps_id)
         if self._log_file_path:
             bash_command += BashCommandTemplate.REDIRECTION.format(
                 self._log_file_path
@@ -337,7 +387,32 @@ class PodManager(object):
             )
             time.sleep(15)
 
+    def get_tf_config_data(self, type_key, index_key):
+        cluster_dict = {}
+        if self._num_ps > 0:
+            cluster_dict["ps"] = []
+            for ps_id in range(self._num_ps):
+                cluster_dict["ps"].append(
+                    self._k8s_client.get_ps_service_address(ps_id)
+                )
+        if self._num_workers > 0:
+            cluster_dict["worker"] = []
+            for worker_id in range(self._num_workers):
+                cluster_dict["worker"].append(
+                    self._k8s_client.get_worker_service_address(worker_id)
+                )
+        task_dict = {}
+        task_dict["type"] = type_key
+        task_dict["index"] = index_key
+        return {"cluster": cluster_dict, "task": task_dict}
+
     def _create_ps_pod(self, ps_id, ps_args):
+        envs = copy.deepcopy(self._envs)
+        if self._need_tf_config:
+            tf_config = self.get_tf_config_data(PodType.PS, ps_id)
+            envs.append(
+                V1EnvVar(name="TF_CONFIG", value=json.dumps(tf_config))
+            )
         return self._k8s_client.create_ps(
             ps_id=ps_id,
             resource_requests=self._ps_resource_request,
@@ -348,7 +423,7 @@ class PodManager(object):
             command=self._ps_command,
             args=ps_args,
             restart_policy=self._restart_policy,
-            envs=copy.deepcopy(self._envs),
+            envs=envs,
         )
 
     def update_status(self, status):
@@ -493,9 +568,9 @@ class PodManager(object):
 
             new_worker_id = self._next_worker_id_fn()
             with self._lock:
-                self._worker_pod_priority[
+                self._worker_pod_priority_and_original_index[
                     new_worker_id
-                ] = self._worker_pod_priority[pod_id]
+                ] = self._worker_pod_priority_and_original_index[pod_id]
             self._start_worker(new_worker_id)
 
     @property
@@ -529,11 +604,10 @@ class PodManager(object):
                 if pod_info.status == PodStatus.RUNNING
             ]
 
-    def get_alive_worker_name_addr(self):
+    def get_alive_worker_id_addr(self):
         alive_workers = self.get_alive_workers()
         alive_workers.sort(key=lambda pod_info: pod_info.start_time)
-
-        return [(info.name, info.ip) for info in alive_workers]
+        return [(info.id, info.ip) for info in alive_workers]
 
     def get_worker_pod_ip(self, worker_id):
         with self._lock:

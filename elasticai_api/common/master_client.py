@@ -11,7 +11,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
+from elasticai_api.util.grpc_utils import build_channel
+
+
+def build_master_client():
+    master_addr = os.getenv("MASTER_ADDR", "localhost:12345")
+    worker_id = int(os.getenv("WORKER_ID", 0))
+
+    master_client = MasterClient(build_channel(master_addr), worker_id)
+
+    return master_client
 
 
 class MasterClient:
@@ -39,6 +51,7 @@ class MasterClient:
         """
         self._stub = elasticai_api_pb2_grpc.MasterStub(channel)
         self._worker_id = worker_id
+        self._worker_host = os.getenv("MY_POD_IP", "localhost")
 
     def get_task(self, task_type=None):
         """Get a task from master.
@@ -88,5 +101,22 @@ class MasterClient:
 
     def get_comm_rank(self):
         req = elasticai_api_pb2.GetCommRankRequest()
-        req.worker_id = self._worker_id
+        req.worker_host = self._worker_host
         return self._stub.get_comm_rank(req)
+
+    def report_training_loop_status(self, status):
+        req = elasticai_api_pb2.ReportTrainingLoopStatusRequest()
+        req.worker_host = self._worker_host
+        req.status = status
+        return self._stub.report_training_loop_status(req)
+
+    def report_training_params(
+        self, batch_size, num_epochs=None, dataset_size=None
+    ):
+        report = elasticai_api_pb2.ReportTrainingParamsRequest()
+        report.batch_size = batch_size
+        if num_epochs is not None:
+            report.num_epochs = num_epochs
+        if dataset_size is not None:
+            report.dataset_size = dataset_size
+        return self._stub.report_training_params(report)
