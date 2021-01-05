@@ -33,6 +33,7 @@ elasticdl train \
   --need_elasticdl_job_service=false \
 """
 
+import sys
 import argparse
 import cv2
 import numpy as np
@@ -56,7 +57,9 @@ class ElasticDataset(Dataset):
         self.images = images
 
     def __len__(self):
-        return 100000
+        """Set the maxsize because the size of dataset is not fixed
+        when using dynamic sharding"""
+        return sys.maxsize
 
     def __getitem__(self, index):
         index = self.data_shard_service.fetch_record_index()
