@@ -109,6 +109,8 @@ class Master(object):
                             "All workers exited but there also are "
                             "unfinished tasks",
                         )
+                    if self.pod_manager.all_workers_failed:
+                        raise RuntimeError("All workers failed")
                     self.pod_manager.update_status(PodManagerStatus.FINISHED)
                     break
                 time.sleep(30)

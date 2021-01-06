@@ -66,9 +66,12 @@ class MasterTest(unittest.TestCase):
             master.task_manager._todo.clear()
             master.pod_manager = Mock()
             master.pod_manager.all_workers_exited = True
+            master.pod_manager.all_workers_failed = False
             exit_code = master.run()
             master.stop()
             self.assertEqual(exit_code, 0)
+            master.pod_manager.all_workers_failed = True
+            self.assertRaises(RuntimeError, master.run)
 
     def test_master_validate(self):
         with tempfile.TemporaryDirectory() as temp_dir_name:

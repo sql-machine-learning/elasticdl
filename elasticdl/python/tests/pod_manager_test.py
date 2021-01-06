@@ -27,7 +27,10 @@ from elasticdl.python.common.k8s_client import (
     _WORKER_SERVICE_PORT,
     PodType,
 )
-from elasticdl.python.master.pod_event_callbacks import TaskRescheduleCallback
+from elasticdl.python.master.pod_event_callbacks import (
+    PodInfo,
+    TaskRescheduleCallback,
+)
 from elasticdl.python.master.pod_manager import (
     PodManager,
     _parse_worker_pod_priority,
@@ -265,6 +268,28 @@ class PodManagerTest(unittest.TestCase):
         self.assertDictEqual(worker_priorities, expected)
         worker_priorities = _parse_worker_pod_priority(1, "0.5")
         self.assertDictEqual(worker_priorities, {0: "high"})
+
+    def test_all_worker_exited(self):
+        pod_manager = PodManager(
+            job_name="test-failed-worker-pod-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
+            image_name="ubuntu:18.04",
+            namespace="default",
+            num_workers=3,
+            restart_policy="Never",
+            envs=[],
+        )
+        pod_info = PodInfo(
+            type=PodType.WORKER,
+            id=0,
+            name="ut-worker-0",
+            ip="0.0.0.1",
+            status=PodStatus.FAILED,
+            start_time=None,
+        )
+        pod_manager._pod_info_cache[PodType.WORKER][pod_info.name] = pod_info
+        self.assertTrue(pod_manager.all_workers_failed)
+        self.assertTrue(pod_manager.all_workers_exited)
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
