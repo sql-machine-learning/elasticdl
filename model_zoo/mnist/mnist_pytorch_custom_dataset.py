@@ -51,18 +51,37 @@ from elasticai_api.pytorch.optimizer import DistributedOptimizer
 
 
 class ElasticDataset(Dataset):
-    def __init__(self, data_shard_service, images):
+    def __init__(self, images, data_shard_service=None):
+        """The dataset supports elastic training.
+
+        Args:
+            images: A list with tuples like (image_path, label_index).
+            For example, we can use `torchvision.datasets.ImageFolder`
+            to get the list.
+            data_shard_service: If we want to use elastic training, we
+            need to use the `data_shard_service` of the elastic controller
+            in elasticai_api.
+        """
         self.data_shard_service = data_shard_service
-        self.images = images
+        self._images = images
 
     def __len__(self):
-        """Set the maxsize because the size of dataset is not fixed
-        when using dynamic sharding"""
-        return sys.maxsize
+        if self.data_shard_service:
+            # Set the maxsize because the size of dataset is not fixed
+            # when using dynamic sharding
+            return sys.maxsize
+        else:
+            return len(self._images)
 
     def __getitem__(self, index):
-        index = self.data_shard_service.fetch_record_index()
-        image_path, label = self.images[index]
+        if self.data_shard_service:
+            index = self.data_shard_service.fetch_record_index()
+            return self.read_image(index)
+        else:
+            return self.read_image(index)
+
+    def read_image(self, index):
+        image_path, label = self._images[index]
         image = cv2.imread(image_path)
         image = np.array(image / 255.0, np.float32)
         image = image.reshape(3, 28, 28)
@@ -104,18 +123,26 @@ def train(args):
         pass a torch.utils.data.DataLoader.
         elastic_controller: The controller for elastic training.
     """
-    training_data = torchvision.datasets.ImageFolder(args.training_data)
+    use_cuda = not args.no_cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+    train_data = torchvision.datasets.ImageFolder(args.training_data)
+    test_data = torchvision.datasets.ImageFolder(args.validation_data)
     allreduce_controller = create_elastic_controller(
         batch_size=args.batch_size,
-        dataset_size=len(training_data.imgs),
+        dataset_size=len(train_data.imgs),
         num_epochs=args.num_epochs,
         shuffle=True,
     )
-    dataset = ElasticDataset(
-        allreduce_controller.data_shard_service, training_data.imgs
+    train_dataset = ElasticDataset(
+        train_data.imgs, allreduce_controller.data_shard_service
     )
-    data_loader = DataLoader(
-        dataset=dataset, batch_size=args.batch_size, num_workers=2
+    train_loader = DataLoader(
+        dataset=train_dataset, batch_size=args.batch_size, num_workers=2
+    )
+
+    test_dataset = ElasticDataset(test_data.imgs)
+    test_loader = DataLoader(
+        dataset=test_dataset, batch_size=args.batch_size, num_workers=2
     )
     model = Net()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
@@ -128,16 +155,10 @@ def train(args):
     model.train()
     epoch = 0
     with allreduce_controller.scope():
-        for batch_idx, (data, target) in enumerate(data_loader):
-
-            new_epoch = int(
-                allreduce_controller.global_completed_batch_num / 100
-            )
-            if new_epoch > epoch:
-                epoch = new_epoch
-                scheduler.step()
-
+        for batch_idx, (data, target) in enumerate(train_loader):
+            model.train()
             target = target.type(torch.LongTensor)
+            data, target = data.to(device), target.to(device)
 
             # Use the elastic function to wrap the training function with
             # a batch.
@@ -146,6 +167,13 @@ def train(args):
             )
             loss = elastic_train_one_batch(model, optimizer, data, target)
             print("loss = {}, step = {}".format(loss, batch_idx))
+            new_epoch = int(
+                allreduce_controller.global_completed_batch_num / 100
+            )
+            if new_epoch > epoch:
+                epoch = new_epoch
+                scheduler.step()
+                test(model, device, test_loader)
 
 
 def train_one_batch(model, optimizer, data, target):
@@ -157,12 +185,46 @@ def train_one_batch(model, optimizer, data, target):
     return loss
 
 
+def test(model, device, test_loader):
+    model.eval()
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            test_loss += F.nll_loss(
+                output, target, reduction="sum"
+            ).item()  # sum up batch loss
+            pred = output.argmax(
+                dim=1, keepdim=True
+            )  # get the index of the max log-probability
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+    test_loss /= len(test_loader.dataset)
+
+    print(
+        "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
+            test_loss,
+            correct,
+            len(test_loader.dataset),
+            100.0 * correct / len(test_loader.dataset),
+        )
+    )
+
+
 def arg_parser():
     parser = argparse.ArgumentParser(description="Process training parameters")
     parser.add_argument("--batch_size", type=int, default=64, required=False)
     parser.add_argument("--num_epochs", type=int, default=1, required=False)
     parser.add_argument(
         "--learning_rate", type=float, default=0.1, required=False
+    )
+    parser.add_argument(
+        "--no-cuda",
+        action="store_true",
+        default=False,
+        help="disable CUDA training",
     )
     parser.add_argument("--training_data", type=str, required=True)
     parser.add_argument(
