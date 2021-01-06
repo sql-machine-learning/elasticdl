@@ -131,13 +131,14 @@ def train(args):
     device = torch.device("cuda" if use_cuda else "cpu")
     train_data = torchvision.datasets.ImageFolder(args.training_data)
     test_data = torchvision.datasets.ImageFolder(args.validation_data)
+    batch_num_per_epoch = int(len(train_data.imgs) / args.batch_size)
+
     allreduce_controller = create_elastic_controller(
         batch_size=args.batch_size,
         dataset_size=len(train_data.imgs),
         num_epochs=args.num_epochs,
         shuffle=True,
     )
-    batch_num_per_epoch = int(len(train_data.imgs) / args.batch_size)
     train_dataset = ElasticDataset(
         train_data.imgs, allreduce_controller.data_shard_service
     )
@@ -149,6 +150,7 @@ def train(args):
     test_loader = DataLoader(
         dataset=test_dataset, batch_size=args.batch_size, num_workers=2
     )
+
     model = Net()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
     optimizer = DistributedOptimizer(optimizer, fixed_global_batch_size=True)
@@ -158,8 +160,7 @@ def train(args):
     allreduce_controller.set_broadcast_model(model)
     allreduce_controller.set_broadcast_optimizer(optimizer)
     epoch = 0
-    # Use the elastic function to wrap the training function with
-    # a batch.
+    # Use the elastic function to wrap the training function with a batch.
     elastic_train_one_batch = allreduce_controller.elastic_run(train_one_batch)
     with allreduce_controller.scope():
         for batch_idx, (data, target) in enumerate(train_loader):
@@ -174,6 +175,7 @@ def train(args):
             )
             if new_epoch > epoch:
                 epoch = new_epoch
+                # Set epoch of the scheduler
                 scheduler.last_epoch = epoch - 1
                 scheduler.step()
                 test(model, device, test_loader)
