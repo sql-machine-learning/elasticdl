@@ -33,8 +33,9 @@ elasticdl train \
   --need_elasticdl_job_service=false \
 """
 
-import sys
 import argparse
+import sys
+
 import cv2
 import numpy as np
 import torch
@@ -42,13 +43,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
-from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import StepLR
+from torch.utils.data import DataLoader, Dataset
 
+from elasticai_api.pytorch.controller import create_elastic_controller
 from elasticai_api.pytorch.optimizer import DistributedOptimizer
-from elasticai_api.pytorch.controller import (
-    create_elastic_controller,
-)
 
 
 class ElasticDataset(Dataset):
@@ -116,9 +115,7 @@ def train(args):
         allreduce_controller.data_shard_service, training_data.imgs
     )
     data_loader = DataLoader(
-        dataset=dataset,
-        batch_size=args.batch_size,
-        num_workers=2
+        dataset=dataset, batch_size=args.batch_size, num_workers=2
     )
     model = Net()
     optimizer = optim.SGD(model.parameters(), lr=args.learning_rate)
