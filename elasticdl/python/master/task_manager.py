@@ -235,14 +235,14 @@ class TaskManager(object):
     def _create_shards_by_dataset_size(self, dataset_size):
         shards = []
         num_shards = dataset_size // self._records_per_task
-        start_ind = 0
+        start_idx = 0
         for shard_id in range(num_shards):
-            shards.append(("", start_ind, self._records_per_task,))
-            start_ind += self._records_per_task
+            shards.append(("", start_idx, self._records_per_task,))
+            start_idx += self._records_per_task
         # Create a shard with the last records
         num_records_left = dataset_size % self._records_per_task
         if num_records_left != 0:
-            shards.append(("", start_ind, num_records_left,))
+            shards.append(("", start_idx, num_records_left,))
         logger.info("Create {} shards".format(len(shards)))
         return shards
 
@@ -270,21 +270,21 @@ class TaskManager(object):
         # Note that a shard may contain records for multiple tasks.
         for (
             shard_name,
-            start_ind_this_shard,
+            start_idx_this_shard,
             num_records_this_shard,
         ) in shards:
-            max_ind_this_shard = start_ind_this_shard + num_records_this_shard
+            max_idx_this_shard = start_idx_this_shard + num_records_this_shard
             self._job_counters[
                 task_type
             ].total_records += num_records_this_shard
-            for start_ind_this_task in range(
-                start_ind_this_shard,
-                max_ind_this_shard,
+            for start_idx_this_task in range(
+                start_idx_this_shard,
+                max_idx_this_shard,
                 self._records_per_task,
             ):
-                end_ind_this_task = min(
-                    start_ind_this_task + self._records_per_task,
-                    max_ind_this_shard,
+                end_idx_this_task = min(
+                    start_idx_this_task + self._records_per_task,
+                    max_idx_this_shard,
                 )
 
                 # Note that only records in [start, end) of this task
@@ -293,8 +293,8 @@ class TaskManager(object):
                 tasks.append(
                     _Task(
                         shard_name=shard_name,
-                        start=start_ind_this_task,
-                        end=end_ind_this_task,
+                        start=start_idx_this_task,
+                        end=end_idx_this_task,
                         type=task_type,
                         model_version=model_version,
                     )
@@ -347,19 +347,19 @@ class TaskManager(object):
         shards = self._training_shards
         assert shards is not None
 
-        (shard_name, start_ind_this_shard, num_records_this_shard) = next(
+        (shard_name, start_idx_this_shard, num_records_this_shard) = next(
             iter(shards)
         )
-        start_ind_this_task = start_ind_this_shard
-        end_ind_this_task = start_ind_this_shard + min(
+        start_idx_this_task = start_idx_this_shard
+        end_idx_this_task = start_idx_this_shard + min(
             self._records_per_task, num_records_this_shard
         )
 
         # Use the first shard of data to do the SavedModel work
         train_end_callback_task = _Task(
             shard_name=shard_name,
-            start=start_ind_this_task,
-            end=end_ind_this_task,
+            start=start_idx_this_task,
+            end=end_idx_this_task,
             type=elasticai_api_pb2.TRAIN_END_CALLBACK,
         )
 
@@ -397,8 +397,8 @@ class TaskManager(object):
             ):
                 # Start a new epoch
                 self._epoch += 1
-                self.create_tasks(elasticai_api_pb2.TRAINING)
                 logger.info("Starting epoch %d", self._epoch)
+                self.create_tasks(elasticai_api_pb2.TRAINING)
 
             if not self._todo:
                 # No more tasks
