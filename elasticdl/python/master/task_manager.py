@@ -212,6 +212,13 @@ class TaskManager(object):
         )
 
     def set_training_params(self, batch_size, num_epochs, dataset_size):
+        logger.info(
+            "Set training parameters. "
+            "batch_size: {}, num_epochs: {}, dataset_size: {}".format(
+                batch_size, num_epochs, dataset_size
+            )
+        )
+
         with self._lock:
             if not self._training_shards:
                 # The master receives the training params to create shards
