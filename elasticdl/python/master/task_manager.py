@@ -48,9 +48,9 @@ class _Task(object):
         shard_name,
         start,
         end,
-        task_record_indices,
         type,
         model_version=-1,
+        task_record_indices=None,
         **kwargs
     ):
         self.shard = _Shard(shard_name, start, end, task_record_indices)
@@ -302,7 +302,7 @@ class TaskManager(object):
                     max_ind_this_shard,
                 )
                 task_record_indices = task_record_indices = (
-                    record_indices[start_ind_this_shard: end_ind_this_task]
+                    record_indices[start_ind_this_shard:end_ind_this_task]
                     if self._shuffle
                     else None
                 )
@@ -315,9 +315,9 @@ class TaskManager(object):
                         shard_name=shard_name,
                         start=start_ind_this_task,
                         end=end_ind_this_task,
-                        task_record_indices=task_record_indices,
                         type=task_type,
                         model_version=model_version,
+                        task_record_indices=task_record_indices,
                     )
                 )
         if task_type == elasticai_api_pb2.TRAINING:
