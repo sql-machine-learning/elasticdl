@@ -12,7 +12,8 @@
 # limitations under the License.
 
 """
-Download the mnist dataset from https://s3.amazonaws.com/fast-ai-imageclas/mnist_png.tgz
+Download the mnist dataset from
+https://s3.amazonaws.com/fast-ai-imageclas/mnist_png.tgz
 and then untar it into ${data_store_dir}. Using minikube, we can use the
 following command to submit a training job with the script.
 
