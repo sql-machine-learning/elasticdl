@@ -157,19 +157,17 @@ def train(args):
     # Set the model and optimizer to broadcast.
     allreduce_controller.set_broadcast_model(model)
     allreduce_controller.set_broadcast_optimizer(optimizer)
-    model.train()
     epoch = 0
+    # Use the elastic function to wrap the training function with
+    # a batch.
+    elastic_train_one_batch = allreduce_controller.elastic_run(
+        train_one_batch
+    )
     with allreduce_controller.scope():
         for batch_idx, (data, target) in enumerate(train_loader):
             model.train()
             target = target.type(torch.LongTensor)
             data, target = data.to(device), target.to(device)
-
-            # Use the elastic function to wrap the training function with
-            # a batch.
-            elastic_train_one_batch = allreduce_controller.elastic_run(
-                train_one_batch
-            )
             loss = elastic_train_one_batch(model, optimizer, data, target)
             print("loss = {}, step = {}".format(loss, batch_idx))
             new_epoch = int(
@@ -178,6 +176,7 @@ def train(args):
             )
             if new_epoch > epoch:
                 epoch = new_epoch
+                scheduler.last_epoch = epoch - 1
                 scheduler.step()
                 test(model, device, test_loader)
 
