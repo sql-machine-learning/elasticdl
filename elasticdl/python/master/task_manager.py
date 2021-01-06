@@ -213,8 +213,8 @@ class TaskManager(object):
 
     def set_training_params(self, batch_size, num_epochs, dataset_size):
         logger.info(
-            "Set training parameters. "
-            "batch_size: {}, num_epochs: {}, dataset_size: {}".format(
+            "Set training parameters: "
+            "batch_size={}, num_epochs={}, dataset_size={}".format(
                 batch_size, num_epochs, dataset_size
             )
         )
