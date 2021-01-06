@@ -12,25 +12,28 @@
 # limitations under the License.
 
 """
-We can use the following command to submit a training job with the script.
+Download the mnist dataset from https://s3.amazonaws.com/fast-ai-imageclas/mnist_png.tgz
+and then untar it into ${data_store_dir}. Using minikube, we can use the
+following command to submit a training job with the script.
+
 elasticdl train \
-  --image_name=elasticdl:dev_allreduce  \
-  --training_data=/data/mnist/train/images.csv \
-  --job_command="python -m model_zoo.mnist.mnist_pytorch_custom_dataset" \
-  --num_epochs=1 \
+  --image_name=elasticdl:pt_mnist_allreduce  \
+  --job_command="python -m model_zoo.mnist.mnist_pytorch_custom_dataset \
+      --training_data=/local_data/mnist_png/training \
+      --validation_data=/local_data/mnist_png/testing" \
   --num_minibatches_per_task=2 \
-  --minibatch_size=64 \
   --num_workers=2 \
   --worker_pod_priority=0.5 \
   --master_resource_request="cpu=0.2,memory=1024Mi" \
   --master_resource_limit="cpu=1,memory=2048Mi" \
   --worker_resource_request="cpu=0.3,memory=1024Mi" \
   --worker_resource_limit="cpu=1,memory=2048Mi" \
-  --envs="USE_TORCH=true" \
-  --job_name=mnist-allreduce \
+  --envs="USE_TORCH=true,HOROVOD_GLOO_TIMEOUT_SECONDS=60,PYTHONUNBUFFERED=0" \
+  --job_name=test-mnist-allreduce \
   --image_pull_policy=Never \
+  --volume="host_path=${data_store_dir},mount_path=/local_data" \
+  --custom_training_loop=true \
   --distribution_strategy=AllreduceStrategy \
-  --need_elasticdl_job_service=false \
 """
 
 import argparse
