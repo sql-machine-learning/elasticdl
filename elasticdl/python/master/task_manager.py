@@ -301,10 +301,11 @@ class TaskManager(object):
                     start_ind_this_task + self._records_per_task,
                     max_ind_this_shard,
                 )
-                if self._shuffle:
-                    task_record_indices = record_indices[
-                        start_ind_this_shard:end_ind_this_task
-                    ]
+                task_record_indices = task_record_indices = (
+                    record_indices[start_ind_this_shard: end_ind_this_task]
+                    if self._shuffle
+                    else None
+                )
 
                 # Note that only records in [start, end) of this task
                 # will be consumed later in the worker that handles

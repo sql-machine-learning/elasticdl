@@ -101,6 +101,7 @@ class MasterServicer(
             res.shard.name = task.shard.name
             res.shard.start = task.shard.start
             res.shard.end = task.shard.end
+            res.shard.indices.extend(task.shard.indices)
             for k, v in task.extended_config.items():
                 res.extended_config[k] = v
 
@@ -167,7 +168,10 @@ class MasterServicer(
 
     def report_training_params(self, request, _):
         self._task_manager.set_training_params(
-            request.batch_size, request.num_epochs, request.dataset_size
+            request.batch_size,
+            request.num_epochs,
+            request.dataset_size,
+            request.shuffle,
         )
         return empty_pb2.Empty()
 
