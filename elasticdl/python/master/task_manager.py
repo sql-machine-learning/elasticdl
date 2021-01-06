@@ -33,19 +33,27 @@ _TASK_TIMEOUT_THRESHOLD_SECS = 300
 
 
 class _Shard(object):
-    def __init__(self, name, start, end):
+    def __init__(self, name, start, end, indices=None):
         self.name = name
         self.start = start
         self.end = end
+        self.indices = indices
 
 
 class _Task(object):
     """Internal representation of a task"""
 
     def __init__(
-        self, shard_name, start, end, type, model_version=-1, **kwargs
+        self,
+        shard_name,
+        start,
+        end,
+        task_record_indices,
+        type,
+        model_version=-1,
+        **kwargs
     ):
-        self.shard = _Shard(shard_name, start, end)
+        self.shard = _Shard(shard_name, start, end, task_record_indices)
         self.type = type
         self.model_version = model_version
         self.extended_config = kwargs
@@ -113,6 +121,7 @@ class TaskManager(object):
         self._batch_size = args.minibatch_size
         self._num_epochs = args.num_epochs
         self._dataset_size = None
+        self._shuffle = False
         self.support_fault_tolerance = args.task_fault_tolerance
         self.relaunch_timeout_worker = args.relaunch_timeout_worker
         self._epoch = 0
@@ -211,11 +220,14 @@ class TaskManager(object):
             checkpoint_dir_for_init
         )
 
-    def set_training_params(self, batch_size, num_epochs, dataset_size):
+    def set_training_params(
+        self, batch_size, num_epochs, dataset_size, shuffle
+    ):
         with self._lock:
             if not self._training_shards:
                 # The master receives the training params to create shards
                 self._batch_size = batch_size
+                self._shuffle = shuffle
                 self._records_per_task = (
                     batch_size * self._num_minibatches_per_task
                 )
@@ -268,6 +280,9 @@ class TaskManager(object):
         tasks = []
         num_records_before_create = self._job_counters[task_type].total_records
         # Note that a shard may contain records for multiple tasks.
+        if self._shuffle:
+            record_indices = list(range(0, self._dataset_size))
+            random.shuffle(record_indices)
         for (
             shard_name,
             start_ind_this_shard,
@@ -286,6 +301,10 @@ class TaskManager(object):
                     start_ind_this_task + self._records_per_task,
                     max_ind_this_shard,
                 )
+                if self._shuffle:
+                    task_record_indices = record_indices[
+                        start_ind_this_shard:end_ind_this_task
+                    ]
 
                 # Note that only records in [start, end) of this task
                 # will be consumed later in the worker that handles
@@ -295,6 +314,7 @@ class TaskManager(object):
                         shard_name=shard_name,
                         start=start_ind_this_task,
                         end=end_ind_this_task,
+                        task_record_indices=task_record_indices,
                         type=task_type,
                         model_version=model_version,
                     )
