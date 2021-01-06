@@ -133,6 +133,7 @@ def train(args):
         num_epochs=args.num_epochs,
         shuffle=True,
     )
+    batch_num_per_epoch = int(len(train_data.imgs) / args.batch_size)
     train_dataset = ElasticDataset(
         train_data.imgs, allreduce_controller.data_shard_service
     )
@@ -168,7 +169,8 @@ def train(args):
             loss = elastic_train_one_batch(model, optimizer, data, target)
             print("loss = {}, step = {}".format(loss, batch_idx))
             new_epoch = int(
-                allreduce_controller.global_completed_batch_num / 100
+                allreduce_controller.global_completed_batch_num
+                / batch_num_per_epoch
             )
             if new_epoch > epoch:
                 epoch = new_epoch
