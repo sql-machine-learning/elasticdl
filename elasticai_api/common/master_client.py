@@ -116,7 +116,7 @@ class MasterClient:
         num_epochs=None,
         dataset_size=None,
         shuffle=False,
-        shuffle_shards=False
+        shuffle_shards=False,
     ):
         report = elasticai_api_pb2.ReportTrainingParamsRequest()
         report.batch_size = batch_size
