@@ -237,6 +237,7 @@ class TaskManager(object):
                 # The master receives the training params to create shards
                 self._batch_size = batch_size
                 self._shuffle = shuffle
+                self._shuffle_shards = shuffle_shards
                 self._records_per_task = (
                     batch_size * self._num_minibatches_per_task
                 )
@@ -331,6 +332,7 @@ class TaskManager(object):
                 )
         if task_type == elasticai_api_pb2.TRAINING:
             if self._shuffle_shards:
+                logger.info("shuffle shards = {}".format(self._shuffle_shards))
                 random.shuffle(tasks)
             self._todo.extend(tasks)
         elif task_type == elasticai_api_pb2.EVALUATION:
@@ -359,7 +361,7 @@ class TaskManager(object):
             if not self._eval_todo:
                 return -1, None
             self._task_id += 1
-            task = self._eval_todo.pop()
+            task = self._eval_todo.pop(0)
             if self.support_fault_tolerance:
                 self._doing[self._task_id] = (worker_id, task, time.time())
             return self._task_id, task
@@ -436,7 +438,7 @@ class TaskManager(object):
                 return -1, None
 
             self._task_id += 1
-            task = self._todo.pop()
+            task = self._todo.pop(0)
             if self.support_fault_tolerance:
                 self._doing[self._task_id] = (worker_id, task, time.time())
 

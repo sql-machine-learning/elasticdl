@@ -69,11 +69,11 @@ class DataShardService(object):
     def _report_training_params(self):
         if self._num_epochs and self._dataset_size:
             self._mc.report_training_params(
-                self._batch_size,
-                self._num_epochs,
-                self._dataset_size,
-                self._shuffle,
-                self._shuffle_shards,
+                batch_size=self._batch_size,
+                num_epochs=self._num_epochs,
+                dataset_size=self._dataset_size,
+                shuffle=self._shuffle,
+                shuffle_shards=self._shuffle_shards,
             )
 
     def get_current_task(self):
@@ -161,12 +161,12 @@ class RecordIndexService(DataShardService):
         shuffle=False,
     ):
         super(RecordIndexService, self).__init__(
-            master_client,
-            batch_size,
-            num_epochs,
-            dataset_size,
-            shuffle,
-            task_type,
+            master_client=master_client,
+            batch_size=batch_size,
+            num_epochs=num_epochs,
+            dataset_size=dataset_size,
+            shuffle=shuffle,
+            task_type=task_type,
         )
         self._shard_queue = SimpleQueue()
         threading.Thread(
