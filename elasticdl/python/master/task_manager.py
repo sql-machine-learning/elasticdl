@@ -308,7 +308,7 @@ class TaskManager(object):
                     start_idx_this_task + self._records_per_task,
                     max_idx_this_shard,
                 )
-                task_record_indices = task_record_indices = (
+                task_record_indices = (
                     record_indices[start_idx_this_task:end_idx_this_task]
                     if self._shuffle
                     else None
