@@ -25,6 +25,8 @@ def build_data_shard_service(
     batch_size,
     num_epochs=None,
     dataset_size=None,
+    shuffle=False,
+    shuffle_shards=False,
     task_type=elasticai_api_pb2.TRAINING,
 ):
     master_client = build_master_client()
@@ -33,6 +35,8 @@ def build_data_shard_service(
         master_client=master_client,
         num_epochs=num_epochs,
         dataset_size=dataset_size,
+        shuffle=shuffle,
+        shuffle_shards=shuffle_shards,
         task_type=task_type,
     )
 
@@ -45,6 +49,7 @@ class DataShardService(object):
         num_epochs=None,
         dataset_size=None,
         shuffle=False,
+        shuffle_shards=False,
         task_type=elasticai_api_pb2.TRAINING,
     ):
         self._mc = master_client
@@ -52,6 +57,7 @@ class DataShardService(object):
         self._num_epochs = num_epochs
         self._dataset_size = dataset_size
         self._shuffle = shuffle
+        self._shuffle_shards = shuffle_shards
         self._task_type = task_type
         self._lock = threading.Lock()
         self._failed_record_count = 0
@@ -63,10 +69,11 @@ class DataShardService(object):
     def _report_training_params(self):
         if self._num_epochs and self._dataset_size:
             self._mc.report_training_params(
-                self._batch_size,
-                self._num_epochs,
-                self._dataset_size,
-                self._shuffle,
+                batch_size=self._batch_size,
+                num_epochs=self._num_epochs,
+                dataset_size=self._dataset_size,
+                shuffle=self._shuffle,
+                shuffle_shards=self._shuffle_shards,
             )
 
     def get_current_task(self):
@@ -154,12 +161,12 @@ class RecordIndexService(DataShardService):
         shuffle=False,
     ):
         super(RecordIndexService, self).__init__(
-            master_client,
-            batch_size,
-            num_epochs,
-            dataset_size,
-            shuffle,
-            task_type,
+            master_client=master_client,
+            batch_size=batch_size,
+            num_epochs=num_epochs,
+            dataset_size=dataset_size,
+            shuffle=shuffle,
+            task_type=task_type,
         )
         self._shard_queue = SimpleQueue()
         threading.Thread(

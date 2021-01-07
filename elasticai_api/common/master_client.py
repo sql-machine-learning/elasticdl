@@ -111,11 +111,17 @@ class MasterClient:
         return self._stub.report_training_loop_status(req)
 
     def report_training_params(
-        self, batch_size, num_epochs=None, dataset_size=None, shuffle=False
+        self,
+        batch_size,
+        num_epochs=None,
+        dataset_size=None,
+        shuffle=False,
+        shuffle_shards=False,
     ):
         report = elasticai_api_pb2.ReportTrainingParamsRequest()
         report.batch_size = batch_size
         report.shuffle = shuffle
+        report.shuffle_shards = shuffle_shards
         if num_epochs is not None:
             report.num_epochs = num_epochs
         if dataset_size is not None:

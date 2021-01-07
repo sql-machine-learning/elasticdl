@@ -122,6 +122,7 @@ class TaskManager(object):
         self._num_epochs = args.num_epochs
         self._dataset_size = None
         self._shuffle = False
+        self._shuffle_shards = False
         self.support_fault_tolerance = args.task_fault_tolerance
         self.relaunch_timeout_worker = args.relaunch_timeout_worker
         self._epoch = 0
@@ -221,12 +222,13 @@ class TaskManager(object):
         )
 
     def set_training_params(
-        self, batch_size, num_epochs, dataset_size, shuffle
+        self, batch_size, num_epochs, dataset_size, shuffle, shuffle_shards
     ):
         logger.info(
             "Set training parameters: "
-            "batch_size={}, num_epochs={}, dataset_size={}, shuffle={}".format(
-                batch_size, num_epochs, dataset_size, shuffle
+            "batch_size={}, num_epochs={}, dataset_size={},"
+            "shuffle={}, shuffle_shards={}".format(
+                batch_size, num_epochs, dataset_size, shuffle, shuffle_shards
             )
         )
 
@@ -235,6 +237,7 @@ class TaskManager(object):
                 # The master receives the training params to create shards
                 self._batch_size = batch_size
                 self._shuffle = shuffle
+                self._shuffle_shards = shuffle_shards
                 self._records_per_task = (
                     batch_size * self._num_minibatches_per_task
                 )
@@ -328,7 +331,8 @@ class TaskManager(object):
                     )
                 )
         if task_type == elasticai_api_pb2.TRAINING:
-            random.shuffle(tasks)
+            if self._shuffle_shards:
+                random.shuffle(tasks)
             self._todo.extend(tasks)
         elif task_type == elasticai_api_pb2.EVALUATION:
             self._eval_todo.extend(tasks)
@@ -356,7 +360,7 @@ class TaskManager(object):
             if not self._eval_todo:
                 return -1, None
             self._task_id += 1
-            task = self._eval_todo.pop()
+            task = self._eval_todo.pop(0)
             if self.support_fault_tolerance:
                 self._doing[self._task_id] = (worker_id, task, time.time())
             return self._task_id, task
@@ -433,7 +437,7 @@ class TaskManager(object):
                 return -1, None
 
             self._task_id += 1
-            task = self._todo.pop()
+            task = self._todo.pop(0)
             if self.support_fault_tolerance:
                 self._doing[self._task_id] = (worker_id, task, time.time())
 

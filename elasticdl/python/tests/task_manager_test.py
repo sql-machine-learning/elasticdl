@@ -169,7 +169,7 @@ class TaskManagerTest(unittest.TestCase):
 
     def test_set_training_params(self):
         task_manager = create_task_manager([], [])
-        task_manager.set_training_params(1, 1, 10, False)
+        task_manager.set_training_params(1, 1, 10, False, False)
         self.assertEqual(
             task_manager._training_shards,
             [("", 0, 3), ("", 3, 3), ("", 6, 3), ("", 9, 1)],

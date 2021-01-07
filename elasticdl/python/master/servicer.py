@@ -172,6 +172,7 @@ class MasterServicer(
             request.num_epochs,
             request.dataset_size,
             request.shuffle,
+            request.shuffle_shards,
         )
         return empty_pb2.Empty()
 
