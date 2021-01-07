@@ -24,6 +24,7 @@ message Shard {
   // Starting and ending (non-inclusive) record number.
   int64 start = 2;
   int64 end = 3;
+  repeated int64 indices = 4;
 }
 
 // A task is a unit of work for ElasticDL training workers, assigned by master.
@@ -56,6 +57,7 @@ message ReportTrainingParamsRequest {
   int32 batch_size = 1;
   int32 num_epochs = 2;
   int32 dataset_size = 3;
+  bool shuffle = 4;
 }
 
 message GetTaskRequest {

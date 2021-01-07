@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
 import threading
 import time
 from collections import deque
@@ -45,12 +44,14 @@ class DataShardService(object):
         batch_size,
         num_epochs=None,
         dataset_size=None,
+        shuffle=False,
         task_type=elasticai_api_pb2.TRAINING,
     ):
         self._mc = master_client
         self._batch_size = batch_size
         self._num_epochs = num_epochs
         self._dataset_size = dataset_size
+        self._shuffle = shuffle
         self._task_type = task_type
         self._lock = threading.Lock()
         self._failed_record_count = 0
@@ -62,7 +63,10 @@ class DataShardService(object):
     def _report_training_params(self):
         if self._num_epochs and self._dataset_size:
             self._mc.report_training_params(
-                self._batch_size, self._num_epochs, self._dataset_size
+                self._batch_size,
+                self._num_epochs,
+                self._dataset_size,
+                self._shuffle,
             )
 
     def get_current_task(self):
@@ -150,9 +154,13 @@ class RecordIndexService(DataShardService):
         shuffle=False,
     ):
         super(RecordIndexService, self).__init__(
-            master_client, batch_size, num_epochs, dataset_size, task_type
+            master_client,
+            batch_size,
+            num_epochs,
+            dataset_size,
+            shuffle,
+            task_type,
         )
-        self._shuffle = shuffle
         self._shard_queue = SimpleQueue()
         threading.Thread(
             target=self._get_shard_indices,
@@ -166,9 +174,11 @@ class RecordIndexService(DataShardService):
                 task = self.get_task(self._task_type)
                 if not task.shard or task.type != self._task_type:
                     break
-                ids = list(range(task.shard.start, task.shard.end))
-                if self._shuffle:
-                    random.shuffle(ids)
+                ids = (
+                    task.shard.indices
+                    if task.shard.indices
+                    else list(range(task.shard.start, task.shard.end))
+                )
                 for i in ids:
                     self._shard_queue.put(i)
             else:
