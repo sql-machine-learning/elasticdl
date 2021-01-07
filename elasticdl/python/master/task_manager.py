@@ -332,7 +332,6 @@ class TaskManager(object):
                 )
         if task_type == elasticai_api_pb2.TRAINING:
             if self._shuffle_shards:
-                logger.info("shuffle shards = {}".format(self._shuffle_shards))
                 random.shuffle(tasks)
             self._todo.extend(tasks)
         elif task_type == elasticai_api_pb2.EVALUATION:
