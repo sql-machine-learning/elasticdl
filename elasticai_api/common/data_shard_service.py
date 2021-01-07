@@ -25,6 +25,8 @@ def build_data_shard_service(
     batch_size,
     num_epochs=None,
     dataset_size=None,
+    shuffle=False,
+    shuffle_shards=False,
     task_type=elasticai_api_pb2.TRAINING,
 ):
     master_client = build_master_client()
@@ -33,6 +35,8 @@ def build_data_shard_service(
         master_client=master_client,
         num_epochs=num_epochs,
         dataset_size=dataset_size,
+        shuffle=shuffle,
+        shuffle_shards=shuffle_shards,
         task_type=task_type,
     )
 
@@ -45,6 +49,7 @@ class DataShardService(object):
         num_epochs=None,
         dataset_size=None,
         shuffle=False,
+        shuffle_shards=False,
         task_type=elasticai_api_pb2.TRAINING,
     ):
         self._mc = master_client
@@ -52,6 +57,7 @@ class DataShardService(object):
         self._num_epochs = num_epochs
         self._dataset_size = dataset_size
         self._shuffle = shuffle
+        self._shuffle_shards = shuffle_shards
         self._task_type = task_type
         self._lock = threading.Lock()
         self._failed_record_count = 0
@@ -67,6 +73,7 @@ class DataShardService(object):
                 self._num_epochs,
                 self._dataset_size,
                 self._shuffle,
+                self._shuffle_shards,
             )
 
     def get_current_task(self):

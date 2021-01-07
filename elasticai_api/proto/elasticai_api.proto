@@ -58,6 +58,7 @@ message ReportTrainingParamsRequest {
   int32 num_epochs = 2;
   int32 dataset_size = 3;
   bool shuffle = 4;
+  bool shuffle_shards = 5;
 }
 
 message GetTaskRequest {
