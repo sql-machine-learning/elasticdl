@@ -59,6 +59,7 @@ message ReportTrainingParamsRequest {
   int32 dataset_size = 3;
   bool shuffle = 4;
   bool shuffle_shards = 5;
+  int32 num_minibatches_per_shard = 6;
 }
 
 message GetTaskRequest {

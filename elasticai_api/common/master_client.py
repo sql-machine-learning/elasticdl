@@ -92,12 +92,12 @@ class MasterClient:
           statistics of the task being executed.
         """
 
-        report = elasticai_api_pb2.ReportTaskResultRequest()
-        report.task_id = task_id
-        report.err_message = err_msg
+        request = elasticai_api_pb2.ReportTaskResultRequest()
+        request.task_id = task_id
+        request.err_message = err_msg
         if isinstance(exec_counters, dict):
-            report.exec_counters.update(exec_counters)
-        return self._stub.report_task_result(report)
+            request.exec_counters.update(exec_counters)
+        return self._stub.report_task_result(request)
 
     def get_comm_rank(self):
         req = elasticai_api_pb2.GetCommRankRequest()
@@ -117,13 +117,15 @@ class MasterClient:
         dataset_size=None,
         shuffle=False,
         shuffle_shards=False,
+        num_minibatches_per_shard=0,
     ):
-        report = elasticai_api_pb2.ReportTrainingParamsRequest()
-        report.batch_size = batch_size
-        report.shuffle = shuffle
-        report.shuffle_shards = shuffle_shards
+        request = elasticai_api_pb2.ReportTrainingParamsRequest()
+        request.batch_size = batch_size
+        request.shuffle = shuffle
+        request.shuffle_shards = shuffle_shards
         if num_epochs is not None:
-            report.num_epochs = num_epochs
+            request.num_epochs = num_epochs
         if dataset_size is not None:
-            report.dataset_size = dataset_size
-        return self._stub.report_training_params(report)
+            request.dataset_size = dataset_size
+        request.num_minibatches_per_shard = num_minibatches_per_shard
+        return self._stub.report_training_params(request)
