@@ -247,7 +247,7 @@ class TaskManager(object):
             if self._training_shards:
                 logger.info(
                     "The training shards have already been initialized."
-                    "Igore these training parameters."
+                    "Ignore these training parameters."
                 )
                 return
 
