@@ -76,7 +76,7 @@ class DataShardService(object):
                 dataset_size=self._dataset_size,
                 shuffle=self._shuffle,
                 shuffle_shards=self._shuffle_shards,
-                num_minibatches_per_shard=self._num_minibatches_per_shard
+                num_minibatches_per_shard=self._num_minibatches_per_shard,
             )
 
     def get_current_task(self):

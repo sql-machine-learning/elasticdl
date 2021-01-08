@@ -232,8 +232,8 @@ class TaskManager(object):
     ):
         logger.info(
             "Set training parameters: "
-            "batch_size={}, num_epochs={}, dataset_size={},"
-            "shuffle={}, shuffle_shards={}, num_minibatches_per_shard={}".format(
+            "batch_size={}, num_epochs={}, dataset_size={}, shuffle={}, "
+            "shuffle_shards={}, num_minibatches_per_shard={}".format(
                 batch_size,
                 num_epochs,
                 dataset_size,
