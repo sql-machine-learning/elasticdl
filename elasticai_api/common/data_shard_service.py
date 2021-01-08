@@ -51,6 +51,7 @@ class DataShardService(object):
         shuffle=False,
         shuffle_shards=False,
         task_type=elasticai_api_pb2.TRAINING,
+        num_minibatches_per_shard=0,
     ):
         self._mc = master_client
         self._batch_size = batch_size
@@ -59,6 +60,7 @@ class DataShardService(object):
         self._shuffle = shuffle
         self._shuffle_shards = shuffle_shards
         self._task_type = task_type
+        self._num_minibatches_per_shard = num_minibatches_per_shard
         self._lock = threading.Lock()
         self._failed_record_count = 0
         self._reported_record_count = 0
@@ -74,6 +76,7 @@ class DataShardService(object):
                 dataset_size=self._dataset_size,
                 shuffle=self._shuffle,
                 shuffle_shards=self._shuffle_shards,
+                num_minibatches_per_shard=self._num_minibatches_per_shard,
             )
 
     def get_current_task(self):

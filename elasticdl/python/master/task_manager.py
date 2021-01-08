@@ -222,43 +222,66 @@ class TaskManager(object):
         )
 
     def set_training_params(
-        self, batch_size, num_epochs, dataset_size, shuffle, shuffle_shards
+        self,
+        batch_size,
+        num_epochs,
+        dataset_size,
+        shuffle,
+        shuffle_shards,
+        num_minibatches_per_shard,
     ):
         logger.info(
             "Set training parameters: "
-            "batch_size={}, num_epochs={}, dataset_size={},"
-            "shuffle={}, shuffle_shards={}".format(
-                batch_size, num_epochs, dataset_size, shuffle, shuffle_shards
+            "batch_size={}, num_epochs={}, dataset_size={}, shuffle={}, "
+            "shuffle_shards={}, num_minibatches_per_shard={}".format(
+                batch_size,
+                num_epochs,
+                dataset_size,
+                shuffle,
+                shuffle_shards,
+                num_minibatches_per_shard,
             )
         )
 
         with self._lock:
-            if not self._training_shards:
-                # The master receives the training params to create shards
-                self._batch_size = batch_size
-                self._shuffle = shuffle
-                self._shuffle_shards = shuffle_shards
-                self._records_per_task = (
-                    batch_size * self._num_minibatches_per_task
+            if self._training_shards:
+                logger.info(
+                    "The training shards have already been initialized."
+                    "Ignore these training parameters."
                 )
-                self._num_epochs = (
-                    num_epochs if num_epochs > 0 else self._num_epochs
-                )
-                self._dataset_size = (
-                    dataset_size if dataset_size > 0 else self._dataset_size
-                )
-                self._training_shards = self._create_shards_by_dataset_size(
-                    dataset_size
-                )
-                if self._training_shards:
-                    logger.info("Starting epoch %d", self._epoch)
-                    self.create_tasks(elasticai_api_pb2.TRAINING)
+                return
+
+            logger.info("Initialize with these training parameters.")
+            # The master receives the training params to create shards
+            self._batch_size = batch_size
+            self._shuffle = shuffle
+            self._shuffle_shards = shuffle_shards
+            self._num_minibatches_per_task = (
+                num_minibatches_per_shard
+                if num_minibatches_per_shard > 0
+                else self._num_minibatches_per_task
+            )
+            self._records_per_task = (
+                batch_size * self._num_minibatches_per_task
+            )
+            self._num_epochs = (
+                num_epochs if num_epochs > 0 else self._num_epochs
+            )
+            self._dataset_size = (
+                dataset_size if dataset_size > 0 else self._dataset_size
+            )
+            self._training_shards = self._create_shards_by_dataset_size(
+                dataset_size
+            )
+            if self._training_shards:
+                logger.info("Starting epoch %d", self._epoch)
+                self.create_tasks(elasticai_api_pb2.TRAINING)
 
     def _create_shards_by_dataset_size(self, dataset_size):
         shards = []
         num_shards = dataset_size // self._records_per_task
         start_idx = 0
-        for shard_id in range(num_shards):
+        for _ in range(num_shards):
             shards.append(("", start_idx, self._records_per_task,))
             start_idx += self._records_per_task
         # Create a shard with the last records
