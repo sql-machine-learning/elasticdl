@@ -74,11 +74,20 @@ $ git push origin branch-0.1
 So now we have v0.1.0rc0 ready to use. Test out this version. If any issues
 found, get them fixed in `develop` branch, merged into `branch-0.1` branch, and
 repeat the aforementioned steps to publish a new release candidate version. We
-keep releasing `rc` version until no further issues found. At that time, release
-the official `v0.1.0` version.
+can use the `cherry-pick` command to pick the fix commit from develop branch
+to the release branch.
+
+```branch
+git checkout branch-0.1
+git cherry-pick <commit-id-in-develop-branch>
+git push origin HEAD
+```
+
+We keep releasing `rc` version until no further issues found. At that time,
+release the official `v0.1.0` version.
 
 ```bash
-$ git checkout -b branch-0.1 develop
+$ git checkout branch-0.1
 $ ./scripts/bump_version.sh v0.1.0
 # Also remember to update RELEASE.md
 
