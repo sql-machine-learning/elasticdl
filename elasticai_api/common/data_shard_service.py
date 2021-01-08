@@ -28,6 +28,7 @@ def build_data_shard_service(
     shuffle=False,
     shuffle_shards=False,
     task_type=elasticai_api_pb2.TRAINING,
+    num_minibatches_per_shard=0,
 ):
     master_client = build_master_client()
     return DataShardService(
@@ -38,6 +39,7 @@ def build_data_shard_service(
         shuffle=shuffle,
         shuffle_shards=shuffle_shards,
         task_type=task_type,
+        num_minibatches_per_shard=num_minibatches_per_shard,
     )
 
 
