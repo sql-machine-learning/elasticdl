@@ -18,7 +18,7 @@ with open("elasticdl_client/requirements.txt") as f:
 
 setup(
     name="elasticdl_client",
-    version="0.2.0rc5.dev0",
+    version="0.2.0rc5",
     description="The client command line tool for ElasticDL.",
     long_description="ElasticDL Client is the client command line tool for"
     " ElasticDL. Users can use it to submit distributed ElasticDL jobs to"
