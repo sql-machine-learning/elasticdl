@@ -78,10 +78,13 @@ can use the `cherry-pick` command to pick the fix commit from develop branch
 to the release branch.
 
 ```bash
-git checkout branch-0.1
+git checkout -b branch-0.1-cherry-pick branch-0.1
 git cherry-pick <commit-id-in-develop-branch>
 git push origin HEAD
 ```
+
+Open pull request from `branch-0.1-cherry-pick` to `branch-0.1` and then merge
+directly.
 
 We keep releasing `rc` version until no further issues found. At that time,
 release the official `v0.1.0` version.
