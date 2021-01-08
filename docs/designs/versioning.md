@@ -77,7 +77,7 @@ repeat the aforementioned steps to publish a new release candidate version. We
 can use the `cherry-pick` command to pick the fix commit from develop branch
 to the release branch.
 
-```branch
+```bash
 git checkout branch-0.1
 git cherry-pick <commit-id-in-develop-branch>
 git push origin HEAD
