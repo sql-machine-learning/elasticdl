@@ -56,7 +56,7 @@ ALL_ARGS_GROUPS = [
     CHECKPOINT_GROUP,
 ]
 
-EXCLUDE_PRINT_ARGS = ["envs"]
+EXCLUDE_PRINT_ARGS = ["envs", "cluster_spec_json"]
 
 
 def pos_int(arg):
