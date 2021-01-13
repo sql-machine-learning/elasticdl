@@ -136,7 +136,7 @@ class TFV1TrainLoopMonitorCallback(PodEventCallback):
 
     @staticmethod
     def is_critical_pod(pod_info):
-        # If the pod is ps, chief worker or evaluator, return True.
+        # If the pod is a ps or the chief worker, return True.
         # Otherwise return false.
         if pod_info.type == PodType.PS:
             return True
