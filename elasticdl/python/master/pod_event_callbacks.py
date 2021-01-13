@@ -115,9 +115,9 @@ class RendezvousServiceRefreshCallback(PodEventCallback):
         self._rendezvous_server.remove_worker(pod_info.ip)
 
 
-class TFV1TrainLoopMonitorCallback(PodEventCallback):
+class TFV1PSStrategyTrainLoopMonitorCallback(PodEventCallback):
     def __init__(self, master):
-        super(TFV1TrainLoopMonitorCallback, self).__init__()
+        super(TFV1PSStrategyTrainLoopMonitorCallback, self).__init__()
         self._master = master
 
     def on_pod_started(self, pod_info, cluster_context):
@@ -127,11 +127,11 @@ class TFV1TrainLoopMonitorCallback(PodEventCallback):
         pass
 
     def on_pod_failed(self, pod_info, cluster_context):
-        if TFV1TrainLoopMonitorCallback.is_critical_pod(pod_info):
+        if TFV1PSStrategyTrainLoopMonitorCallback.is_critical_pod(pod_info):
             self._master.request_stop(success=False, msg=None)
 
     def on_pod_deleted(self, pod_info, cluster_context):
-        if TFV1TrainLoopMonitorCallback.is_critical_pod(pod_info):
+        if TFV1PSStrategyTrainLoopMonitorCallback.is_critical_pod(pod_info):
             self._master.request_stop(success=False, msg=None)
 
     @staticmethod

@@ -20,6 +20,7 @@ from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
 from elasticdl.python.master.pod_event_callbacks import (
     RendezvousServiceRefreshCallback,
     TaskRescheduleCallback,
+    TFV1PSStrategyTrainLoopMonitorCallback,
 )
 from elasticdl.python.master.pod_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
@@ -56,6 +57,10 @@ class Master(object):
             if self.rendezvous_server:
                 self.pod_manager.add_pod_event_callback(
                     RendezvousServiceRefreshCallback(self.rendezvous_server)
+                )
+            if self._is_tfv1_ps_strategy_training():
+                self.pod_manager.add_pod_event_callback(
+                    TFV1PSStrategyTrainLoopMonitorCallback(self)
                 )
 
         # Start the components one by one
@@ -203,3 +208,14 @@ class Master(object):
                 "Task manager with fault tolerance is required for ",
                 "elasticdl job service.",
             )
+
+    def _is_tfv1_ps_strategy_custom_training(self):
+        if (
+            not self._args.need_elasticdl_job_service
+            and self._args.need_tf_config
+            and self._args.distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
+            return True
+
+        return False
