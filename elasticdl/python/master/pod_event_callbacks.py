@@ -128,11 +128,15 @@ class TFV1PSStrategyTrainLoopMonitorCallback(PodEventCallback):
 
     def on_pod_failed(self, pod_info, cluster_context):
         if TFV1PSStrategyTrainLoopMonitorCallback.is_critical_pod(pod_info):
-            self._master.request_stop(success=False, msg=None)
+            self._master.request_stop(
+                success=False, msg="PS or chief worker is failed."
+            )
 
     def on_pod_deleted(self, pod_info, cluster_context):
         if TFV1PSStrategyTrainLoopMonitorCallback.is_critical_pod(pod_info):
-            self._master.request_stop(success=False, msg=None)
+            self._master.request_stop(
+                success=False, msg="PS or chief worker is deleted."
+            )
 
     @staticmethod
     def is_critical_pod(pod_info):
