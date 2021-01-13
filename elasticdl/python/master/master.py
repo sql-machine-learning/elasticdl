@@ -140,8 +140,14 @@ class Master(object):
         logger.info("RPC server stopped")
         logger.info("Master stopped")
 
-    def request_stop(self, success, msg):
+    def request_stop(self, success, msg=""):
         self._stop_requested = True
+        if success:
+            self._exit_code = 0
+            logger.info(msg)
+        else:
+            self._exit_code = 1
+            logger.error(msg)
 
     def create_pod_manager_if_needed(self, args):
         if args.need_pod_manager:
