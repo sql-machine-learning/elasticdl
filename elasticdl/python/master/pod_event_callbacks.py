@@ -127,17 +127,15 @@ class TFV1TrainLoopMonitorCallback(PodEventCallback):
         pass
 
     def on_pod_failed(self, pod_info, cluster_context):
-        num_workers = cluster_context.pod_manager.num_workers
-        if TFV1TrainLoopMonitorCallback.is_critical_pod(pod_info, num_workers):
+        if TFV1TrainLoopMonitorCallback.is_critical_pod(pod_info):
             self._master.request_stop(success=False, msg=None)
 
     def on_pod_deleted(self, pod_info, cluster_context):
-        num_workers = cluster_context.pod_manager.num_workers
-        if TFV1TrainLoopMonitorCallback.is_critical_pod(pod_info, num_workers):
+        if TFV1TrainLoopMonitorCallback.is_critical_pod(pod_info):
             self._master.request_stop(success=False, msg=None)
 
     @staticmethod
-    def is_critical_pod(pod_info, num_workers):
+    def is_critical_pod(pod_info):
         # If the pod is ps, chief worker or evaluator, return True.
         # Otherwise return false.
         if pod_info.type == PodType.PS:
