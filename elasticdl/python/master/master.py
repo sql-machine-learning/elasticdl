@@ -36,6 +36,7 @@ class Master(object):
         self.create_elasticdl_job_service_if_needed(args)
         self.create_master_grpc_service(args)
         self._args = args
+        self._stop_requested = False
         self._exit_code = 0
 
     def prepare(self):
@@ -103,6 +104,9 @@ class Master(object):
         """
         try:
             while True:
+                if self._stop_requested:
+                    break
+
                 if self.pod_manager and self.pod_manager.all_workers_exited:
                     if self.task_manager and not self.task_manager.finished():
                         logger.warning(
@@ -130,6 +134,9 @@ class Master(object):
         self._master_server.stop(None)  # grace = None
         logger.info("RPC server stopped")
         logger.info("Master stopped")
+
+    def request_stop(self, success, msg):
+        self._stop_requested = True
 
     def create_pod_manager_if_needed(self, args):
         if args.need_pod_manager:
