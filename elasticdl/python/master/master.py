@@ -58,7 +58,7 @@ class Master(object):
                 self.pod_manager.add_pod_event_callback(
                     RendezvousServiceRefreshCallback(self.rendezvous_server)
                 )
-            if self._is_tfv1_ps_strategy_training():
+            if self._is_tfv1_ps_strategy_custom_training():
                 self.pod_manager.add_pod_event_callback(
                     TFV1PSStrategyTrainLoopMonitorCallback(self)
                 )
