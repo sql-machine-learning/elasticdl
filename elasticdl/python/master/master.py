@@ -20,6 +20,7 @@ from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
 from elasticdl.python.master.pod_event_callbacks import (
     RendezvousServiceRefreshCallback,
     TaskRescheduleCallback,
+    TFV1PSStrategyTrainLoopMonitorCallback,
 )
 from elasticdl.python.master.pod_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
@@ -36,6 +37,7 @@ class Master(object):
         self.create_elasticdl_job_service_if_needed(args)
         self.create_master_grpc_service(args)
         self._args = args
+        self._stop_requested = False
         self._exit_code = 0
 
     def prepare(self):
@@ -55,6 +57,10 @@ class Master(object):
             if self.rendezvous_server:
                 self.pod_manager.add_pod_event_callback(
                     RendezvousServiceRefreshCallback(self.rendezvous_server)
+                )
+            if self._is_tfv1_ps_strategy_custom_training():
+                self.pod_manager.add_pod_event_callback(
+                    TFV1PSStrategyTrainLoopMonitorCallback(self)
                 )
 
         # Start the components one by one
@@ -103,16 +109,24 @@ class Master(object):
         """
         try:
             while True:
+                if self._stop_requested:
+                    break
+
                 if self.pod_manager and self.pod_manager.all_workers_exited:
+                    if self.pod_manager.all_workers_failed:
+                        logger.error("All workers failed")
+                        self._exit_code = 1
+                        break
+
                     if self.task_manager and not self.task_manager.finished():
                         logger.warning(
                             "All workers exited but there also are "
                             "unfinished tasks",
                         )
-                    if self.pod_manager.all_workers_failed:
-                        raise RuntimeError("All workers failed")
+
                     self.pod_manager.update_status(PodManagerStatus.FINISHED)
                     break
+
                 time.sleep(30)
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
@@ -130,6 +144,15 @@ class Master(object):
         self._master_server.stop(None)  # grace = None
         logger.info("RPC server stopped")
         logger.info("Master stopped")
+
+    def request_stop(self, success, msg=""):
+        self._stop_requested = True
+        if success:
+            self._exit_code = 0
+            logger.info(msg)
+        else:
+            self._exit_code = 1
+            logger.error(msg)
 
     def create_pod_manager_if_needed(self, args):
         if args.need_pod_manager:
@@ -196,3 +219,14 @@ class Master(object):
                 "Task manager with fault tolerance is required for ",
                 "elasticdl job service.",
             )
+
+    def _is_tfv1_ps_strategy_custom_training(self):
+        if (
+            not self._args.need_elasticdl_job_service
+            and self._args.need_tf_config
+            and self._args.distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
+            return True
+
+        return False
