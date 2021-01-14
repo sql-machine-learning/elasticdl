@@ -14,6 +14,8 @@
 import abc
 import collections
 
+from elasticdl_client.common.k8s_client import PodType
+
 PodInfo = collections.namedtuple(
     "PodInfo", ("type", "id", "name", "ip", "status", "start_time")
 )
@@ -111,3 +113,38 @@ class RendezvousServiceRefreshCallback(PodEventCallback):
 
     def on_pod_deleted(self, pod_info, cluster_context):
         self._rendezvous_server.remove_worker(pod_info.ip)
+
+
+class TFV1PSStrategyTrainLoopMonitorCallback(PodEventCallback):
+    def __init__(self, master):
+        super(TFV1PSStrategyTrainLoopMonitorCallback, self).__init__()
+        self._master = master
+
+    def on_pod_started(self, pod_info, cluster_context):
+        pass
+
+    def on_pod_succeeded(self, pod_info, cluster_context):
+        pass
+
+    def on_pod_failed(self, pod_info, cluster_context):
+        if TFV1PSStrategyTrainLoopMonitorCallback.is_critical_pod(pod_info):
+            self._master.request_stop(
+                success=False, msg="PS or chief worker is failed."
+            )
+
+    def on_pod_deleted(self, pod_info, cluster_context):
+        if TFV1PSStrategyTrainLoopMonitorCallback.is_critical_pod(pod_info):
+            self._master.request_stop(
+                success=False, msg="PS or chief worker is deleted."
+            )
+
+    @staticmethod
+    def is_critical_pod(pod_info):
+        # If the pod is a ps or the chief worker, return True.
+        # Otherwise return false.
+        if pod_info.type == PodType.PS or (
+            pod_info.type == PodType.WORKER and pod_info.id == 0
+        ):
+            return True
+
+        return False
