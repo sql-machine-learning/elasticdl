@@ -531,6 +531,11 @@ class PodManager(object):
                 start_time=pod_start_time,
             )
             self._pod_info_cache[pod_type][pod_name] = pod_info
+            logger.info(
+                "{} status change: {} to {}, by evt_type {}, phase {}".format(
+                    pod_name, pod_state, new_status, evt_type, phase
+                )
+            )
 
         cluster_context = ClusterContext(pod_manager=self)
         should_relaunch = (
