@@ -12,10 +12,10 @@
 # limitations under the License.
 
 import sys
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Tuple
 
 import torchvision
-from torchvision.datasets import default_loader
+from torchvision.datasets.folder import default_loader
 
 IMG_EXTENSIONS = (
     ".jpg",
@@ -33,30 +33,45 @@ IMG_EXTENSIONS = (
 class ElasticImageFolder(torchvision.datasets.ImageFolder):
     def __init__(
         self,
-        root: str,
-        transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
-        loader: Callable[[str], Any] = default_loader,
-        is_valid_file: Optional[Callable[[str], bool]] = None,
-        data_shard_service=None,
+        root,
+        transform=None,
+        target_transform=None,
+        loader=default_loader,
+        is_valid_file=None,
     ):
+        """Create a dataset from a folder for ElasticDL
+        Arguments:
+            root: the path of the image folder
+            transform (callable, optional): A function/transform that takes in
+                a sample and returns a transformed version.
+                E.g, ``transforms.RandomCrop`` for images.
+            target_transform (callable, optional): A function/transform that
+                takes in the target and transforms it.
+                loader (callable): A function to load a sample given its path.
+            is_valid_file (callable, optional): A function that takes path of
+                a file and check if the file is a valid file (used to check of
+                corrupt files) both extensions and is_valid_file should not
+                be passed.
+        """
         super(ElasticImageFolder, self).__init__(
             root,
-            loader,
-            IMG_EXTENSIONS if is_valid_file is None else None,
             transform=transform,
             target_transform=target_transform,
+            loader=loader,
             is_valid_file=is_valid_file,
         )
+        self._data_shard_service = None
+
+    def set_data_shard_service(self, data_shard_service):
         self._data_shard_service = data_shard_service
 
     def __len__(self):
-        if self.data_shard_service:
+        if self._data_shard_service:
             # Set the maxsize because the size of dataset is not fixed
             # when using dynamic sharding
             return sys.maxsize
         else:
-            return len(self._images)
+            return len(self.samples)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
