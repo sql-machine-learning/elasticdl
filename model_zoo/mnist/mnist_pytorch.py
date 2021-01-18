@@ -162,6 +162,8 @@ def train(args):
     epoch = 0
     # Use the elastic function to wrap the training function with a batch.
     elastic_train_one_batch = allreduce_controller.elastic_run(train_one_batch)
+    if torch.cuda.is_available():
+        model.cuda()
     with allreduce_controller.scope():
         for batch_idx, (data, target) in enumerate(train_loader):
             model.train()
