@@ -45,6 +45,16 @@ from elasticdl_client.common.k8s_client import (
 _SERVICE_ADDR_SEP = ","
 
 
+class WorkerInfo(object):
+    def __init__(self, pod_priority="", original_index=0, relaunch_count=0):
+        self.pod_priority = pod_priority
+        self.original_index = original_index
+        self.relaunch_count = relaunch_count
+
+    def inc_relaunch_count(self):
+        self.relaunch_count += 1
+
+
 def _get_addrs(num_addrs, addr_get_fn):
     """
     Get `num_addrs` addresses and then concatenate
@@ -181,6 +191,7 @@ def create_pod_manager(args):
             disable_relaunch=disable_relaunch,
             log_file_path=args.log_file_path,
             need_elasticdl_job_args=args.need_elasticdl_job_service,
+            relaunch_on_worker_failure=args.relaunch_on_worker_failure,
         )
 
     return pod_manager
@@ -205,6 +216,7 @@ class PodManager(object):
         disable_relaunch=False,
         log_file_path=None,
         need_elasticdl_job_args=False,
+        relaunch_on_worker_failure=0,
         **kwargs
     ):
         self._num_workers = num_workers
@@ -213,9 +225,11 @@ class PodManager(object):
         worker_pod_priority = _parse_worker_pod_priority(
             self._num_workers, worker_pod_priority
         )
-        self._worker_pod_priority_and_original_index = {}
+        self._worker_info = {}
         for (k, v) in worker_pod_priority.items():
-            self._worker_pod_priority_and_original_index[k] = (v, k)
+            self._worker_info[k] = WorkerInfo(
+                pod_priority=v, original_index=k, relaunch_count=0
+            )
 
         self._num_ps = num_ps
         self._ps_resource_request = ps_resource_request
@@ -230,6 +244,7 @@ class PodManager(object):
         self._log_file_path = log_file_path
         self._need_tf_config = need_tf_config
         self._need_elasticdl_job_args = need_elasticdl_job_args
+        self._relaunch_on_worker_failure = relaunch_on_worker_failure
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -307,9 +322,7 @@ class PodManager(object):
         need_patch_service = False
         original_index = worker_id
         if self._need_tf_config:
-            original_index = self._worker_pod_priority_and_original_index[
-                worker_id
-            ][1]
+            original_index = self._worker_info[worker_id].original_index
             tf_config = self.get_tf_config_data(PodType.WORKER, original_index)
             envs.append(
                 V1EnvVar(name="TF_CONFIG", value=json.dumps(tf_config))
@@ -323,9 +336,7 @@ class PodManager(object):
                 worker_id=worker_id,
                 resource_requests=self._worker_resource_request,
                 resource_limits=self._worker_resource_limit,
-                pod_priority=self._worker_pod_priority_and_original_index[
-                    worker_id
-                ][0],
+                pod_priority=self._worker_info[worker_id].pod_priority,
                 termination_period=1,
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
@@ -559,9 +570,18 @@ class PodManager(object):
                 callback.on_pod_failed(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
             ]
-            should_relaunch = should_relaunch and _should_relaunch_killed_pod(
-                evt_obj=evt_obj
-            )
+            if should_relaunch:
+                should_relaunch = (
+                    should_relaunch
+                    and _should_relaunch_killed_pod(evt_obj=evt_obj)
+                )
+                if (
+                    not should_relaunch
+                    and self._worker_info[pod_id].relaunch_count
+                    < self._relaunch_on_worker_failure
+                ):
+                    self._worker_info[pod_id].inc_relaunch_count()
+                    should_relaunch = True
         elif matched_pod_state_flow.to_status == PodStatus.DELETED:
             [
                 callback.on_pod_deleted(pod_info, cluster_context)
@@ -573,9 +593,7 @@ class PodManager(object):
 
             new_worker_id = self._next_worker_id_fn()
             with self._lock:
-                self._worker_pod_priority_and_original_index[
-                    new_worker_id
-                ] = self._worker_pod_priority_and_original_index[pod_id]
+                self._worker_info[new_worker_id] = self._worker_info[pod_id]
             self._start_worker(new_worker_id)
 
     @property

@@ -33,6 +33,7 @@ from elasticdl.python.master.pod_event_callbacks import (
 )
 from elasticdl.python.master.pod_manager import (
     PodManager,
+    WorkerInfo,
     _parse_worker_pod_priority,
     build_environment_variables,
 )
@@ -67,7 +68,9 @@ class PodManagerTest(unittest.TestCase):
                 break
 
         pod_manager._not_created_worker_id = [2]
-        pod_manager._worker_pod_priority_and_original_index[2] = (None, 1)
+        pod_manager._worker_info[2] = WorkerInfo(
+            pod_priority=None, original_index=1, relaunch_count=0
+        )
         pod_manager._process_worker()
         for _ in range(max_check_num):
             time.sleep(3)
