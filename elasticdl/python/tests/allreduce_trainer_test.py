@@ -187,6 +187,14 @@ class PyTorchReduceControllerTest(unittest.TestCase):
         self.controller.reset_backward_passes_per_step()
         self.assertEqual(self.controller.backward_passes_per_step, 2)
 
+    def test_get_epoch(self):
+        self.controller.batch_count_per_epoch = 10
+        self.controller.global_completed_batch_num = 78
+        epoch = self.controller.get_current_epoch()
+        self.assertEqual(epoch, 7)
+        self.controller.set_resume_epoch(5)
+        self.assertEqual(self.controller.global_completed_batch_num, 50)
+
 
 if __name__ == "__main__":
     unittest.main()
