@@ -196,6 +196,13 @@ def add_train_params(parser):
         help="If true, needs to set TF_CONFIG env for ps/worker. Also "
         "need to use fixed service name for workers",
     )
+    parser.add_argument(
+        "--relaunch_on_worker_failure",
+        type=int,
+        help="The number of relaunch tries for a worker failure for "
+        "PS Strategy training",
+        default=1,
+    )
 
 
 def add_evaluate_params(parser):
