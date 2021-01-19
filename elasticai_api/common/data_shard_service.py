@@ -81,6 +81,9 @@ class DataShardService(object):
                 num_minibatches_per_shard=self._num_minibatches_per_shard,
             )
 
+    def get_minibatch_count_per_epoch(self):
+        return int(self._dataset_size / self._batch_size)
+
     def get_current_task(self):
         return self._current_task
 
