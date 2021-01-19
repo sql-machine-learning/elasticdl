@@ -36,6 +36,7 @@ from elasticdl_client.common.args import parse_envs
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
     ClusterSpecConfig,
+    DistributionStrategy,
 )
 from elasticdl_client.common.k8s_client import (
     ELASTICDL_REPLICA_INDEX_KEY,
@@ -169,6 +170,12 @@ def create_pod_manager(args):
         disable_relaunch = kwargs.get("disable_relaunch", False)
         cluster_spec = get_image_cluster_spec(args.cluster_spec)
 
+        # relaunch on worker failure for PS strategy only
+        if args.distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
+            relaunch_on_worker_failure = args.relaunch_on_worker_failure
+        else:
+            relaunch_on_worker_failure = 0
+
         pod_manager = PodManager(
             job_name=args.job_name,
             image_name=args.worker_image,
@@ -191,7 +198,7 @@ def create_pod_manager(args):
             disable_relaunch=disable_relaunch,
             log_file_path=args.log_file_path,
             need_elasticdl_job_args=args.need_elasticdl_job_service,
-            relaunch_on_worker_failure=args.relaunch_on_worker_failure,
+            relaunch_on_worker_failure=relaunch_on_worker_failure,
         )
 
     return pod_manager

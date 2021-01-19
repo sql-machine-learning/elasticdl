@@ -199,7 +199,8 @@ def add_train_params(parser):
     parser.add_argument(
         "--relaunch_on_worker_failure",
         type=int,
-        help="The number of relaunch tries for a worker failure",
+        help="The number of relaunch tries for a worker failure for "
+        "PS Strategy training",
         default=1,
     )
 
