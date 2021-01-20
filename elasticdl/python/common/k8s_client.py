@@ -31,11 +31,11 @@ _WORKER_SERVICE_PORT = 3333
 
 
 def get_worker_pod_name(job_name, worker_id):
-    return "elasticdl-%s-worker-%s" % (job_name, str(worker_id))
+    return "%s-worker-%s" % (job_name, str(worker_id))
 
 
 def get_ps_pod_name(job_name, ps_id):
-    return "elasticdl-%s-ps-%s" % (job_name, str(ps_id))
+    return "%s-ps-%s" % (job_name, str(ps_id))
 
 
 class Client(BaseClient):
