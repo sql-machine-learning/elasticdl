@@ -316,11 +316,11 @@ class PodManagerTest(unittest.TestCase):
 
         tf_config_cluster = '{"cluster": \
             {"ps": \
-              ["elasticdl-JOBNAME-ps-0.NAMESPACE.svc:PSPORT", \
-               "elasticdl-JOBNAME-ps-1.NAMESPACE.svc:PSPORT"], \
+              ["JOBNAME-ps-0.NAMESPACE.svc:PSPORT", \
+               "JOBNAME-ps-1.NAMESPACE.svc:PSPORT"], \
              "worker": \
-              ["elasticdl-JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT", \
-               "elasticdl-JOBNAME-worker-1.NAMESPACE.svc:WORKERPORT"] \
+              ["JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT", \
+               "JOBNAME-worker-1.NAMESPACE.svc:WORKERPORT"] \
             }}'
         tf_config_cluster = tf_config_cluster.replace("JOBNAME", job_name)
         tf_config_cluster = tf_config_cluster.replace("NAMESPACE", namespace)
