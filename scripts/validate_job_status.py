@@ -92,8 +92,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
         "test-" + job_type + "-ps-" + str(i) for i in range(ps_num)
     ]
     worker_pod_names = [
-        "test-" + job_type + "-worker-" + str(i)
-        for i in range(worker_num)
+        "test-" + job_type + "-worker-" + str(i) for i in range(worker_num)
     ]
     master_pod_name = "elasticdl-test-" + job_type + "-master"
 
