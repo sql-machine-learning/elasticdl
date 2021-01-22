@@ -17,11 +17,11 @@ set -e
 
 sh scripts/build.sh
 
-# go tests disabled because go uses a lower version of grpcio
-#(
-#    cd /tmp/elasticdl
-#    go test -v -cover ./...
-#)
+# go ps tests disabled because go uses a lower version of grpcio
+(
+    cd /tmp/elasticdl
+    go test -v -cover ./pkg/common/... ./pkg/kernel/...
+)
 
 # Run Python unittests
 pytest elasticdl/python/tests \
