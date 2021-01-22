@@ -171,7 +171,7 @@ class PyTorchReduceControllerTest(unittest.TestCase):
         self.assertEqual(self.controller.global_completed_batch_num, 1)
 
     def test_create_elastic_controller(self):
-        controller = create_elastic_controller(batch_size=64)
+        controller = create_elastic_controller(batch_size=64, dataset_size=128)
         self.assertIsNotNone(controller)
         self.assertIsNotNone(controller.data_shard_service._mc)
         self.assertEqual(controller.data_shard_service._batch_size, 64)
