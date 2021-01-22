@@ -131,7 +131,6 @@ def train(args):
     device = torch.device("cuda" if use_cuda else "cpu")
     train_data = torchvision.datasets.ImageFolder(args.training_data)
     test_data = torchvision.datasets.ImageFolder(args.validation_data)
-    batch_num_per_epoch = int(len(train_data.imgs) / args.batch_size)
 
     allreduce_controller = create_elastic_controller(
         batch_size=args.batch_size,
@@ -171,10 +170,7 @@ def train(args):
             data, target = data.to(device), target.to(device)
             loss = elastic_train_one_batch(model, optimizer, data, target)
             print("loss = {}, step = {}".format(loss, batch_idx))
-            new_epoch = int(
-                allreduce_controller.global_completed_batch_num
-                / batch_num_per_epoch
-            )
+            new_epoch = allreduce_controller.get_current_epoch()
             if new_epoch > epoch:
                 epoch = new_epoch
                 # Set epoch of the scheduler
