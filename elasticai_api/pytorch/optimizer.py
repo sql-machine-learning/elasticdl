@@ -92,8 +92,7 @@ class _DistributedOptimizer(torch.optim.Optimizer):
         self._requires_update = set()
         self._synchronized = False
         self._should_synchronize = True
-        if size() > 1 or os.environ.get("HOROVOD_ELASTIC") == "1":
-            self._register_hooks()
+        self._register_hooks()
 
         self.fixed_global_batch_size = fixed_global_batch_size
         self._global_batch_num_per_step = global_batch_num_per_step
