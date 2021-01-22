@@ -100,7 +100,7 @@ class AllReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        data_shard_service = DataShardService(master_client, 1)
+        data_shard_service = DataShardService(master_client, 1, 1, 10)
         controller = AllReduceController(master_client, data_shard_service)
         elastic_run = controller.elastic_run(self.train)
         elastic_run()
@@ -115,7 +115,7 @@ class TensorFlowV2ReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        data_shard_service = DataShardService(master_client, 1)
+        data_shard_service = DataShardService(master_client, 1, 1, 10)
         self.controller = TensorFlowV2AllReduceController(
             master_client, data_shard_service
         )
@@ -145,7 +145,7 @@ class PyTorchReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        data_shard_service = DataShardService(master_client, 1)
+        data_shard_service = DataShardService(master_client, 1, 1, 10)
         self.controller = PyTorchAllReduceController(
             master_client, data_shard_service
         )
@@ -171,7 +171,7 @@ class PyTorchReduceControllerTest(unittest.TestCase):
         self.assertEqual(self.controller.global_completed_batch_num, 1)
 
     def test_create_elastic_controller(self):
-        controller = create_elastic_controller(batch_size=64)
+        controller = create_elastic_controller(batch_size=64, dataset_size=128)
         self.assertIsNotNone(controller)
         self.assertIsNotNone(controller.data_shard_service._mc)
         self.assertEqual(controller.data_shard_service._batch_size, 64)
@@ -186,6 +186,14 @@ class PyTorchReduceControllerTest(unittest.TestCase):
         self.controller.global_batch_num_per_step = 2
         self.controller.reset_backward_passes_per_step()
         self.assertEqual(self.controller.backward_passes_per_step, 2)
+
+    def test_get_epoch(self):
+        self.controller.batch_count_per_epoch = 10
+        self.controller.global_completed_batch_num = 78
+        epoch = self.controller.get_current_epoch()
+        self.assertEqual(epoch, 7)
+        self.controller.set_resume_epoch(5)
+        self.assertEqual(self.controller.global_completed_batch_num, 50)
 
 
 if __name__ == "__main__":

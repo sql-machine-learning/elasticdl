@@ -107,6 +107,15 @@ class PyTorchAllReduceController(AllReduceController):
             os.getenv(WorkerEnv.WORKER_NUM, 1)
         )
         self.global_completed_batch_num = 0
+        self.batch_count_per_epoch = (
+            self.data_shard_service.get_minibatch_count_per_epoch()
+        )
+
+    def get_current_epoch(self):
+        return self.global_completed_batch_num // self.batch_count_per_epoch
+
+    def set_resume_epoch(self, epoch):
+        self.global_completed_batch_num = epoch * self.batch_count_per_epoch
 
     def set_broadcast_model(self, model):
         self._model = model
@@ -175,8 +184,8 @@ class PyTorchAllReduceController(AllReduceController):
         ):
             world_size = hvd.size()
             rank = hvd.rank()
-            self.backward_passes_per_step = int(
-                self.global_batch_num_per_step / world_size
+            self.backward_passes_per_step = (
+                self.global_batch_num_per_step // world_size
             )
             if rank < self.global_batch_num_per_step % world_size:
                 self.backward_passes_per_step += 1
