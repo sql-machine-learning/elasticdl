@@ -174,6 +174,7 @@ class MasterServicer(
             request.shuffle,
             request.shuffle_shards,
             request.num_minibatches_per_shard,
+            request.training_data,
         )
         return empty_pb2.Empty()
 
