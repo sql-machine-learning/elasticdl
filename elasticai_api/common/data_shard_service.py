@@ -73,7 +73,7 @@ class DataShardService(object):
         self._report_training_params()
 
     def _report_training_params(self):
-        if self._num_epochs and self._dataset_size:
+        if self._num_epochs and (self._dataset_size or self._training_data):
             self._mc.report_training_params(
                 batch_size=self._batch_size,
                 num_epochs=self._num_epochs,
