@@ -11,14 +11,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
+import recordio
+from contextlib import closing
 import horovod.tensorflow as hvd
 import tensorflow as tf
 
-from elasticdl.python.common.constants import Mode
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticai_api.tensorflow.controller import create_elastic_controller
+from elasticai_api.tensorflow.optimizer import DistributedOptimizer
 
 
-def train(dataset, elastic_controller):
+def get_dataset_gen(data_shard_service):
+    def gen():
+        while(True):
+            shard = data_shard_service.fetch_shard()
+            if not shard:
+                raise StopIteration("No data")
+            with closing(
+                recordio.Scanner(
+                    shard.name,
+                    shard.start,
+                    shard.end - shard.start,
+                )
+            ) as reader:
+                for i in range(shard.start, shard.end):
+                    record = reader.record()
+                    if record:
+                        yield record
+    return gen
+
+
+def create_dataset(data_shard_service):
+    gen = get_dataset_gen(data_shard_service)
+    dataset = tf.data.Dataset.from_generator(gen, tf.string)
+    return dataset
+
+
+def train(args):
+    allreduce_controller = create_elastic_controller(
+        batch_size=args.batch_size,
+        num_epochs=args.num_epochs,
+        training_data=args.training_data,
+    )
+    dataset = create_dataset(allreduce_controller.data_shard_service)
+    dataset = feed(dataset)
+    dataset = dataset.batch(args.batch_size).prefetch(1)
     dataset_it = dataset.make_one_shot_iterator()
     batch_x, batch_y = dataset_it.get_next()
     batch_x = tf.cast(batch_x, tf.float32)
@@ -37,30 +75,29 @@ def train(dataset, elastic_controller):
         )
     )
     optimizer = tf.train.GradientDescentOptimizer(0.1)
-    optimizer = hvd.DistributedOptimizer(optimizer)
+    optimizer = DistributedOptimizer(optimizer)
     train_step = optimizer.minimize(loss)
 
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+    with allreduce_controller.scope():
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
 
-        # Use the elastic wrapper to wrap the function to train one batch
-        elastic_train_one_batch = elastic_controller.elastic_run(
-            train_one_batch
-        )
-        for i in range(1000):
-            loss_value, _ = elastic_train_one_batch(sess, [loss, train_step])
-            logger.info("loss: {}".format(loss_value))
+            # Use the elastic wrapper to wrap the function to train one batch
+            elastic_train_one_batch = allreduce_controller.elastic_run(
+                train_one_batch
+            )
+            for i in range(1000):
+                loss_value, _ = elastic_train_one_batch(sess, [loss, train_step])
+                logger.info("loss: {}".format(loss_value))
 
 
 def train_one_batch(sess, run_tensors):
     return sess.run(run_tensors)
 
 
-def feed(dataset, mode, _):
+def feed(dataset):
     dataset = dataset.map(_parse_data)
-
-    if mode == Mode.TRAINING:
-        dataset = dataset.shuffle(buffer_size=1024)
+    dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 
 
@@ -83,3 +120,30 @@ def eval_metrics_fn():
             tf.cast(tf.reshape(labels, [-1]), tf.int32),
         )
     }
+
+
+def arg_parser():
+    parser = argparse.ArgumentParser(description="Process training parameters")
+    parser.add_argument("--batch_size", type=int, default=64, required=False)
+    parser.add_argument("--num_epochs", type=int, default=1, required=False)
+    parser.add_argument(
+        "--learning_rate", type=float, default=0.1, required=False
+    )
+    parser.add_argument(
+        "--no-cuda",
+        action="store_true",
+        default=False,
+        help="disable CUDA training",
+    )
+    parser.add_argument("--training_data", type=str, required=True)
+    parser.add_argument(
+        "--validation_data", type=str, default="", required=False
+    )
+    return parser
+
+
+if __name__ == "__main__":
+    parser = arg_parser()
+    args = parser.parse_args()
+    print(args)
+    train(args)
