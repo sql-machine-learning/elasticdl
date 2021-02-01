@@ -15,12 +15,12 @@ import tempfile
 import threading
 import time
 import unittest
-from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
+
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.tests.test_utils import (
     DatasetName,
     create_recordio_file,
-    create_task_manager
+    create_task_manager,
 )
 
 
@@ -192,8 +192,7 @@ class TaskManagerTest(unittest.TestCase):
                 1, 1, 0, False, False, 3, temp_dir_name
             )
             self.assertEqual(
-                task_manager._training_shards,
-                [(shard_name, 0, num_records)]
+                task_manager._training_shards, [(shard_name, 0, num_records)]
             )
 
 
