@@ -12,33 +12,32 @@
 # limitations under the License.
 
 import argparse
-import recordio
 from contextlib import closing
-import horovod.tensorflow as hvd
+
+import recordio
 import tensorflow as tf
 
-from elasticdl.python.common.log_utils import default_logger as logger
 from elasticai_api.tensorflow.controller import create_elastic_controller
 from elasticai_api.tensorflow.optimizer import DistributedOptimizer
+from elasticdl.python.common.log_utils import default_logger as logger
 
 
 def get_dataset_gen(data_shard_service):
     def gen():
-        while(True):
+        while True:
             shard = data_shard_service.fetch_shard()
             if not shard:
                 raise StopIteration("No data")
             with closing(
                 recordio.Scanner(
-                    shard.name,
-                    shard.start,
-                    shard.end - shard.start,
+                    shard.name, shard.start, shard.end - shard.start,
                 )
             ) as reader:
                 for i in range(shard.start, shard.end):
                     record = reader.record()
                     if record:
                         yield record
+
     return gen
 
 
@@ -79,9 +78,7 @@ def train(args):
     train_step = optimizer.minimize(loss)
 
     # Use the elastic wrapper to wrap the function to train one batch
-    elastic_train_one_batch = allreduce_controller.elastic_run(
-        train_one_batch
-    )
+    elastic_train_one_batch = allreduce_controller.elastic_run(train_one_batch)
     with allreduce_controller.scope():
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
