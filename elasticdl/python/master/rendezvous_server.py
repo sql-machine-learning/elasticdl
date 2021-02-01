@@ -14,6 +14,8 @@ import copy
 import time
 from threading import Lock
 
+from elasticai_api.util.log_utils import default_logger as logger
+
 try:
     from horovod.runner.common.util.hosts import (
         get_host_assignments,
@@ -78,6 +80,11 @@ the start message|                                  a rank |
         self._rendezvous_port = self._rendezvous_server.start()
 
     def _init_rendezvous_server(self):
+        logger.info(
+            "Initialize rendezvous server with hosts {}".format(
+                self._next_rendezvous_hosts
+            )
+        )
         self._cur_rendezvous_hosts = self._next_rendezvous_hosts
         self._next_rendezvous_hosts = None
         host_alloc_plan = self._get_host_plan()
@@ -128,7 +135,12 @@ the start message|                                  a rank |
 
     def add_worker(self, worker_host):
         with self._lock:
-            if worker_host and worker_host not in self._cur_rendezvous_hosts:
+            logger.info(
+                "Add worker host {} into rendenzvous and cur hosts {}.".format(
+                    worker_host, self._cur_rendezvous_hosts
+                )
+            )
+            if worker_host:
                 if self._next_rendezvous_hosts is None:
                     self._next_rendezvous_hosts = copy.deepcopy(
                         self._cur_rendezvous_hosts
@@ -137,6 +149,9 @@ the start message|                                  a rank |
 
     def remove_worker(self, worker_host):
         with self._lock:
+            logger.info(
+                "Remove worker host {} from rendenzvous.".format(worker_host)
+            )
             if worker_host in self._cur_rendezvous_hosts:
                 if self._next_rendezvous_hosts is None:
                     self._next_rendezvous_hosts = copy.deepcopy(
