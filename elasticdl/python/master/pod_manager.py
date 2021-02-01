@@ -388,7 +388,7 @@ class PodManager(object):
             bash_command += " --ps_id {}".format(ps_id)
         if self._log_file_path:
             bash_command += BashCommandTemplate.REDIRECTION.format(
-                self._log_file_path
+                bash_command, self._log_file_path
             )
         ps_args = [self._ps_args[0], bash_command]
         while True:
