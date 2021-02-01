@@ -21,6 +21,8 @@ from elasticai_api.tensorflow.controller import create_elastic_controller
 from elasticai_api.tensorflow.optimizer import DistributedOptimizer
 from elasticdl.python.common.log_utils import default_logger as logger
 
+layers = tf.layers
+
 
 def get_dataset_gen(data_shard_service):
     def gen():
@@ -47,6 +49,58 @@ def create_dataset(data_shard_service):
     return dataset
 
 
+def conv_model(feature, target, mode):
+    """2-layer convolution model."""
+    # Convert the target to a one-hot tensor of shape (batch_size, 10) and
+    # with a on-value of 1 for each one-hot vector of length 10.
+    target = tf.one_hot(tf.cast(target, tf.int32), 10, 1, 0)
+
+    # Reshape feature to 4d tensor with 2nd and 3rd dimensions being
+    # image width and height final dimension being the number of color channels.
+    feature = tf.reshape(feature, [-1, 28, 28, 1])
+
+    # First conv layer will compute 32 features for each 5x5 patch
+    with tf.variable_scope("conv_layer1"):
+        h_conv1 = layers.conv2d(
+            feature,
+            32,
+            kernel_size=[5, 5],
+            activation=tf.nn.relu,
+            padding="SAME",
+        )
+        h_pool1 = tf.nn.max_pool(
+            h_conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME"
+        )
+
+    # Second conv layer will compute 64 features for each 5x5 patch.
+    with tf.variable_scope("conv_layer2"):
+        h_conv2 = layers.conv2d(
+            h_pool1,
+            64,
+            kernel_size=[5, 5],
+            activation=tf.nn.relu,
+            padding="SAME",
+        )
+        h_pool2 = tf.nn.max_pool(
+            h_conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME"
+        )
+        # reshape tensor into a batch of vectors
+        h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 64])
+
+    # Densely connected layer with 1024 neurons.
+    h_fc1 = layers.dropout(
+        layers.dense(h_pool2_flat, 1024, activation=tf.nn.relu),
+        rate=0.5,
+        training=mode == tf.estimator.ModeKeys.TRAIN,
+    )
+
+    # Compute logits (1 per class) and compute loss.
+    logits = layers.dense(h_fc1, 10, activation=None)
+    loss = tf.losses.softmax_cross_entropy(target, logits)
+
+    return tf.argmax(logits, 1), loss
+
+
 def train(args):
     allreduce_controller = create_elastic_controller(
         batch_size=args.batch_size,
@@ -60,22 +114,13 @@ def train(args):
     batch_x, batch_y = dataset_it.get_next()
     batch_x = tf.cast(batch_x, tf.float32)
 
-    x = tf.keras.layers.Reshape((28, 28, 1))(batch_x)
-    x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
-    x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu")(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
-    x = tf.keras.layers.Dropout(0.25)(x)
-    x = tf.keras.layers.Flatten()(x)
-    outputs = tf.keras.layers.Dense(10)(x)
-    loss = tf.reduce_mean(
-        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=outputs, labels=tf.reshape(batch_y, [-1])
-        )
-    )
+    batch_y = tf.reshape(batch_y, (-1,))
+    image = tf.reshape(batch_x, (-1, 784))
+    predict, loss = conv_model(image, batch_y, tf.estimator.ModeKeys.TRAIN)
     optimizer = tf.train.GradientDescentOptimizer(0.1)
-    optimizer = DistributedOptimizer(optimizer)
-    train_step = optimizer.minimize(loss)
+    optimizer = DistributedOptimizer(optimizer, fixed_global_batch_size=True)
+    global_step = tf.train.get_or_create_global_step()
+    train_step = optimizer.minimize(loss, global_step=global_step)
 
     # Use the elastic wrapper to wrap the function to train one batch
     elastic_train_one_batch = allreduce_controller.elastic_run(train_one_batch)
