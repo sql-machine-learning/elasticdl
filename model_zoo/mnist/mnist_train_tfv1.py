@@ -78,17 +78,21 @@ def train(args):
     optimizer = DistributedOptimizer(optimizer)
     train_step = optimizer.minimize(loss)
 
+    # Use the elastic wrapper to wrap the function to train one batch
+    elastic_train_one_batch = allreduce_controller.elastic_run(
+        train_one_batch
+    )
     with allreduce_controller.scope():
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-
-            # Use the elastic wrapper to wrap the function to train one batch
-            elastic_train_one_batch = allreduce_controller.elastic_run(
-                train_one_batch
-            )
-            for i in range(1000):
-                loss_value, _ = elastic_train_one_batch(sess, [loss, train_step])
-                logger.info("loss: {}".format(loss_value))
+            try:
+                while True:
+                    loss_value, _ = elastic_train_one_batch(
+                        sess, [loss, train_step]
+                    )
+                    logger.info("loss: {}".format(loss_value))
+            except tf.errors.OutOfRangeError:
+                print("end!")
 
 
 def train_one_batch(sess, run_tensors):
