@@ -321,7 +321,10 @@ class PodManager(object):
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
-        job_command = self._complement_job_command()
+        if self._ps_addrs and self._need_elasticdl_job_args:
+            # worker_args[1] is the execution command of the worker
+            self._worker_args[1] += " --ps_addrs {}".format(self._ps_addrs)
+        job_command = self._complement_job_command(self._worker_args)
         worker_args = [self._worker_args[0], job_command]
         envs = copy.deepcopy(self._envs)
         envs.append(V1EnvVar(name=WorkerEnv.WORKER_ID, value=str(worker_id)))
@@ -366,31 +369,25 @@ class PodManager(object):
 
             return True
 
-    def _complement_job_command(self):
-        # self._worker_args has 2 strings. The first string is "-c" and
+    def _complement_job_command(self, pod_args):
+        # pod_args has 2 strings. The first string is "-c" and
         # the second string is the shell command to run, like
-        # ["-c", "python -m elasticdl.python.worker.main --minibatch_size 64"]
-        job_command = self._worker_args[1]
-        if self._ps_addrs and self._need_elasticdl_job_args:
-            job_command += " --ps_addrs {}".format(self._ps_addrs)
+        # ["-c", "python -m main --minibatch_size 64"]
+        job_command = pod_args[1]
         if self._log_file_path:
             job_command = BashCommandTemplate.REDIRECTION.format(
                 job_command, self._log_file_path
             )
-        job_command += " ".join(self._worker_args[2:])
+        job_command += " ".join(pod_args[2:])
         job_command = BashCommandTemplate.SET_PIPEFAIL + job_command
         return job_command
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
-        bash_command = self._ps_args[1]
         if self._need_elasticdl_job_args:
-            bash_command += " --ps_id {}".format(ps_id)
-        if self._log_file_path:
-            bash_command = BashCommandTemplate.REDIRECTION.format(
-                bash_command, self._log_file_path
-            )
-        ps_args = [self._ps_args[0], bash_command]
+            self._ps_args[1] += " --ps_id {}".format(ps_id)
+        job_command = self._complement_job_command(self._ps_args)
+        ps_args = [self._ps_args[0],  job_command]
         while True:
             with self._lock:
                 pod = self._create_ps_pod(ps_id, ps_args)
