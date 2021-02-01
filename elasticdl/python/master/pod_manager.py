@@ -374,8 +374,8 @@ class PodManager(object):
         if self._ps_addrs and self._need_elasticdl_job_args:
             job_command += " --ps_addrs {}".format(self._ps_addrs)
         if self._log_file_path:
-            job_command += BashCommandTemplate.REDIRECTION.format(
-                self._log_file_path
+            job_command = BashCommandTemplate.REDIRECTION.format(
+                job_command, self._log_file_path
             )
         job_command += " ".join(self._worker_args[2:])
         job_command = BashCommandTemplate.SET_PIPEFAIL + job_command
