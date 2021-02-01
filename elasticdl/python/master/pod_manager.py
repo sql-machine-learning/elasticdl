@@ -387,7 +387,7 @@ class PodManager(object):
         if self._need_elasticdl_job_args:
             bash_command += " --ps_id {}".format(ps_id)
         if self._log_file_path:
-            bash_command += BashCommandTemplate.REDIRECTION.format(
+            bash_command = BashCommandTemplate.REDIRECTION.format(
                 bash_command, self._log_file_path
             )
         ps_args = [self._ps_args[0], bash_command]
