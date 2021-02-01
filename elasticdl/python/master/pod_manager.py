@@ -387,7 +387,7 @@ class PodManager(object):
         if self._need_elasticdl_job_args:
             self._ps_args[1] += " --ps_id {}".format(ps_id)
         job_command = self._complement_job_command(self._ps_args)
-        ps_args = [self._ps_args[0],  job_command]
+        ps_args = [self._ps_args[0], job_command]
         while True:
             with self._lock:
                 pod = self._create_ps_pod(ps_id, ps_args)
