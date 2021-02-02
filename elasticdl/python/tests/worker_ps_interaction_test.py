@@ -71,8 +71,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
             tf.keras.backend.clear_session()
             tf.random.set_seed(22)
             arguments = [
-                "--worker_id",
-                i,
                 "--job_type",
                 elasticai_api_pb2.TRAINING,
                 "--minibatch_size",
@@ -208,8 +206,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         images, labels = get_random_batch(self._batch_size)
         # TODO(yunjian.lmh): test optimizer wrapper
         arguments = [
-            "--worker_id",
-            0,
             "--job_type",
             elasticai_api_pb2.TRAINING,
             "--minibatch_size",
@@ -369,8 +365,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         for w in range(2):
             self._reset_pserver()
             arguments = [
-                "--worker_id",
-                0,
                 "--job_type",
                 elasticai_api_pb2.TRAINING,
                 "--minibatch_size",
