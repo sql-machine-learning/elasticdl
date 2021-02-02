@@ -13,9 +13,9 @@
 
 import os
 
-from elasticai_api.util.log_utils import default_logger as logger
 from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 from elasticai_api.util.grpc_utils import build_channel
+from elasticai_api.util.log_utils import default_logger as logger
 
 
 def build_master_client():
