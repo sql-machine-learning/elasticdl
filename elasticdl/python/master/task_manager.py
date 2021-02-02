@@ -13,6 +13,7 @@
 
 """TaskQueue Implementation"""
 
+import os
 import random
 import threading
 import time
@@ -229,17 +230,20 @@ class TaskManager(object):
         shuffle,
         shuffle_shards,
         num_minibatches_per_shard,
+        training_data=None,
     ):
         logger.info(
             "Set training parameters: "
             "batch_size={}, num_epochs={}, dataset_size={}, shuffle={}, "
-            "shuffle_shards={}, num_minibatches_per_shard={}".format(
+            "shuffle_shards={}, num_minibatches_per_shard={}, "
+            "training_data={}".format(
                 batch_size,
                 num_epochs,
                 dataset_size,
                 shuffle,
                 shuffle_shards,
                 num_minibatches_per_shard,
+                training_data,
             )
         )
 
@@ -270,9 +274,20 @@ class TaskManager(object):
             self._dataset_size = (
                 dataset_size if dataset_size > 0 else self._dataset_size
             )
-            self._training_shards = self._create_shards_by_dataset_size(
-                dataset_size
-            )
+            if (
+                not dataset_size
+                and training_data
+                and os.path.isdir(training_data)
+            ):
+                # The training_data is a directory only using RecordIO.
+                self._create_training_tasks(training_data, None)
+            elif dataset_size > 0:
+                self._training_shards = self._create_shards_by_dataset_size(
+                    dataset_size
+                )
+            else:
+                logger.warning("No data to create shards")
+
             if self._training_shards:
                 logger.info("Starting epoch %d", self._epoch)
                 self.create_tasks(elasticai_api_pb2.TRAINING)
