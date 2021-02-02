@@ -281,10 +281,12 @@ class TaskManager(object):
             ):
                 # The training_data is a directory only using RecordIO.
                 self._create_training_tasks(training_data, None)
-            else:
+            elif dataset_size > 0:
                 self._training_shards = self._create_shards_by_dataset_size(
                     dataset_size
                 )
+            else:
+                logger.warning("No data to create shards")
 
             if self._training_shards:
                 logger.info("Starting epoch %d", self._epoch)
