@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import argparse
 from contextlib import closing
 
@@ -20,8 +19,8 @@ import tensorflow as tf
 
 from elasticai_api.tensorflow.controller import create_elastic_controller
 from elasticai_api.tensorflow.optimizer import (
+    AdjustBackwardPassesPerStepHook,
     DistributedOptimizer,
-    AdjustBackwardPassesPerStepHook
 )
 from elasticdl.python.common.log_utils import default_logger as logger
 
@@ -60,7 +59,8 @@ def conv_model(feature, target, mode):
     target = tf.one_hot(tf.cast(target, tf.int32), 10, 1, 0)
 
     # Reshape feature to 4d tensor with 2nd and 3rd dimensions being
-    # image width and height final dimension being the number of color channels.
+    # image width and height final dimension being the number of color
+    # channels.
     feature = tf.reshape(feature, [-1, 28, 28, 1])
 
     # First conv layer will compute 32 features for each 5x5 patch
@@ -131,9 +131,7 @@ def train(args):
     hook = AdjustBackwardPassesPerStepHook(optimizer)
     allreduce_controller.set_broadcast_variables(tf.global_variables())
     with allreduce_controller.scope():
-        with tf.train.MonitoredTrainingSession(
-            hooks=[hook]
-        ) as sess:
+        with tf.train.MonitoredTrainingSession(hooks=[hook]) as sess:
             allreduce_controller.set_session(sess)
             try:
                 while True:

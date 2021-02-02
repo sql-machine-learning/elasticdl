@@ -12,8 +12,8 @@
 # limitations under the License.
 
 import time
-
 from distutils.version import LooseVersion
+
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
 
@@ -22,9 +22,9 @@ from elasticai_api.common.base_controller import (
     RETRY_ALLREDUCE_INTERVAL_SECS,
     AllReduceController,
 )
-from elasticai_api.util.log_utils import default_logger as logger
 from elasticai_api.common.data_shard_service import RecordIndexService
 from elasticai_api.common.master_client import build_master_client
+from elasticai_api.util.log_utils import default_logger as logger
 
 try:
     import horovod.tensorflow as hvd
