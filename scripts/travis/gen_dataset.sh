@@ -21,7 +21,3 @@ python elasticdl/python/data/recordio_gen/image_label.py --dataset mnist --fract
 # Generate frappe dataset
 python elasticdl/python/data/recordio_gen/frappe_recordio_gen.py --data /root/.keras/datasets \
     --output_dir "$DATA_PATH"/frappe --fraction 0.05
-
-# Generate heart dataset
-python elasticdl/python/data/recordio_gen/heart_recordio_gen.py --data_dir /root/.keras/datasets \
-    --output_dir "$DATA_PATH"/heart
