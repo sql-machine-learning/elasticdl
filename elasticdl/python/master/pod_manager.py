@@ -586,7 +586,10 @@ class PodManager(object):
                 ):
                     self._worker_info[pod_id].inc_relaunch_count()
                     should_relaunch = True
-        elif matched_pod_state_flow.to_status == PodStatus.DELETED:
+        elif (
+            matched_pod_state_flow.from_status != PodStatus.FAILED
+            and matched_pod_state_flow.to_status == PodStatus.DELETED
+        ):
             [
                 callback.on_pod_deleted(pod_info, cluster_context)
                 for callback in self._pod_event_callbacks
