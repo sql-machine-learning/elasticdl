@@ -330,10 +330,10 @@ class LocalGradientAggregationHelper:
             grads = get_not_none_from_list(grads)
             assert len(grads) == len(self.locally_aggregated_grads)
 
-            # Allreduce locally aggregated gradientswhen the counter equals
+            # Allreduce locally aggregated gradients when the counter equals
             # or exceeds backward_passes_per_step. The counter may exceed
             # backward_passes_per_step because of retries in the fault-tolerant
-            # allreduce. This the condition is true, it also resets the counter
+            # allreduce. When the condition is true, it also resets the counter
             # back to 0.
             allreduced_grads = tf.cond(
                 tf.math.less(
