@@ -331,14 +331,16 @@ class LocalGradientAggregationHelper:
             assert len(grads) == len(self.locally_aggregated_grads)
 
             # Allreduce locally aggregated gradients when the counter is
-            # equivalent to `backward_passes_per_step`. This the condition is
-            # true, it also resets the counter back to 0.
+            # not less than `backward_passes_per_step`. Because, the counter
+            # may be bigger than `backward_passes_per_step` in ElasticDL with
+            # retries. This the condition is true, it also resets the counter
+            # back to 0.
             allreduced_grads = tf.cond(
-                tf.equal(
+                tf.math.less(
                     self.counter, self.mutable_local_backward_passes_per_step
                 ),
-                lambda: self._allreduce_grads_helper(grads),
                 lambda: grads,
+                lambda: self._allreduce_grads_helper(grads),
             )
 
             # Handle case where there is only one variable.
