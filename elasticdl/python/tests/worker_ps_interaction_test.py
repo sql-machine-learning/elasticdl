@@ -156,8 +156,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         model_def = "mnist.mnist_functional_api.custom_model"
         self._create_pserver(model_def, 2)
         arguments = [
-            "--worker_id",
-            0,
             "--job_type",
             elasticai_api_pb2.TRAINING,
             "--minibatch_size",
