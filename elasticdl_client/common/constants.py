@@ -19,7 +19,7 @@ class DistributionStrategy(object):
 
 
 class BashCommandTemplate(object):
-    REDIRECTION = " 2>&1 | tee {}"
+    REDIRECTION = "({}) 2>&1 | tee {}"
     SET_PIPEFAIL = "set -o pipefail;"
 
 
