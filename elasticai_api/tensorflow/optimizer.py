@@ -330,15 +330,17 @@ class LocalGradientAggregationHelper:
             grads = get_not_none_from_list(grads)
             assert len(grads) == len(self.locally_aggregated_grads)
 
-            # Allreduce locally aggregated gradients when the counter is
-            # equivalent to `backward_passes_per_step`. This the condition is
-            # true, it also resets the counter back to 0.
+            # Allreduce locally aggregated gradients when the counter equals
+            # or exceeds backward_passes_per_step. The counter may exceed
+            # backward_passes_per_step because of retries in the fault-tolerant
+            # allreduce. When the condition is true, it also resets the counter
+            # back to 0.
             allreduced_grads = tf.cond(
-                tf.equal(
+                tf.math.less(
                     self.counter, self.mutable_local_backward_passes_per_step
                 ),
-                lambda: self._allreduce_grads_helper(grads),
                 lambda: grads,
+                lambda: self._allreduce_grads_helper(grads),
             )
 
             # Handle case where there is only one variable.
