@@ -134,13 +134,18 @@ class TensorFlowV1AllReduceController(AllReduceController):
             master_client, master_addr
         )
         self._bcast_op = None
+        self._session = None
+
+    def set_broadcast_variables(self, variables):
+        if self._bcast_op is None:
+            self._variables = variables
+            self._bcast_op = broadcast_variables(self._variables, root_rank=0)
+
+    def set_session(self, session):
+        self._session = session
 
     def broadcast(self):
-        if self._bcast_op is None:
-            self._variables = tf.global_variables()
-            self._bcast_op = broadcast_variables(self._variables, root_rank=0)
-        session = tf.get_default_session()
-        session.run(self._bcast_op)
+        self._session.run(self._bcast_op)
 
     def train_one_batch_with_retries(self, func, *args, **kwargs):
         allreduce_success = False

@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import argparse
 from contextlib import closing
 
@@ -18,7 +19,10 @@ import recordio
 import tensorflow as tf
 
 from elasticai_api.tensorflow.controller import create_elastic_controller
-from elasticai_api.tensorflow.optimizer import DistributedOptimizer
+from elasticai_api.tensorflow.optimizer import (
+    DistributedOptimizer,
+    AdjustBackwardPassesPerStepHook
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 
 layers = tf.layers
@@ -124,15 +128,21 @@ def train(args):
 
     # Use the elastic wrapper to wrap the function to train one batch
     elastic_train_one_batch = allreduce_controller.elastic_run(train_one_batch)
+    hook = AdjustBackwardPassesPerStepHook(optimizer)
+    allreduce_controller.set_broadcast_variables(tf.global_variables())
     with allreduce_controller.scope():
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
+        with tf.train.MonitoredTrainingSession(
+            hooks=[hook]
+        ) as sess:
+            allreduce_controller.set_session(sess)
             try:
                 while True:
-                    loss_value, _ = elastic_train_one_batch(
-                        sess, [loss, train_step]
+                    loss_value, step, _ = elastic_train_one_batch(
+                        sess, [loss, global_step, train_step]
                     )
-                    logger.info("loss: {}".format(loss_value))
+                    logger.info(
+                        "global step = {}. loss: {}".format(step, loss_value)
+                    )
             except tf.errors.OutOfRangeError:
                 print("end!")
 
