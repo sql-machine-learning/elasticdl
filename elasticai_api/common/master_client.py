@@ -15,7 +15,6 @@ import os
 
 from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 from elasticai_api.util.grpc_utils import build_channel
-from elasticai_api.util.log_utils import default_logger as logger
 
 
 def build_master_client():
@@ -106,7 +105,6 @@ class MasterClient:
         return self._stub.get_comm_rank(req)
 
     def report_training_loop_status(self, status):
-        logger.info("report status : {}".format(status))
         req = elasticai_api_pb2.ReportTrainingLoopStatusRequest()
         req.worker_host = self._worker_host
         req.status = status
