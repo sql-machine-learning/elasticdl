@@ -267,12 +267,17 @@ class TaskManager(object):
             self._num_epochs = (
                 num_epochs if num_epochs > 0 else self._num_epochs
             )
-            self._dataset_size = (
-                dataset_size if dataset_size > 0 else self._dataset_size
-            )
-            self._training_shards = self._create_shards_by_dataset_size(
-                dataset_size
-            )
+            if dataset_size > 0:
+                self._dataset_size = dataset_size
+                self._training_shards = self._create_shards_by_dataset_size(
+                    self._dataset_size
+                )
+            else:
+                logger.error(
+                    "No shard creating because dataset size {} <= 0".format(
+                        dataset_size
+                    )
+                )
 
             if self._training_shards:
                 logger.info("Starting epoch %d", self._epoch)
