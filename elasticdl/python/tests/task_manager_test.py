@@ -11,17 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tempfile
 import threading
 import time
 import unittest
 
 from elasticai_api.proto import elasticai_api_pb2
-from elasticdl.python.tests.test_utils import (
-    DatasetName,
-    create_recordio_file,
-    create_task_manager,
-)
+from elasticdl.python.tests.test_utils import create_task_manager
 
 
 class TaskManagerTest(unittest.TestCase):
@@ -180,20 +175,6 @@ class TaskManagerTest(unittest.TestCase):
             [("", 0, 3), ("", 3, 3), ("", 6, 3), ("", 9, 1)],
         )
         self.assertEqual(len(task_manager._todo), 4)
-
-        task_manager = create_task_manager([], [])
-        num_records = 128
-        with tempfile.TemporaryDirectory() as temp_dir_name:
-            shard_name = create_recordio_file(
-                num_records, DatasetName.TEST_MODULE, 1, temp_dir=temp_dir_name
-            )
-
-            task_manager.set_training_params(
-                1, 1, 0, False, False, 3, temp_dir_name
-            )
-            self.assertEqual(
-                task_manager._training_shards, [(shard_name, 0, num_records)]
-            )
 
 
 if __name__ == "__main__":

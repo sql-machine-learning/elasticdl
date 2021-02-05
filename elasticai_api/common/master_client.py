@@ -118,7 +118,6 @@ class MasterClient:
         shuffle=False,
         shuffle_shards=False,
         num_minibatches_per_shard=0,
-        training_data=None,
     ):
         request = elasticai_api_pb2.ReportTrainingParamsRequest()
         request.batch_size = batch_size
@@ -128,7 +127,5 @@ class MasterClient:
             request.num_epochs = num_epochs
         if dataset_size is not None:
             request.dataset_size = dataset_size
-        if training_data is not None:
-            request.training_data = training_data
         request.num_minibatches_per_shard = num_minibatches_per_shard
         return self._stub.report_training_params(request)
