@@ -11,56 +11,147 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import horovod.tensorflow as hvd
+import argparse
+from contextlib import closing
+
+import recordio
 import tensorflow as tf
 
-from elasticdl.python.common.constants import Mode
+from elasticai_api.tensorflow.controller import create_elastic_controller
+from elasticai_api.tensorflow.optimizer import (
+    AdjustBackwardPassesPerStepHook,
+    DistributedOptimizer,
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 
+layers = tf.layers
 
-def train(dataset, elastic_controller):
+
+def get_dataset_gen(data_shard_service):
+    def gen():
+        while True:
+            shard = data_shard_service.fetch_shard()
+            if not shard:
+                raise StopIteration("No data")
+            with closing(
+                recordio.Scanner(
+                    shard.name, shard.start, shard.end - shard.start,
+                )
+            ) as reader:
+                for i in range(shard.start, shard.end):
+                    record = reader.record()
+                    if record:
+                        yield record
+
+    return gen
+
+
+def create_dataset(data_shard_service):
+    gen = get_dataset_gen(data_shard_service)
+    dataset = tf.data.Dataset.from_generator(gen, tf.string)
+    return dataset
+
+
+def conv_model(feature, target, mode):
+    """2-layer convolution model."""
+    # Convert the target to a one-hot tensor of shape (batch_size, 10) and
+    # with a on-value of 1 for each one-hot vector of length 10.
+    target = tf.one_hot(tf.cast(target, tf.int32), 10, 1, 0)
+
+    # Reshape feature to 4d tensor with 2nd and 3rd dimensions being
+    # image width and height final dimension being the number of color
+    # channels.
+    feature = tf.reshape(feature, [-1, 28, 28, 1])
+
+    # First conv layer will compute 32 features for each 5x5 patch
+    with tf.variable_scope("conv_layer1"):
+        h_conv1 = layers.conv2d(
+            feature,
+            32,
+            kernel_size=[5, 5],
+            activation=tf.nn.relu,
+            padding="SAME",
+        )
+        h_pool1 = tf.nn.max_pool(
+            h_conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME"
+        )
+
+    # Second conv layer will compute 64 features for each 5x5 patch.
+    with tf.variable_scope("conv_layer2"):
+        h_conv2 = layers.conv2d(
+            h_pool1,
+            64,
+            kernel_size=[5, 5],
+            activation=tf.nn.relu,
+            padding="SAME",
+        )
+        h_pool2 = tf.nn.max_pool(
+            h_conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME"
+        )
+        # reshape tensor into a batch of vectors
+        h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 64])
+
+    # Densely connected layer with 1024 neurons.
+    h_fc1 = layers.dropout(
+        layers.dense(h_pool2_flat, 1024, activation=tf.nn.relu),
+        rate=0.5,
+        training=mode == tf.estimator.ModeKeys.TRAIN,
+    )
+
+    # Compute logits (1 per class) and compute loss.
+    logits = layers.dense(h_fc1, 10, activation=None)
+    loss = tf.losses.softmax_cross_entropy(target, logits)
+
+    return tf.argmax(logits, 1), loss
+
+
+def train(args):
+    allreduce_controller = create_elastic_controller(
+        batch_size=args.batch_size,
+        num_epochs=args.num_epochs,
+        training_data=args.training_data,
+    )
+    dataset = create_dataset(allreduce_controller.data_shard_service)
+    dataset = feed(dataset)
+    dataset = dataset.batch(args.batch_size).prefetch(1)
     dataset_it = dataset.make_one_shot_iterator()
     batch_x, batch_y = dataset_it.get_next()
     batch_x = tf.cast(batch_x, tf.float32)
 
-    x = tf.keras.layers.Reshape((28, 28, 1))(batch_x)
-    x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
-    x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu")(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
-    x = tf.keras.layers.Dropout(0.25)(x)
-    x = tf.keras.layers.Flatten()(x)
-    outputs = tf.keras.layers.Dense(10)(x)
-    loss = tf.reduce_mean(
-        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=outputs, labels=tf.reshape(batch_y, [-1])
-        )
-    )
+    batch_y = tf.reshape(batch_y, (-1,))
+    image = tf.reshape(batch_x, (-1, 784))
+    predict, loss = conv_model(image, batch_y, tf.estimator.ModeKeys.TRAIN)
     optimizer = tf.train.GradientDescentOptimizer(0.1)
-    optimizer = hvd.DistributedOptimizer(optimizer)
-    train_step = optimizer.minimize(loss)
+    optimizer = DistributedOptimizer(optimizer, fixed_global_batch_size=True)
+    global_step = tf.train.get_or_create_global_step()
+    train_step = optimizer.minimize(loss, global_step=global_step)
 
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-
-        # Use the elastic wrapper to wrap the function to train one batch
-        elastic_train_one_batch = elastic_controller.elastic_run(
-            train_one_batch
-        )
-        for i in range(1000):
-            loss_value, _ = elastic_train_one_batch(sess, [loss, train_step])
-            logger.info("loss: {}".format(loss_value))
+    # Use the elastic wrapper to wrap the function to train one batch
+    elastic_train_one_batch = allreduce_controller.elastic_run(train_one_batch)
+    hook = AdjustBackwardPassesPerStepHook(optimizer)
+    allreduce_controller.set_broadcast_variables(tf.global_variables())
+    with allreduce_controller.scope():
+        with tf.train.MonitoredTrainingSession(hooks=[hook]) as sess:
+            allreduce_controller.set_session(sess)
+            try:
+                while True:
+                    loss_value, step, _ = elastic_train_one_batch(
+                        sess, [loss, global_step, train_step]
+                    )
+                    logger.info(
+                        "global step = {}. loss: {}".format(step, loss_value)
+                    )
+            except tf.errors.OutOfRangeError:
+                print("end!")
 
 
 def train_one_batch(sess, run_tensors):
     return sess.run(run_tensors)
 
 
-def feed(dataset, mode, _):
+def feed(dataset):
     dataset = dataset.map(_parse_data)
-
-    if mode == Mode.TRAINING:
-        dataset = dataset.shuffle(buffer_size=1024)
+    dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 
 
@@ -83,3 +174,30 @@ def eval_metrics_fn():
             tf.cast(tf.reshape(labels, [-1]), tf.int32),
         )
     }
+
+
+def arg_parser():
+    parser = argparse.ArgumentParser(description="Process training parameters")
+    parser.add_argument("--batch_size", type=int, default=64, required=False)
+    parser.add_argument("--num_epochs", type=int, default=1, required=False)
+    parser.add_argument(
+        "--learning_rate", type=float, default=0.1, required=False
+    )
+    parser.add_argument(
+        "--no-cuda",
+        action="store_true",
+        default=False,
+        help="disable CUDA training",
+    )
+    parser.add_argument("--training_data", type=str, required=True)
+    parser.add_argument(
+        "--validation_data", type=str, default="", required=False
+    )
+    return parser
+
+
+if __name__ == "__main__":
+    parser = arg_parser()
+    args = parser.parse_args()
+    print(args)
+    train(args)

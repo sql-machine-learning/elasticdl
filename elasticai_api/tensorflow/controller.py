@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import time
+from distutils.version import LooseVersion
 
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
@@ -21,6 +22,8 @@ from elasticai_api.common.base_controller import (
     RETRY_ALLREDUCE_INTERVAL_SECS,
     AllReduceController,
 )
+from elasticai_api.common.data_shard_service import RecordIndexService
+from elasticai_api.common.master_client import build_master_client
 from elasticai_api.util.log_utils import default_logger as logger
 
 try:
@@ -29,6 +32,50 @@ try:
 
 except ImportError:
     hvd = None
+
+_IS_TF2 = LooseVersion(tf.__version__) >= LooseVersion("2.0.0")
+
+
+def create_elastic_controller(
+    batch_size,
+    num_epochs=None,
+    dataset_size=None,
+    shuffle=False,
+    training_data=None,
+):
+    """Create an elastic AllReduce controller with data shard service.
+    Users can use the `controller.data_shard_service` to get data
+    shards like:
+    ```python
+    shard = controller.data_shard_service.fetch_shard()
+    ```
+
+    Users also can use the controller to do an elastic training.
+
+    Args:
+        batch_size: The batch size of a single worker.
+        num_epochs: The number of epochs.
+        dataset_size: The total size of dataset.
+    """
+    master_client = build_master_client()
+    record_index_service = RecordIndexService(
+        master_client=master_client,
+        batch_size=batch_size,
+        num_epochs=num_epochs,
+        dataset_size=dataset_size,
+        shuffle=shuffle,
+        training_data=training_data,
+    )
+    if _IS_TF2:
+        controller = TensorFlowV2AllReduceController(
+            master_client, record_index_service
+        )
+    else:
+        controller = TensorFlowV1AllReduceController(
+            master_client, record_index_service
+        )
+    controller.init_horovod_locally()
+    return controller
 
 
 class TensorFlowV2AllReduceController(AllReduceController):
@@ -87,13 +134,18 @@ class TensorFlowV1AllReduceController(AllReduceController):
             master_client, master_addr
         )
         self._bcast_op = None
+        self._session = None
+
+    def set_broadcast_variables(self, variables):
+        if self._bcast_op is None:
+            self._variables = variables
+            self._bcast_op = broadcast_variables(self._variables, root_rank=0)
+
+    def set_session(self, session):
+        self._session = session
 
     def broadcast(self):
-        if self._bcast_op is None:
-            self._variables = tf.global_variables()
-            self._bcast_op = broadcast_variables(self._variables, root_rank=0)
-        session = tf.get_default_session()
-        session.run(self._bcast_op)
+        self._session.run(self._bcast_op)
 
     def train_one_batch_with_retries(self, func, *args, **kwargs):
         allreduce_success = False
