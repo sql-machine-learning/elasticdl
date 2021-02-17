@@ -60,7 +60,6 @@ message ReportTrainingParamsRequest {
   bool shuffle = 4;
   bool shuffle_shards = 5;
   int32 num_minibatches_per_shard = 6;
-  string training_data = 7;
 }
 
 message GetTaskRequest {
