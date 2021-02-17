@@ -37,11 +37,7 @@ _IS_TF2 = LooseVersion(tf.__version__) >= LooseVersion("2.0.0")
 
 
 def create_elastic_controller(
-    batch_size,
-    num_epochs=None,
-    dataset_size=None,
-    shuffle=False,
-    training_data=None,
+    batch_size, num_epochs=None, dataset_size=None, shuffle=False,
 ):
     """Create an elastic AllReduce controller with data shard service.
     Users can use the `controller.data_shard_service` to get data
@@ -64,7 +60,6 @@ def create_elastic_controller(
         num_epochs=num_epochs,
         dataset_size=dataset_size,
         shuffle=shuffle,
-        training_data=training_data,
     )
     if _IS_TF2:
         controller = TensorFlowV2AllReduceController(
