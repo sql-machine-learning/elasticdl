@@ -452,10 +452,10 @@ class TaskManager(object):
             if not self._todo and not self._should_stop:
                 # Start a new epoch
                 self._epoch += 1
-                # num_epochs < 0 indicates that the master will create data
+                # num_epochs <= 0 indicates that the master will create data
                 # shards infinitely. So, the worker can use the dataset like
                 # `dataset.repeat()`.
-                if (self._num_epochs < 0 or self._epoch < self._num_epochs):
+                if self._num_epochs <= 0 or self._epoch < self._num_epochs:
                     logger.info("Starting epoch %d", self._epoch)
                     self.create_tasks(elasticai_api_pb2.TRAINING)
 
