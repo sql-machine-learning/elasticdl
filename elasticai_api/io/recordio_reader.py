@@ -45,6 +45,11 @@ class RecordIOReader(object):
                         break
 
     def _get_record_file(self, start, end):
+        """The block ranges in data_blocks are sorted in
+        increasing order. For example,
+        blocks are [[0,100),[100, 200),[200,300)]. So we
+        can find which block the shard is in by sequential search.
+        """
         target_files = []
         for block in self._data_blocks:
             if start < block.end:
