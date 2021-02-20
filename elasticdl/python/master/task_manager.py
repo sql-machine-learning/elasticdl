@@ -264,9 +264,7 @@ class TaskManager(object):
             self._records_per_task = (
                 batch_size * self._num_minibatches_per_task
             )
-            self._num_epochs = (
-                num_epochs if num_epochs > 0 else self._num_epochs
-            )
+            self._num_epochs = num_epochs
             if dataset_size > 0:
                 self._dataset_size = dataset_size
                 self._training_shards = self._create_shards_by_dataset_size(
@@ -451,15 +449,15 @@ class TaskManager(object):
         """Return next (task_id, Task) tuple"""
 
         with self._lock:
-            if (
-                not self._todo
-                and not self._should_stop
-                and self._epoch < self._num_epochs - 1
-            ):
+            if not self._todo and not self._should_stop:
                 # Start a new epoch
                 self._epoch += 1
-                logger.info("Starting epoch %d", self._epoch)
-                self.create_tasks(elasticai_api_pb2.TRAINING)
+                # num_epochs < 0 indicates that the master will create data
+                # shards infinitely. So, the worker can use the dataset like
+                # `dataset.repeat()`.
+                if (self._num_epochs < 0 or self._epoch < self._num_epochs):
+                    logger.info("Starting epoch %d", self._epoch)
+                    self.create_tasks(elasticai_api_pb2.TRAINING)
 
             if not self._todo:
                 # No more tasks
