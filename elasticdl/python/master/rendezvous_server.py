@@ -145,7 +145,8 @@ the start message|                                  a rank |
                     self._next_rendezvous_hosts = copy.deepcopy(
                         self._cur_rendezvous_hosts
                     )
-                self._next_rendezvous_hosts.append(worker_host)
+                if worker_host not in self._next_rendezvous_hosts:
+                    self._next_rendezvous_hosts.append(worker_host)
 
     def remove_worker(self, worker_host):
         with self._lock:
