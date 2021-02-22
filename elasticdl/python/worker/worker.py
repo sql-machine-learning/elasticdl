@@ -25,7 +25,6 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_model_spec,
-    get_training_func_spec,
     set_callback_parameters,
 )
 from elasticdl.python.common.timing_utils import Timing
