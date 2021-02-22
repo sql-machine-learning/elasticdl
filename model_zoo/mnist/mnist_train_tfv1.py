@@ -12,11 +12,11 @@
 # limitations under the License.
 
 import argparse
-from contextlib import closing
+import os
 
-import recordio
 import tensorflow as tf
 
+from elasticai_api.io.recordio_reader import RecordIOReader
 from elasticai_api.tensorflow.controller import create_elastic_controller
 from elasticai_api.tensorflow.optimizer import (
     AdjustBackwardPassesPerStepHook,
@@ -27,29 +27,33 @@ from elasticdl.python.common.log_utils import default_logger as logger
 layers = tf.layers
 
 
-def get_dataset_gen(data_shard_service):
+def get_dataset_gen(data_shard_service, data_reader):
     def gen():
         while True:
             shard = data_shard_service.fetch_shard()
             if not shard:
                 raise StopIteration("No data")
-            with closing(
-                recordio.Scanner(
-                    shard.name, shard.start, shard.end - shard.start,
-                )
-            ) as reader:
-                for i in range(shard.start, shard.end):
-                    record = reader.record()
-                    if record:
-                        yield record
+            count = 0
+            for record in data_reader.read_records(shard.start, shard.end):
+                count += 1
+                yield record
 
     return gen
 
 
-def create_dataset(data_shard_service):
-    gen = get_dataset_gen(data_shard_service)
+def create_dataset(data_shard_service, training_data_dir):
+    data_files = _get_data_files(training_data_dir)
+    data_reader = RecordIOReader(data_files)
+    gen = get_dataset_gen(data_shard_service, data_reader)
     dataset = tf.data.Dataset.from_generator(gen, tf.string)
     return dataset
+
+
+def _get_data_files(data_dir):
+    data_files = []
+    for filename in os.listdir(data_dir):
+        data_files.append(os.path.join(data_dir, filename))
+    return data_files
 
 
 def conv_model(feature, target, mode):
@@ -109,9 +113,11 @@ def train(args):
     allreduce_controller = create_elastic_controller(
         batch_size=args.batch_size,
         num_epochs=args.num_epochs,
-        training_data=args.training_data,
+        dataset_size=50000,
     )
-    dataset = create_dataset(allreduce_controller.data_shard_service)
+    dataset = create_dataset(
+        allreduce_controller.data_shard_service, args.training_data
+    )
     dataset = feed(dataset)
     dataset = dataset.batch(args.batch_size).prefetch(1)
     dataset_it = dataset.make_one_shot_iterator()
