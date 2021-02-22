@@ -63,6 +63,8 @@ class RendevousManager(object):
                 time.sleep(RETRY_ALLREDUCE_INTERVAL_SECS)
             else:
                 break
+        if rank_response.rank_id < 0:
+            raise ValueError("Cannot get an invalid rank")
 
         # If the rendezvous from master is unequal to self._rendezvous_id,
         # the worker should rebuild the communication because the master
