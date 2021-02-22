@@ -141,6 +141,10 @@ the start message|                                  a rank |
                 )
             )
             if worker_host:
+                # Master will not add any worker if the current rendezvous
+                # hosts become empty after starting training.
+                if self._rendezvous_id > 0 and not self._cur_rendezvous_hosts:
+                    return
                 if self._next_rendezvous_hosts is None:
                     self._next_rendezvous_hosts = copy.deepcopy(
                         self._cur_rendezvous_hosts
