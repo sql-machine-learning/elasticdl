@@ -64,7 +64,7 @@ class RendevousManager(object):
             else:
                 break
         if rank_response.rank_id < 0:
-            raise ValueError("Cannot get an invalid rank")
+            raise ValueError("Invalid rank {}".format(rank_response.rank_id))
 
         # If the rendezvous from master is unequal to self._rendezvous_id,
         # the worker should rebuild the communication because the master
