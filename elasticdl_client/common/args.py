@@ -142,13 +142,6 @@ def add_train_params(parser):
     )
     add_bool_param(
         parser=parser,
-        name="--custom_training_loop",
-        default=False,
-        help="If true, users need to define training loop by themselves. "
-        "Otherwise, users should define a Keras model",
-    )
-    add_bool_param(
-        parser=parser,
         name="--need_elasticdl_job_service",
         default=False,
         help="If true, users use ElasticDL worker framework. "

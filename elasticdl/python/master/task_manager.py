@@ -155,8 +155,7 @@ class TaskManager(object):
             args.validation_data, args.data_reader_params
         )
         self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
-        if not args.custom_training_loop:
-            self._add_deferred_callback_create_train_end_task()
+        self._add_deferred_callback_create_train_end_task()
 
         self._max_task_completed_times = {
             elasticai_api_pb2.EVALUATION: 0,

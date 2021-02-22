@@ -33,7 +33,6 @@ elasticdl train \
   --job_name=test-mnist-allreduce \
   --image_pull_policy=Never \
   --volume="host_path=${data_store_dir},mount_path=/local_data" \
-  --custom_training_loop=true \
   --distribution_strategy=AllreduceStrategy \
 """
 

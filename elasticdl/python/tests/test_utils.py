@@ -107,7 +107,6 @@ class TaskManagerArgs(object):
         model_def="",
         custom_data_reader="custom_data_reader",
         checkpoint_dir_for_init="",
-        custom_training_loop=False,
         task_fault_tolerance=True,
         relaunch_timeout_worker=True,
     ):
@@ -122,7 +121,6 @@ class TaskManagerArgs(object):
         self.model_def = model_def
         self.custom_data_reader = custom_data_reader
         self.checkpoint_dir_for_init = checkpoint_dir_for_init
-        self.custom_training_loop = custom_training_loop
         self.task_fault_tolerance = task_fault_tolerance
         self.relaunch_timeout_worker = relaunch_timeout_worker
 

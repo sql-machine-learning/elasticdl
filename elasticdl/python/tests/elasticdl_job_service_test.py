@@ -62,7 +62,6 @@ class ElasticdlJobServiceTest(unittest.TestCase):
                 temp_dir=temp_dir_name,
             )
             self.arguments["training_data"] = temp_dir_name
-            self.arguments["custom_training_loop"] = "true"
             args = self._get_args()
             args = parse_master_args(args)
             master = ElasticdlJobService(args, TaskManager(args))
@@ -72,7 +71,6 @@ class ElasticdlJobServiceTest(unittest.TestCase):
         self.arguments[
             "distribution_strategy"
         ] = DistributionStrategy.ALLREDUCE
-        self.arguments["custom_training_loop"] = "true"
         self.arguments["model_def"] = "mnist.mnist_train_tfv2.train"
         with tempfile.TemporaryDirectory() as temp_dir_name:
             create_recordio_file(

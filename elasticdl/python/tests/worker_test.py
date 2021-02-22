@@ -49,8 +49,6 @@ class WorkerTest(unittest.TestCase):
             "mnist.mnist_train_tfv2.train",
             "--distribution_strategy",
             DistributionStrategy.ALLREDUCE,
-            "--custom_training_loop",
-            "true",
         ]
         worker = self._create_worker(arguments)
         self.assertIsNotNone(worker._feed)
