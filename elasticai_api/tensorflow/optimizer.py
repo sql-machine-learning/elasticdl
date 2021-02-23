@@ -17,7 +17,7 @@ import horovod.tensorflow as hvd
 import tensorflow as tf
 from horovod.tensorflow import _LegacyOptimizer
 
-optimizer_instances = []
+optimizer_instances: list = []
 
 
 def complement_value_from_env_if_none(
