@@ -661,7 +661,7 @@ def DistributedOptimizer(
             num_groups=num_groups,
             global_batch_count_per_step=global_batch_count_per_step,
         )
-        global optimizer_instance
+        global optimizer_instances
         optimizer_instances.append(opt)
         return opt
     elif isinstance(optimizer, tf.keras.optimizers.Optimizer):
