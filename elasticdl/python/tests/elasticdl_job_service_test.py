@@ -71,7 +71,7 @@ class ElasticdlJobServiceTest(unittest.TestCase):
         self.arguments[
             "distribution_strategy"
         ] = DistributionStrategy.ALLREDUCE
-        self.arguments["model_def"] = "mnist.mnist_train_tfv2.train"
+        self.arguments["model_def"] = "mnist.mnist_functional_api.custom_model"
         with tempfile.TemporaryDirectory() as temp_dir_name:
             create_recordio_file(
                 self._num_records,

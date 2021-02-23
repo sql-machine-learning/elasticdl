@@ -35,27 +35,6 @@ class WorkerTest(unittest.TestCase):
         args = parse_worker_args(arguments)
         return Worker(args)
 
-    def test_init_training_func_from_args(self):
-        arguments = [
-            "--worker_id",
-            "0",
-            "--job_type",
-            elasticai_api_pb2.TRAINING,
-            "--minibatch_size",
-            self._batch_size,
-            "--model_zoo",
-            self._model_zoo_path,
-            "--model_def",
-            "mnist.mnist_train_tfv2.train",
-            "--distribution_strategy",
-            DistributionStrategy.ALLREDUCE,
-        ]
-        worker = self._create_worker(arguments)
-        self.assertIsNotNone(worker._feed)
-        self.assertIsNotNone(worker._training_func)
-        self.assertEqual(worker._minibatch_size, 16)
-        self.assertIsNotNone(worker._task_data_service)
-
 
 if __name__ == "__main__":
     unittest.main()
