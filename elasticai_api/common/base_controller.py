@@ -108,7 +108,7 @@ class RendevousManager(object):
 
 class AllReduceController(object):
     """The controller initializes Horovod and calls the function with forward
-    and backward computation using a mini-batch of data. If Horovod raise an
+    and backward computation using a mini-batch of data. If Horovod raises an
     exception about AllReduce, Allgather and Broadcast, the controller will
     catch the exception and re-initialize Horovod. Then, it will broadcast
     the variables and retry to call those functions.
