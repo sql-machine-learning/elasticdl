@@ -17,6 +17,8 @@ import horovod.tensorflow as hvd
 import tensorflow as tf
 from horovod.tensorflow import _LegacyOptimizer
 
+optimizer_instances = []
+
 
 def complement_value_from_env_if_none(
     original_value, key, clz, default_value=None
@@ -25,6 +27,14 @@ def complement_value_from_env_if_none(
         return original_value
 
     return clz(os.environ.get(key, default_value))
+
+
+def get_adjust_backward_passes_hooks():
+    hooks = []
+    global optimizer_instances
+    for opt in optimizer_instances:
+        hooks.append(AdjustBackwardPassesPerStepHook(opt))
+    return hooks
 
 
 class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
@@ -636,7 +646,7 @@ def DistributedOptimizer(
             hvd_max_size, "WORKER_NUM", int, 1
         )
         global_batch_count_per_step = hvd_max_size * backward_passes_per_step
-        return _DistributedOptimizer(
+        opt = _DistributedOptimizer(
             optimizer=optimizer,
             name=name,
             use_locking=use_locking,
@@ -651,6 +661,9 @@ def DistributedOptimizer(
             num_groups=num_groups,
             global_batch_count_per_step=global_batch_count_per_step,
         )
+        global optimizer_instance
+        optimizer_instances.append(opt)
+        return opt
     elif isinstance(optimizer, tf.keras.optimizers.Optimizer):
         raise ValueError(
             "fixed_global_batch_size == True is not supported yet with Keras"
