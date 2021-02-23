@@ -75,19 +75,22 @@ class RendevousManager(object):
                     rank_response.rank_id, rank_response.world_size
                 )
             )
-            os.environ[HorovodEnv.RENDEZVOUS_PORT] = str(
-                rank_response.rendezvous_port
-            )
-            os.environ[HorovodEnv.RANK] = str(rank_response.rank_id)
-            os.environ[HorovodEnv.SIZE] = str(rank_response.world_size)
-            # Not using Horovod elastic feature in init, but need it for
-            # allreduce to call allreduce op when size=1.
-            os.environ[HorovodEnv.ELASTIC] = str(0)
-            hvd.shutdown()
-            hvd.init()
-            os.environ[HorovodEnv.ELASTIC] = str(1)
-            self._rendezvous_id = rank_response.rendezvous_id
-            self.need_broadcast = True
+            self._restart_hvd(rank_response)
+
+    def _restart_hvd(self, rank_response):
+        os.environ[HorovodEnv.RENDEZVOUS_PORT] = str(
+            rank_response.rendezvous_port
+        )
+        os.environ[HorovodEnv.RANK] = str(rank_response.rank_id)
+        os.environ[HorovodEnv.SIZE] = str(rank_response.world_size)
+        # Not using Horovod elastic feature in init, but need it for
+        # allreduce to call allreduce op when size=1.
+        os.environ[HorovodEnv.ELASTIC] = str(0)
+        hvd.shutdown()
+        hvd.init()
+        os.environ[HorovodEnv.ELASTIC] = str(1)
+        self._rendezvous_id = rank_response.rendezvous_id
+        self.need_broadcast = True
 
     def _set_horovod_env(self):
         master_addr_port = os.getenv(WorkerEnv.MASTER_ADDR, None)
