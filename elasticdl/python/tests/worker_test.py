@@ -16,10 +16,8 @@ import unittest
 
 import tensorflow as tf
 
-from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.worker.worker import Worker
-from elasticdl_client.common.constants import DistributionStrategy
 
 
 class WorkerTest(unittest.TestCase):
