@@ -31,7 +31,6 @@ def complement_value_from_env_if_none(
 
 def get_adjust_backward_passes_hooks():
     hooks = []
-    global optimizer_instances
     for opt in optimizer_instances:
         hooks.append(AdjustBackwardPassesPerStepHook(opt))
     return hooks
@@ -661,7 +660,6 @@ def DistributedOptimizer(
             num_groups=num_groups,
             global_batch_count_per_step=global_batch_count_per_step,
         )
-        global optimizer_instances
         optimizer_instances.append(opt)
         return opt
     elif isinstance(optimizer, tf.keras.optimizers.Optimizer):
