@@ -22,7 +22,6 @@ from elasticdl.python.common.model_utils import (
     get_model_spec,
     get_module_file_path,
     get_optimizer_info,
-    get_training_func_spec,
 )
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -75,20 +74,6 @@ class ModelHelperTest(unittest.TestCase):
             custom_data_reader="custom_data_reader",
             callbacks="callbacks",
         )
-
-    def test_training_func_spec(self):
-        model_zoo_path = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
-        )
-        (train_spec, feed, data_reader,) = get_training_func_spec(
-            model_zoo=model_zoo_path,
-            model_def="mnist.mnist_train_tfv2.train",
-            feed="feed",
-            custom_data_reader="custom_data_reader",
-        )
-        self.assertIsNotNone(train_spec)
-        self.assertIsNotNone(feed)
-        self.assertIsNone(data_reader)
 
     def test_get_module_file_path(self):
         self.assertEqual(

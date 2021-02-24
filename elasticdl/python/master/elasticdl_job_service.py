@@ -71,11 +71,7 @@ class ElasticdlJobService(object):
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
 
-        self._optimizer = (
-            None
-            if args.custom_training_loop
-            else model_module[args.optimizer]()
-        )
+        self._optimizer = model_module[args.optimizer]()
 
         # TODO: Remove task manage and rendezvous server after
         # refactoring pod manager.

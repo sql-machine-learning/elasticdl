@@ -15,7 +15,7 @@
 Download the mnist dataset from
 https://s3.amazonaws.com/fast-ai-imageclas/mnist_png.tgz
 and then untar it into ${data_store_dir}. Using minikube, we can use the
-following command to submit a training job with the script.
+following command to submit a training job with these codes.
 
 elasticdl train \
   --image_name=elasticdl:pt_mnist_allreduce  \
@@ -33,7 +33,6 @@ elasticdl train \
   --job_name=test-mnist-allreduce \
   --image_pull_policy=Never \
   --volume="host_path=${data_store_dir},mount_path=/local_data" \
-  --custom_training_loop=true \
   --distribution_strategy=AllreduceStrategy \
 """
 

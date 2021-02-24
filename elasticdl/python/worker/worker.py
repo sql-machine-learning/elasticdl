@@ -25,7 +25,6 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_model_spec,
-    get_training_func_spec,
     set_callback_parameters,
 )
 from elasticdl.python.common.timing_utils import Timing
@@ -84,21 +83,16 @@ class Worker(object):
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
         self._log_loss_count = 0
         self._var_created = False
-        self._custom_training_loop = args.custom_training_loop
         self._job_type = args.job_type
         self._minibatch_size = args.minibatch_size
         self._data_shard_service = DataShardService(
             self._mc, self._minibatch_size
         )
-        if self._custom_training_loop:
-            self._init_training_func_from_args(args)
-        else:
-            self._init_model_from_args(args)
+        self._init_model_from_args(args)
         self._init_task_data_service(args)
         self._init_default_feed_if_needed()
-        if not self._custom_training_loop:
-            self._init_callbacks(args)
-            self._init_trainer(args)
+        self._init_callbacks(args)
+        self._init_trainer(args)
 
     def _init_model_from_args(self, args):
         """
@@ -171,19 +165,6 @@ class Worker(object):
             self._trainer = ParameterServerTrainer(
                 self._model_inst, self._ps_client, self._timing, args
             )
-
-    def _init_training_func_from_args(self, args):
-        self._job_type = args.job_type
-        (
-            self._training_func,
-            self._feed,
-            self._custom_data_reader,
-        ) = get_training_func_spec(
-            model_zoo=args.model_zoo,
-            model_def=args.model_def,
-            feed=args.feed,
-            custom_data_reader=args.custom_data_reader,
-        )
 
     def _init_default_feed_if_needed(self):
         if self._feed is None:
@@ -465,48 +446,4 @@ class Worker(object):
         elif self._job_type == JobType.EVALUATION_ONLY:
             self._evaluate_only()
         else:
-            if self._custom_training_loop:
-                self._elastic_allreduce_train()
-            else:
-                self._train_and_evaluate()
-
-    def _elastic_allreduce_train(self):
-        """
-        Train and evaluate the model on the worker
-        """
-        if os.getenv("USE_TORCH", None):
-            from elasticai_api.pytorch.controller import (
-                PyTorchAllReduceController,
-            )
-
-            elastic_controller = PyTorchAllReduceController(
-                self._mc, self._data_shard_service
-            )
-        elif _IS_TF2:
-            from elasticai_api.tensorflow.controller import (
-                TensorFlowV2AllReduceController,
-            )
-
-            elastic_controller = TensorFlowV2AllReduceController(
-                self._mc, self._data_shard_service
-            )
-        else:
-            from elasticai_api.tensorflow.controller import (
-                TensorFlowV1AllReduceController,
-            )
-
-            elastic_controller = TensorFlowV1AllReduceController(
-                self._mc, self._master_addr
-            )
-        # Initialize Horovod locally to generate varibles of the model
-        # and optimizer.
-        elastic_controller.init_horovod_locally()
-        dataset = self._task_data_service.get_dataset()
-        dataset = self._feed(
-            dataset,
-            Mode.TRAINING,
-            self._task_data_service.data_reader.metadata,
-        )
-        dataset = dataset.batch(self._minibatch_size).prefetch(1)
-        self._training_func(dataset, elastic_controller)
-        del dataset
+            self._train_and_evaluate()

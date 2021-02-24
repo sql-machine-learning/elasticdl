@@ -191,40 +191,6 @@ def get_model_spec(
     )
 
 
-def get_training_func_spec(
-    model_zoo, model_def, feed, custom_data_reader,
-):
-    """Get the model spec items in a tuple.
-
-    Args:
-        model_zoo: String, the folder name of model files.
-        model_def: The import path to the model definition function/class in
-        the "model zoo".
-        feed: the function name in the model definition file to convert the
-        input data.
-        custom_data_reader: the function name in the model definition file
-        to read data from the storage.
-
-    The model spec tuple contains the following items in order:
-
-    * The `training_func` of training loop.
-    * The `feed`,
-    * The `custom_data_reader`
-    """
-    model_def_module_file = get_module_file_path(model_zoo, model_def)
-    default_module = load_module(model_def_module_file).__dict__
-    training_func_name = model_def.split(".")[-1]
-    training_func = _get_spec_value(
-        training_func_name, model_zoo, default_module, required=True
-    )
-
-    return (
-        training_func,
-        _get_spec_value(feed, model_zoo, default_module, required=False),
-        _get_spec_value(custom_data_reader, model_zoo, default_module),
-    )
-
-
 def find_layer(model, layer_class):
     """
     Find all layers in model that are instances of layer_class
