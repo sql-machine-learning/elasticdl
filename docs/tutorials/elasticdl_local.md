@@ -165,6 +165,7 @@ elasticdl train \
   --job_name=test-mnist \
   --image_pull_policy=Never \
   --volume="host_path=/data,mount_path=/data" \
+  --need_elasticdl_job_service=true \
   --distribution_strategy=ParameterServerStrategy
 ```
 
@@ -236,6 +237,7 @@ elasticdl train \
   --job_name=test-mnist-allreduce \
   --image_pull_policy=Never \
   --volume="host_path=/data,mount_path=/data" \
+  --need_elasticdl_job_service=true \
   --distribution_strategy=AllreduceStrategy
 ```
 
