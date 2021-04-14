@@ -28,7 +28,7 @@ elasticdl train \
   --master_resource_limit="cpu=1,memory=2048Mi" \
   --worker_resource_request="cpu=0.3,memory=1024Mi" \
   --worker_resource_limit="cpu=1,memory=2048Mi" \
-  --envs="HOROVOD_GLOO_TIMEOUT_SECONDS=60,PYTHONUNBUFFERED=0,HOROVOD_ELASTIC=1" \
+  --envs="PYTHONUNBUFFERED=0,HOROVOD_ELASTIC=1" \
   --job_name=test-mnist-allreduce \
   --image_pull_policy=Never \
   --volume="host_path=${data_store_dir},mount_path=/local_data" \
@@ -37,9 +37,9 @@ elasticdl train \
 
 import argparse
 import os
+
 import cv2
 import numpy as np
-
 import tensorflow as tf
 
 from elasticai_api.tensorflow.controller import create_elastic_controller
@@ -77,6 +77,7 @@ def get_dataset_gen(data_shard_service, samples):
             image = cv2.imread(image_path)
             image = np.array(image / 255.0, np.float32)
             yield image, np.array([label])
+
     return gen
 
 
