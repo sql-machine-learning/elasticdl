@@ -70,6 +70,8 @@ def get_samples_from_folder(folder_dir):
 def get_dataset_gen(data_shard_service, samples):
     def gen():
         while True:
+            # The data shard service will fetch the index of sample
+            # from the master of ElasticDL job.
             index = data_shard_service.fetch_record_index()
             if not index:
                 raise StopIteration("No data")
@@ -148,6 +150,9 @@ def train(args):
         dataset_size=len(training_samples),
         shuffle=True,
     )
+
+    # Create the dataset with the elastic allreduce controller
+    # which will fetch data shards from the master of ElasticDL job.
     dataset = create_dataset(
         allreduce_controller.data_shard_service, training_samples
     )
@@ -159,6 +164,8 @@ def train(args):
     batch_y = tf.reshape(batch_y, (-1,))
     predict, loss = conv_model(batch_x, batch_y, tf.estimator.ModeKeys.TRAIN)
     optimizer = tf.train.GradientDescentOptimizer(0.1)
+
+    # Wrap the optimizer.
     optimizer = DistributedOptimizer(optimizer, fixed_global_batch_size=True)
     global_step = tf.train.get_or_create_global_step()
     train_step = optimizer.minimize(loss, global_step=global_step)
