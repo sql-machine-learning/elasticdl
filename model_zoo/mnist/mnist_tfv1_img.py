@@ -61,7 +61,7 @@ def get_samples_from_folder(folder_dir):
             continue
         for img_file in os.listdir(category_dir):
             img_dir = os.path.join(category_dir, img_file)
-            if os.path.isfile(img_dir) and img_dir.endswith("png"):
+            if os.path.isfile(img_dir) and img_dir.endswith("jpg"):
                 samples.append((img_dir, category_index))
         category_index += 1
     return samples
@@ -197,19 +197,7 @@ def arg_parser():
     parser = argparse.ArgumentParser(description="Process training parameters")
     parser.add_argument("--batch_size", type=int, default=64, required=False)
     parser.add_argument("--num_epochs", type=int, default=1, required=False)
-    parser.add_argument(
-        "--learning_rate", type=float, default=0.1, required=False
-    )
-    parser.add_argument(
-        "--no-cuda",
-        action="store_true",
-        default=False,
-        help="disable CUDA training",
-    )
     parser.add_argument("--training_data", type=str, required=True)
-    parser.add_argument(
-        "--validation_data", type=str, default="", required=False
-    )
     return parser
 
 
