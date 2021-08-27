@@ -16,7 +16,7 @@ import time
 from kubernetes import client
 
 from elasticdl.python.common.constants import PodStatus
-from elasticdl.python.common.k8s_client import Client
+from elasticdl.python.common.k8s_client import Client, PodType
 from elasticdl.python.common.log_utils import default_logger as logger
 
 MAX_READ_POD_RETRIES = 6
@@ -122,8 +122,8 @@ class EdlJobMonitor:
 
     def check_worker_status(self):
         for i in range(self.worker_num):
-            worker_pod = self.client.get_worker_pod(i)
-            worker_pod_name = self.client.get_worker_pod_name(i)
+            worker_pod = self.client.get_typed_pod(PodType.WORKER, i)
+            worker_pod_name = self.client.get_pod_name(PodType.WORKER, i)
             if worker_pod is None:
                 logger.error("Worker {} Not Found".format(worker_pod_name))
             elif worker_pod.status.phase == PodStatus.FAILED:
@@ -135,8 +135,8 @@ class EdlJobMonitor:
 
     def check_ps_status(self):
         for i in range(self.ps_num):
-            ps_pod = self.client.get_ps_pod(i)
-            ps_pod_name = self.client.get_ps_pod_name(i)
+            ps_pod = self.client.get_typed_pod(PodType.PS, i)
+            ps_pod_name = self.client.get_pod_name(PodType.PS, i)
             if ps_pod is None:
                 logger.error("PS {} Not Found".format(ps_pod_name))
             elif ps_pod.status.phase == PodStatus.FAILED:

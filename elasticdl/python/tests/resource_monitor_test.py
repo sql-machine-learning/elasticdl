@@ -11,21 +11,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import unittest
 
-class DistributionStrategy(object):
-    LOCAL = "Local"
-    PARAMETER_SERVER = "ParameterServerStrategy"
-    ALLREDUCE = "AllreduceStrategy"
-    CUSTOM = "CustomStrategy"
+from elasticdl.python.master.resource_monitor import WorkerResourceMonitor
 
 
-class BashCommandTemplate(object):
-    REDIRECTION = "({}) 2>&1 | tee {}"
-    SET_PIPEFAIL = "set -o pipefail;"
+class ResourceMonitorTest(unittest.TestCase):
+    def testWorkerResourceMonitor(self):
+        resource_monitor = WorkerResourceMonitor()
+        resource_monitor.set_worker_resource(2 * 1024 * 1024, 0.5)
+        self.assertEqual(resource_monitor.get_worker_memory(), 2)
 
 
-class ClusterSpecConfig(object):
-    CLUSTER_SPEC_DIR = "/cluster_spec"
-    POD_SPEC = "pod_spec"
-    SERVICE_SPEC = "service_spec"
-    POD_SPEC_SUFFIX = "_pod_spec"
+if __name__ == "__main__":
+    unittest.main()

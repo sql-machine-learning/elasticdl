@@ -34,6 +34,7 @@ from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
 
+@unittest.skip("Skip WorkerPSInteraction test")
 class WorkerPSInteractionTest(unittest.TestCase):
     def setUp(self):
         self._model_zoo_path = os.path.join(

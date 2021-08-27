@@ -15,6 +15,7 @@ import threading
 import time
 import unittest
 
+from elasticai_api.common.constants import DefaultDatasetName
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.tests.test_utils import create_task_manager
 
@@ -22,6 +23,7 @@ from elasticdl.python.tests.test_utils import create_task_manager
 class TaskManagerTest(unittest.TestCase):
     def test_create_tasks_with_zero_start_ind(self):
         task_d = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
+        training_dataset = task_d._datasets[DefaultDatasetName.TRAINING]
 
         all_tasks = [
             ("f1", 0, 3, elasticai_api_pb2.TRAINING, -1),
@@ -53,18 +55,18 @@ class TaskManagerTest(unittest.TestCase):
             task_d.report(request, True)
 
         # there should be 2 doing tasks left.
-        self.assertEqual(2, len(task_d._doing))
+        self.assertEqual(2, len(training_dataset.doing))
 
         # report a task failure
-        request.task_id = list(task_d._doing.items())[0][0]
+        request.task_id = list(training_dataset.doing.items())[0][0]
         task_d.report(request, False)
-        self.assertEqual(1, len(task_d._doing))
+        self.assertEqual(1, len(training_dataset.doing))
 
         # recover tasks from a dead worker
-        task_d.recover_tasks(list(task_d._doing.items())[0][1][0])
-        self.assertEqual(0, len(task_d._doing))
+        task_d.recover_tasks(list(training_dataset.doing.items())[0][1][0])
+        self.assertEqual(0, len(training_dataset.doing))
 
-        self.assertEqual(2, len(task_d._todo))
+        self.assertEqual(2, len(training_dataset.todo))
 
         id1, t1 = task_d.get(11)
         id2, t2 = task_d.get(12)
@@ -126,55 +128,56 @@ class TaskManagerTest(unittest.TestCase):
 
     def test_invoke_train_end_callback(self):
         task_d = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
+        training_ds = task_d._datasets[DefaultDatasetName.TRAINING]
         task_d._add_deferred_callback_create_train_end_task()
-        task_d._todo.clear()
+        training_ds.todo.clear()
         task_d.invoke_deferred_callback()
-        self.assertEqual(len(task_d._todo), 1)
+        self.assertEqual(len(training_ds.todo), 1)
         self.assertEqual(
-            task_d._todo[0].type, elasticai_api_pb2.TRAIN_END_CALLBACK
+            training_ds.todo[0].type, elasticai_api_pb2.TRAIN_END_CALLBACK
         )
 
     def test_check_and_reassign_timeout_tasks(self):
-        task_manager = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
-        task_manager.create_tasks(elasticai_api_pb2.TRAINING)
-        task_count = len(task_manager._todo)
+        task_d = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
+        training_ds = task_d._datasets[DefaultDatasetName.TRAINING]
+        task_count = len(training_ds.todo)
         task_start_time = time.time() - 1000
-        task_manager._worker_start_task_time[0] = task_start_time
-        task_manager._doing[0] = (0, task_manager._todo[0], task_start_time)
-        task_manager._todo.pop()
+        task_d._worker_start_task_time[0] = task_start_time
+        training_ds.doing[0] = (0, training_ds.todo[0], task_start_time)
+        training_ds.todo.pop()
 
         threading.Thread(
-            target=task_manager._check_and_reassign_timeout_tasks,
+            target=task_d._check_and_reassign_timeout_tasks,
             name="check_timeout_tasks",
             daemon=True,
         ).start()
         time.sleep(1)  # Sleep 1s to reassgin checkout the timeout task
-        self.assertEqual(len(task_manager._todo), task_count)
+        self.assertEqual(len(training_ds.todo), task_count)
 
     def test_get_max_task_completed_time(self):
-        task_manager = create_task_manager([("f1", 0, 10), ("f2", 0, 10)], [])
-        self.assertEqual(
-            task_manager._max_task_completed_times,
-            {elasticai_api_pb2.TRAINING: 0, elasticai_api_pb2.EVALUATION: 0},
-        )
-        task_manager.record_task_completed_time(elasticai_api_pb2.TRAINING, 10)
+        task_manager = create_task_manager([("f1", 0, 10)], [("f2", 0, 10)])
+        training_ds = task_manager._datasets[DefaultDatasetName.TRAINING]
+        eval_ds = task_manager._datasets[DefaultDatasetName.EVALUATION]
+        self.assertEqual(training_ds.max_task_completed_time, 0)
+        self.assertEqual(eval_ds.max_task_completed_time, 0)
         task_manager.record_task_completed_time(
-            elasticai_api_pb2.EVALUATION, 5
+            DefaultDatasetName.TRAINING, 10
+        )
+        task_manager.record_task_completed_time(
+            DefaultDatasetName.EVALUATION, 5
         )
 
-        self.assertEqual(
-            task_manager._max_task_completed_times,
-            {elasticai_api_pb2.TRAINING: 10, elasticai_api_pb2.EVALUATION: 5},
-        )
+        self.assertEqual(training_ds.max_task_completed_time, 10)
+        self.assertEqual(eval_ds.max_task_completed_time, 5)
 
-    def test_set_training_params(self):
-        task_manager = create_task_manager([], [])
-        task_manager.set_training_params(1, 1, 10, False, False, 3)
-        self.assertEqual(
-            task_manager._training_shards,
-            [("", 0, 3), ("", 3, 3), ("", 6, 3), ("", 9, 1)],
+    def test_get_dataset_epoch(self):
+        dataset_name = "test_data_shard"
+        task_manager = create_task_manager([("f1", 0, 10)], [("f2", 0, 10)])
+        task_manager.set_dataset_params(
+            32, 2, 1000, False, False, 320, dataset_name
         )
-        self.assertEqual(len(task_manager._todo), 4)
+        epoch = task_manager.get_dataset_epoch(dataset_name)
+        self.assertEqual(epoch, 0)
 
 
 if __name__ == "__main__":

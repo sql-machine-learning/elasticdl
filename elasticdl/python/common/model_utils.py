@@ -14,9 +14,6 @@
 import importlib.util
 import os
 
-import tensorflow as tf
-from tensorflow.python.keras.callbacks import CallbackList
-
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.odps_io import is_odps_configured
 from elasticdl.python.worker.prediction_outputs_processor import (
@@ -47,6 +44,8 @@ def load_callbacks_from_module(callbacks_def, model_module):
     callbacks_def_name = callbacks_def.split(".")[-1]
     callbacks_fn = _get_spec_value(callbacks_def_name, None, model_module)
     callbacks = [] if callbacks_fn is None else callbacks_fn()
+    from tensorflow.python.keras.callbacks import CallbackList
+
     return CallbackList(callbacks)
 
 
@@ -237,6 +236,8 @@ def get_optimizer_info(optimizer):
     }
     opt_type = "unknown"
     opt_argument = ""
+
+    import tensorflow as tf
 
     if isinstance(optimizer, tf.keras.optimizers.SGD):
         opt_type = "SGD"

@@ -16,10 +16,6 @@ import collections
 
 from elasticdl_client.common.k8s_client import PodType
 
-PodInfo = collections.namedtuple(
-    "PodInfo", ("type", "id", "name", "ip", "status", "start_time")
-)
-
 ClusterContext = collections.namedtuple("ClusterContext", ("pod_manager"))
 
 
@@ -89,11 +85,11 @@ class TaskRescheduleCallback(PodEventCallback):
         pass
 
     def on_pod_failed(self, pod_info, cluster_context):
-        if pod_info.id is not None:
+        if pod_info.id is not None and pod_info.type == PodType.WORKER:
             self._task_manager.recover_tasks(pod_info.id)
 
     def on_pod_deleted(self, pod_info, cluster_context):
-        if pod_info.id is not None:
+        if pod_info.id is not None and pod_info.type == PodType.WORKER:
             self._task_manager.recover_tasks(pod_info.id)
 
 
@@ -106,45 +102,63 @@ class RendezvousServiceRefreshCallback(PodEventCallback):
         pass
 
     def on_pod_succeeded(self, pod_info, cluster_context):
-        self._rendezvous_server.remove_worker(pod_info.ip)
+        if pod_info.type == PodType.WORKER:
+            self._rendezvous_server.remove_worker(pod_info.pod_ip)
 
     def on_pod_failed(self, pod_info, cluster_context):
-        self._rendezvous_server.remove_worker(pod_info.ip)
+        if pod_info.type == PodType.WORKER:
+            self._rendezvous_server.remove_worker(pod_info.pod_ip)
 
     def on_pod_deleted(self, pod_info, cluster_context):
-        self._rendezvous_server.remove_worker(pod_info.ip)
+        if pod_info.type == PodType.WORKER:
+            self._rendezvous_server.remove_worker(pod_info.pod_ip)
 
 
-class TFV1PSStrategyTrainLoopMonitorCallback(PodEventCallback):
+class SpecialPodHandlingCallback(PodEventCallback):
     def __init__(self, master):
-        super(TFV1PSStrategyTrainLoopMonitorCallback, self).__init__()
+        super(SpecialPodHandlingCallback, self).__init__()
         self._master = master
 
     def on_pod_started(self, pod_info, cluster_context):
-        pass
-
-    def on_pod_succeeded(self, pod_info, cluster_context):
-        pass
-
-    def on_pod_failed(self, pod_info, cluster_context):
-        if TFV1PSStrategyTrainLoopMonitorCallback.is_critical_pod(pod_info):
-            self._master.request_stop(
-                success=False, msg="PS or chief worker is failed."
-            )
-
-    def on_pod_deleted(self, pod_info, cluster_context):
-        if TFV1PSStrategyTrainLoopMonitorCallback.is_critical_pod(pod_info):
-            self._master.request_stop(
-                success=False, msg="PS or chief worker is deleted."
-            )
-
-    @staticmethod
-    def is_critical_pod(pod_info):
-        # If the pod is a ps or the chief worker, return True.
-        # Otherwise return false.
         if pod_info.type == PodType.PS or (
             pod_info.type == PodType.WORKER and pod_info.id == 0
         ):
-            return True
+            cluster_context.pod_manager.launch_waiting_workers()
 
-        return False
+    def on_pod_succeeded(self, pod_info, cluster_context):
+        if pod_info.type == PodType.WORKER and pod_info.original_index == 0:
+            cluster_context.pod_manager.remove_running_ps_training_pods()
+
+    def on_pod_failed(self, pod_info, cluster_context):
+        if (
+            not cluster_context.pod_manager.is_deleted_ps_pod_for_relaunch(
+                pod_info
+            )
+            and pod_info.is_unrecoverable_failure()
+        ):
+            self._master.request_stop(
+                success=False,
+                msg=(
+                    "Critical pod (type={}, id={}) is failed "
+                    "and {} relaunches have been exhausted.".format(
+                        pod_info.type, pod_info.id, pod_info.max_relaunch_count
+                    )
+                ),
+            )
+
+    def on_pod_deleted(self, pod_info, cluster_context):
+        if (
+            not cluster_context.pod_manager.is_deleted_ps_pod_for_relaunch(
+                pod_info
+            )
+            and pod_info.is_unrecoverable_failure()
+        ):
+            self._master.request_stop(
+                success=False,
+                msg=(
+                    "Critical pod (type={}, id={}) is deleted "
+                    "and {} relaunches have been exhausted.".format(
+                        pod_info.type, pod_info.id, pod_info.max_relaunch_count
+                    )
+                ),
+            )

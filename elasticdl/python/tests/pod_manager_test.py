@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import argparse
+import copy
 import json
 import os
 import random
@@ -27,31 +28,42 @@ from elasticdl.python.common.k8s_client import (
     _WORKER_SERVICE_PORT,
     PodType,
 )
-from elasticdl.python.master.pod_event_callbacks import (
-    PodInfo,
-    TaskRescheduleCallback,
-)
+from elasticdl.python.master.pod_event_callbacks import TaskRescheduleCallback
+from elasticdl.python.master.pod_info import PodInfo, TypedPodConfig
 from elasticdl.python.master.pod_manager import (
     PodManager,
-    WorkerInfo,
-    _parse_worker_pod_priority,
     build_environment_variables,
+    get_critical_worker_index,
+    is_huge_memory,
+    should_launch_worker_after_ps_running,
 )
 from elasticdl.python.tests.test_utils import create_task_manager
+from elasticdl_client.common.constants import DistributionStrategy
+
+RESOURCE = "cpu=1,memory=8192Mi"
 
 
 class PodManagerTest(unittest.TestCase):
+    def setUp(self):
+        self._typed_pod_config = TypedPodConfig()
+        self._typed_pod_config.add_typed_pod_config(
+            PodType.WORKER, 2, RESOURCE, RESOURCE, None, None
+        )
+        self._typed_pod_config.add_typed_pod_config(
+            PodType.PS, 3, RESOURCE, RESOURCE, None, None
+        )
+
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
         "No Kubernetes cluster available",
     )
     def test_create_delete_worker_pod(self):
         pod_manager = PodManager(
+            typed_pod_config=self._typed_pod_config,
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
             namespace="default",
-            num_workers=2,
             envs=[],
         )
         pod_manager.set_up(
@@ -67,10 +79,8 @@ class PodManagerTest(unittest.TestCase):
             if counters[PodStatus.SUCCEEDED] == 2:
                 break
 
-        pod_manager._not_created_worker_id = [2]
-        pod_manager._worker_info[2] = WorkerInfo(
-            pod_priority=None, original_index=1, relaunch_count=0
-        )
+        pod_manager._not_created_workers = [(PodType.WORKER, 2)]
+        pod_manager.pod_info[PodType.WORKER][2].original_index = 1
         pod_manager._process_worker()
         for _ in range(max_check_num):
             time.sleep(3)
@@ -78,7 +88,7 @@ class PodManagerTest(unittest.TestCase):
             if counters[PodStatus.SUCCEEDED] == 3:
                 break
 
-        pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
+        pod_manager.stop_relaunch_and_remove_all_pods()
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
@@ -93,11 +103,11 @@ class PodManagerTest(unittest.TestCase):
     )
     def test_get_worker_addrs(self):
         pod_manager = PodManager(
+            typed_pod_config=self._typed_pod_config,
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
             namespace="default",
-            num_workers=3,
             envs=[],
         )
         pod_manager.set_up(
@@ -116,7 +126,7 @@ class PodManagerTest(unittest.TestCase):
                     len(worker_addrs), counters[PodStatus.RUNNING]
                 )
 
-        pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
+        pod_manager.stop_relaunch_and_remove_all_pods()
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
@@ -129,12 +139,13 @@ class PodManagerTest(unittest.TestCase):
         """
         task_manager = create_task_manager([("f", 0, 10)], [])
         task_manager.recover_tasks = MagicMock()
+        self._typed_pod_config._typed_pod_num[PodType.WORKER] = 3
         pod_manager = PodManager(
+            typed_pod_config=self._typed_pod_config,
             job_name="test-failed-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
             namespace="default",
-            num_workers=3,
             restart_policy="Never",
             envs=[],
         )
@@ -153,7 +164,7 @@ class PodManagerTest(unittest.TestCase):
             if counters[PodStatus.FAILED] == 3:
                 break
 
-        pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
+        pod_manager.stop_relaunch_and_remove_all_pods()
         for _ in range(max_check_num):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
@@ -170,13 +181,13 @@ class PodManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_relaunch_worker_pod(self):
-        num_workers = 3
+        self._typed_pod_config._typed_pod_num[PodType.WORKER] = 3
         pod_manager = PodManager(
+            typed_pod_config=self._typed_pod_config,
             job_name="test-relaunch-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
             namespace="default",
-            num_workers=num_workers,
             envs=[],
         )
         pod_manager.set_up(
@@ -198,7 +209,7 @@ class PodManagerTest(unittest.TestCase):
         )
         self.assertTrue(alive_workers)
 
-        pod_manager._remove_worker(alive_workers.pop().id)
+        pod_manager.remove_worker(alive_workers.pop().id)
         # verify a new worker get launched
         for _ in range(max_check_num):
             current_alive_workers = pod_manager.get_pod_infos(
@@ -209,7 +220,7 @@ class PodManagerTest(unittest.TestCase):
             new_launched_workers = [
                 pod_info
                 for pod_info in current_alive_workers
-                if pod_info.id >= num_workers
+                if pod_info.id >= 3
             ]
             if new_launched_workers:
                 break
@@ -217,7 +228,7 @@ class PodManagerTest(unittest.TestCase):
         else:
             self.fail("Cannot to find any newly launched worker.")
 
-        pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)
+        pod_manager.stop_relaunch_and_remove_all_pods()
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
@@ -225,12 +236,13 @@ class PodManagerTest(unittest.TestCase):
     )
     def test_launch_ps_pod(self):
         num_ps = 3
+        self._typed_pod_config._typed_pod_num[PodType.PS] = num_ps
         pod_manager = PodManager(
+            typed_pod_config=self._typed_pod_config,
             job_name="test-relaunch-ps-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
             namespace="default",
-            num_ps=num_ps,
         )
         pod_manager.set_up(
             ps_command=["/bin/bash"], ps_args=["-c", "sleep 10 #"],
@@ -245,7 +257,7 @@ class PodManagerTest(unittest.TestCase):
             owner = service.metadata.owner_references[0]
             self.assertEqual(owner.kind, "Pod")
             self.assertEqual(
-                owner.name, pod_manager._k8s_client.get_ps_pod_name(i)
+                owner.name, pod_manager._k8s_client.get_pod_name(PodType.PS, i)
             )
 
         max_check_num = 60
@@ -257,70 +269,71 @@ class PodManagerTest(unittest.TestCase):
         else:
             self.fail("PS pod cannot start within the time limit.")
 
-        pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.PS)
-
-    def test_parse_worker_pod_priority(self):
-        worker_priorities = _parse_worker_pod_priority(10, "0.5")
-        expected = {}
-        for i in range(3):
-            expected[i] = "high"
-        for i in range(3, 8):
-            expected[i] = "low"
-        for i in range(8, 10):
-            expected[i] = "high"
-        self.assertDictEqual(worker_priorities, expected)
-        worker_priorities = _parse_worker_pod_priority(1, "0.5")
-        self.assertDictEqual(worker_priorities, {0: "high"})
+        pod_manager.stop_relaunch_and_remove_all_pods()
 
     def test_all_worker_exited(self):
+        typed_pod_config = copy.deepcopy(self._typed_pod_config)
+        typed_pod_config.add_typed_pod_config(
+            PodType.WORKER, 3, RESOURCE, RESOURCE, None, None
+        )
+        typed_pod_config.add_typed_pod_config(
+            PodType.EVALUATOR, 1, RESOURCE, RESOURCE, None, None
+        )
         pod_manager = PodManager(
+            typed_pod_config=typed_pod_config,
             job_name="test-failed-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
             namespace="default",
-            num_workers=3,
             restart_policy="Never",
             envs=[],
         )
         pod_info = PodInfo(
-            type=PodType.WORKER,
+            pod_type=PodType.WORKER,
             id=0,
             name="ut-worker-0",
-            ip="0.0.0.1",
+            pod_ip="0.0.0.1",
             status=PodStatus.FAILED,
             start_time=None,
         )
-        pod_manager._pod_info_cache[PodType.WORKER][pod_info.name] = pod_info
+        pod_manager.pod_info[PodType.WORKER][pod_info.id] = pod_info
         self.assertTrue(pod_manager.all_workers_failed)
-        self.assertTrue(pod_manager.all_workers_exited)
+        self.assertTrue(pod_manager.all_workers_and_evaluators_exited)
 
-    @unittest.skipIf(
-        os.environ.get("K8S_TESTS", "True") == "False",
-        "No Kubernetes cluster available",
-    )
     def test_get_tf_config_data(self):
-        num_ps = 2
-        num_workers = 2
         job_name = "test-tf_config-%d-%d" % (
             int(time.time()),
             random.randint(1, 101),
         )
         namespace = "default"
+        typed_pod_config = copy.deepcopy(self._typed_pod_config)
+        typed_pod_config.add_typed_pod_config(
+            PodType.EVALUATOR, 1, RESOURCE, RESOURCE, None, None,
+        )
+        typed_pod_config.add_typed_pod_config(
+            PodType.PS, 2, RESOURCE, RESOURCE, None, None
+        )
+        typed_pod_config.add_typed_pod_config(
+            PodType.CHIEF, 1, RESOURCE, RESOURCE, None, None
+        )
         pod_manager = PodManager(
+            typed_pod_config=typed_pod_config,
             job_name=job_name,
             image_name="ubuntu:18.04",
             namespace=namespace,
-            num_ps=num_ps,
-            num_workers=num_workers,
         )
 
         tf_config_cluster = '{"cluster": \
             {"ps": \
-              ["JOBNAME-ps-0.NAMESPACE.svc:PSPORT", \
-               "JOBNAME-ps-1.NAMESPACE.svc:PSPORT"], \
-             "worker": \
-              ["JOBNAME-worker-0.NAMESPACE.svc:WORKERPORT", \
-               "JOBNAME-worker-1.NAMESPACE.svc:WORKERPORT"] \
+              ["JOBNAME-edljob-ps-0:PSPORT", \
+               "JOBNAME-edljob-ps-1:PSPORT"], \
+            "worker": \
+              ["JOBNAME-edljob-worker-0:WORKERPORT", \
+               "JOBNAME-edljob-worker-1:WORKERPORT"], \
+            "evaluator": \
+              ["JOBNAME-edljob-evaluator-0:WORKERPORT"], \
+            "master": \
+              ["JOBNAME-edljob-master-0:WORKERPORT"] \
             }}'
         tf_config_cluster = tf_config_cluster.replace("JOBNAME", job_name)
         tf_config_cluster = tf_config_cluster.replace("NAMESPACE", namespace)
@@ -347,6 +360,15 @@ class PodManagerTest(unittest.TestCase):
         self.assertEqual(worker1_config["task"]["type"], "worker")
         self.assertEqual(worker1_config["task"]["index"], 1)
 
+        chief_worker_config = pod_manager.get_tf_config_data(
+            PodType.CHIEF, 0
+        )
+        self.assertEqual(
+            tf_config_cluster_dict["cluster"], chief_worker_config["cluster"]
+        )
+        self.assertEqual(chief_worker_config["task"]["type"], "master")
+        self.assertEqual(chief_worker_config["task"]["index"], 0)
+
     def test_build_environment_variables(self):
         os.environ["ELASTICDL_abc"] = "abc"
         args = argparse.Namespace(
@@ -362,6 +384,123 @@ class PodManagerTest(unittest.TestCase):
         self.assertTrue(WorkerEnv.MASTER_ADDR in env_dict)
         self.assertTrue(WorkerEnv.WORKER_NUM in env_dict)
         self.assertTrue("ELASTICDL_abc" in env_dict)
+
+    def test_critical_worker_index(self):
+        args = argparse.Namespace(
+            need_elasticdl_job_service=False,
+            need_tf_config=True,
+            distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
+            critical_worker_index="default",
+            num_evaluators=0,
+            num_workers=3,
+            relaunch_on_worker_failure=1,
+        )
+        critical_index = get_critical_worker_index(True, args)
+        self.assertEqual(critical_index, {0: 0})
+
+        args = argparse.Namespace(
+            need_elasticdl_job_service=False,
+            need_tf_config=True,
+            distribution_strategy=DistributionStrategy.ALLREDUCE,
+            critical_worker_index="default",
+        )
+        critical_index = get_critical_worker_index(False, args)
+        self.assertEqual(critical_index, {})
+
+        args = argparse.Namespace(
+            need_elasticdl_job_service=False,
+            need_tf_config=True,
+            distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
+            critical_worker_index="none",
+            num_evaluators=1,
+            num_workers=3,
+            relaunch_on_worker_failure=1,
+        )
+        critical_index = get_critical_worker_index(True, args)
+        self.assertEqual(critical_index, {})
+
+        args = argparse.Namespace(
+            need_elasticdl_job_service=False,
+            need_tf_config=True,
+            distribution_strategy=DistributionStrategy.ALLREDUCE,
+            critical_worker_index="1:1,3:1,9:1",
+            num_evaluators=1,
+        )
+        critical_index = get_critical_worker_index(True, args)
+        self.assertEqual(critical_index, {1: 1, 3: 1, 9: 1})
+
+    def test_should_launch_worker_after_ps_running(self):
+        args = argparse.Namespace(
+            launch_worker_after_ps_running="default",
+            num_ps_pods=1,
+            ps_resource_request="cpu=20,memory=4096Mi",
+        )
+        is_tfv1_ps = True
+
+        self.assertTrue(
+            should_launch_worker_after_ps_running(is_tfv1_ps, True, args)
+        )
+
+        args = argparse.Namespace(
+            launch_worker_after_ps_running="default",
+            num_ps_pods=1,
+            ps_resource_request="cpu=2,memory=4096Mi",
+        )
+        self.assertFalse(
+            should_launch_worker_after_ps_running(is_tfv1_ps, False, args)
+        )
+
+        args = argparse.Namespace(
+            launch_worker_after_ps_running="on",
+            num_ps_pods=1,
+            ps_resource_request="cpu=1,memory=4096Mi",
+        )
+        self.assertTrue(
+            should_launch_worker_after_ps_running(is_tfv1_ps, False, args)
+        )
+
+    def test_is_huge_memory(self):
+        typed_pod_config = TypedPodConfig()
+        resource = "cpu=1,memory=20480Mi"
+        typed_pod_config.add_typed_pod_config(
+            PodType.WORKER, 6, resource, resource, "", ""
+        )
+        self.assertTrue(is_huge_memory(typed_pod_config))
+
+        typed_pod_config = TypedPodConfig()
+        resource = "cpu=1,memory=204800Mi"
+        typed_pod_config.add_typed_pod_config(
+            PodType.WORKER, 1, resource, resource, "", ""
+        )
+        self.assertTrue(is_huge_memory(typed_pod_config))
+
+        typed_pod_config = TypedPodConfig()
+        resource = "cpu=1,memory=20480Mi"
+        typed_pod_config.add_typed_pod_config(
+            PodType.WORKER, 3, resource, resource, "", ""
+        )
+        self.assertFalse(is_huge_memory(typed_pod_config))
+
+    def test_get_recommended_memory(self):
+        pod_manager = PodManager(
+            typed_pod_config=self._typed_pod_config,
+            job_name="test-create-worker-pod-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
+            image_name="ubuntu:18.04",
+            namespace="default",
+            envs=[],
+        )
+        pod_manager.wait_chief_worker_execution = False
+        mem = pod_manager._get_recommended_memory(PodType.WORKER)
+        self.assertEqual(mem, 0.0)
+
+        pod_manager._worker_resource_monitor._worker_memory = 1
+        mem = pod_manager._get_recommended_memory(PodType.WORKER)
+        self.assertEqual(mem, 4096)
+
+        pod_manager._worker_resource_monitor._worker_memory = 3000
+        mem = pod_manager._get_recommended_memory(PodType.WORKER)
+        self.assertEqual(mem, 5400)
 
 
 if __name__ == "__main__":

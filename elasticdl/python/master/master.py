@@ -16,11 +16,10 @@ import time
 
 from elasticdl.python.common.constants import PodManagerStatus
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
 from elasticdl.python.master.pod_event_callbacks import (
     RendezvousServiceRefreshCallback,
+    SpecialPodHandlingCallback,
     TaskRescheduleCallback,
-    TFV1PSStrategyTrainLoopMonitorCallback,
 )
 from elasticdl.python.master.pod_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
@@ -45,7 +44,7 @@ class Master(object):
         # Composite the components
         if self.task_manager and self.pod_manager:
             self.task_manager.set_task_timeout_callback(
-                self.pod_manager._remove_worker
+                self.pod_manager.remove_worker
             )
         if self.pod_manager:
             self._set_command_in_pod_manager()
@@ -58,10 +57,9 @@ class Master(object):
                 self.pod_manager.add_pod_event_callback(
                     RendezvousServiceRefreshCallback(self.rendezvous_server)
                 )
-            if self._is_tfv1_ps_strategy_custom_training():
-                self.pod_manager.add_pod_event_callback(
-                    TFV1PSStrategyTrainLoopMonitorCallback(self)
-                )
+            self.pod_manager.add_pod_event_callback(
+                SpecialPodHandlingCallback(self)
+            )
 
         # Start the components one by one
         if self.task_manager:
@@ -112,7 +110,10 @@ class Master(object):
                 if self._stop_requested:
                     break
 
-                if self.pod_manager and self.pod_manager.all_workers_exited:
+                if (
+                    self.pod_manager
+                    and self.pod_manager.all_workers_and_evaluators_exited
+                ):
                     if self.pod_manager.all_workers_failed:
                         logger.error("All workers failed")
                         self._exit_code = 1
@@ -131,6 +132,7 @@ class Master(object):
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
         finally:
+            # self.pod_manager.stop_relaunch_and_remove_all_pods()
             self.stop()
         return self._exit_code
 
@@ -175,6 +177,10 @@ class Master(object):
 
     def create_elasticdl_job_service_if_needed(self, args):
         if args.need_elasticdl_job_service:
+            from elasticdl.python.master.elasticdl_job_service import (
+                ElasticdlJobService,
+            )
+
             # TODO: Remove rendezvous server after rafactoring the pod
             # manager.
             self.elasticdl_job_service = ElasticdlJobService(
@@ -198,6 +204,7 @@ class Master(object):
             self.pod_manager,
             self.rendezvous_server,
             evaluation_service,
+            self.elasticdl_job_service is not None,
         )
 
     def validate(self):
@@ -219,14 +226,3 @@ class Master(object):
                 "Task manager with fault tolerance is required for ",
                 "elasticdl job service.",
             )
-
-    def _is_tfv1_ps_strategy_custom_training(self):
-        if (
-            not self._args.need_elasticdl_job_service
-            and self._args.need_tf_config
-            and self._args.distribution_strategy
-            == DistributionStrategy.PARAMETER_SERVER
-        ):
-            return True
-
-        return False

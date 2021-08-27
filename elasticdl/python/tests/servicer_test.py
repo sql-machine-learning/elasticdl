@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, Mock
 
 import tensorflow as tf
 
+from elasticai_api.common.constants import DefaultDatasetName
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import (
@@ -93,15 +94,16 @@ class ServicerTest(unittest.TestCase):
 
         # task to number of runs.
         tasks = defaultdict(int)
+        training_ds = self.master.task_manager._datasets[
+            DefaultDatasetName.TRAINING
+        ]
         while True:
             req = elasticai_api_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
             task = master.get_task(req, None)
             if not task.shard.name:
                 break
-            self.assertEqual(
-                self.master.task_manager._doing[task.task_id][0], req.worker_id
-            )
+            self.assertEqual(training_ds.doing[task.task_id][0], req.worker_id)
             task_key = (task.shard.name, task.shard.start, task.shard.end)
             tasks[task_key] += 1
             report = elasticai_api_pb2.ReportTaskResultRequest()

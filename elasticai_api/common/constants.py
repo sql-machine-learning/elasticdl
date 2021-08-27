@@ -19,10 +19,6 @@ class GRPC(object):
     MAX_RECEIVE_MESSAGE_LENGTH = 256 * 1024 * 1024
 
 
-class TaskExecCounterKey(object):
-    FAIL_COUNT = "fail_count"
-
-
 class HorovodEnv(object):
     RENDEZVOUS_ADDR = "HOROVOD_GLOO_RENDEZVOUS_ADDR"
     RENDEZVOUS_PORT = "HOROVOD_GLOO_RENDEZVOUS_PORT"
@@ -41,6 +37,15 @@ class WorkerEnv(object):
     WORKER_NUM = "WORKER_NUM"
 
 
+class PodEnv(object):
+    RELAUNCHED_POD = "RELAUNCHED_POD"
+
+
 class TrainingLoopStatus(object):
     START = 1
     END = 2
+
+
+class DefaultDatasetName(object):
+    TRAINING = "_EDL_DEFAULT_TRAINING_DATA"
+    EVALUATION = "_EDL_DEFAULT_EVALUATION_DATA"

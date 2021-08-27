@@ -24,12 +24,14 @@ from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 class TaskDataService(object):
     def __init__(
         self,
-        data_shard_service,
+        training_shard_service,
+        eval_shard_service=None,
         custom_data_reader=None,
         data_reader_params=None,
         data_origin=None,
     ):
-        self._data_shard_service = data_shard_service
+        self._training_shard_service = training_shard_service
+        self._eval_shard_service = eval_shard_service
         self._create_data_reader_fn = create_data_reader
         if custom_data_reader is not None:
             self._create_data_reader_fn = custom_data_reader
@@ -46,10 +48,10 @@ class TaskDataService(object):
         self.current_eval_task = None
 
     def get_current_task(self):
-        return self._data_shard_service.get_current_task()
+        return self._training_shard_service.get_current_task()
 
     def report_record_done(self, count, err_msg=""):
-        self._data_shard_service.report_batch_done(count, err_msg)
+        self._training_shard_service.report_batch_done(count, err_msg)
 
     def get_dataset_gen(self, task):
         """
@@ -79,7 +81,7 @@ class TaskDataService(object):
 
     def get_train_end_callback_task(self):
         while True:
-            task = self._data_shard_service.get_task()
+            task = self._training_shard_service.get_task()
             if task.type == elasticai_api_pb2.TRAIN_END_CALLBACK:
                 self.train_end_callback_task = task
                 return task
@@ -107,7 +109,7 @@ class TaskDataService(object):
         used to create a `tf.data.Dataset` object from a list of tasks.
         """
         while True:
-            task = self._data_shard_service.get_task()
+            task = self._training_shard_service.get_task()
             if task.type != elasticai_api_pb2.TRAINING:
                 break
 
@@ -117,10 +119,8 @@ class TaskDataService(object):
 
     def get_eval_dataset(self):
         def _gen():
-            task = self._data_shard_service.get_task(
-                elasticai_api_pb2.EVALUATION
-            )
-            if task.type != elasticai_api_pb2.EVALUATION:
+            task = self._eval_shard_service.get_task()
+            if not task.shard.name:
                 return
             logger.info("the evaluation task_id: %d" % task.task_id)
             self.current_eval_task = task

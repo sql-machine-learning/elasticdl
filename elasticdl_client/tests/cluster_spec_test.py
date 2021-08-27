@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
 import unittest
 
 from kubernetes import client
@@ -25,7 +26,8 @@ test_spec = """
          "elasticdl.org/site": "hangzhou"
       },
       "annotations": {
-         "tag.elasticdl.org/optimization": "enabled"
+         "tag.elasticdl.org/optimization": "enabled",
+         "master-config": "{\\"cpu\\": 0.4}"
       },
       "affinity": {
          "nodeAffinity": {
@@ -65,7 +67,7 @@ test_spec = """
       "clusterIP": "None",
       "type": "ClusterIP"
    },
-   "master_pod_spec": {
+   "edl-master_pod_spec": {
       "labels": {
          "elasticdl.org/xyz": "Sun"
       }
@@ -78,6 +80,11 @@ test_spec = """
    "ps_pod_spec": {
       "labels": {
          "elasticdl.org/xyz": "Moon"
+      }
+   },
+   "master_pod_spec": {
+      "labels": {
+         "elasticdl.org/xyz": "Mars"
       }
    }
 }
@@ -112,8 +119,8 @@ def create_test_service(name="test_service"):
 
 
 class ClusterSpecTest(unittest.TestCase):
-    def test_pod_spec(self):
-        cluster_spec = ClusterSpec(cluster_spec_json=test_spec)
+    def validate_cluster_spec(self, cluster_spec_config):
+        cluster_spec = ClusterSpec(cluster_spec_json=cluster_spec_config)
         pod = create_test_pod("test_spec")
         pod = cluster_spec.patch_pod(pod, "other")
 
@@ -172,6 +179,17 @@ class ClusterSpecTest(unittest.TestCase):
         pod = create_test_pod("test_spec")
         pod = cluster_spec.patch_pod(pod, PodType.PS)
         self.assertEqual(pod.metadata.labels["elasticdl.org/xyz"], "Moon")
+
+        pod = create_test_pod("test_spec")
+        pod = cluster_spec.patch_pod(pod, PodType.CHIEF)
+        self.assertEqual(pod.metadata.labels["elasticdl.org/xyz"], "Mars")
+
+    def test_pod_spec_json(self):
+        self.validate_cluster_spec(cluster_spec_config=test_spec)
+
+    def test_pod_spec_base64(self):
+        spec_base64_bytes = base64.b64encode(test_spec.encode("utf-8"))
+        self.validate_cluster_spec(spec_base64_bytes)
 
     def test_service_spec(self):
         cluster_spec = ClusterSpec(cluster_spec_json=test_spec)

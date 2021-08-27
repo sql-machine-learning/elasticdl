@@ -17,6 +17,7 @@ import time
 import unittest
 
 from elasticdl.python.common import k8s_client as k8s
+from elasticdl.python.common.k8s_client import PodType
 
 
 class WorkerTracker(object):
@@ -75,8 +76,9 @@ class K8sClientTest(unittest.TestCase):
 
         # Start 3 workers
         for i in range(3):
-            _ = c.create_worker(
-                worker_id=str(i),
+            _ = c.create_typed_pod(
+                PodType.WORKER,
+                str(i),
                 resource_requests=resource,
                 resource_limits=resource,
                 command=["echo"],
@@ -94,7 +96,7 @@ class K8sClientTest(unittest.TestCase):
 
         # Check worker pods labels
         for i in range(3):
-            worker = c.get_worker_pod(i)
+            worker = c.get_typed_pod(PodType.WORKER, i)
             self.assertEqual(
                 worker.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
             )
@@ -108,8 +110,9 @@ class K8sClientTest(unittest.TestCase):
 
         # Start 2 ps pods
         for i in range(2):
-            _ = c.create_ps(
-                ps_id=str(i),
+            _ = c.create_typed_pod(
+                PodType.PS,
+                i,
                 resource_requests=resource,
                 resource_limits=resource,
                 command=["echo"],
@@ -127,7 +130,7 @@ class K8sClientTest(unittest.TestCase):
 
         # Check ps pods labels
         for i in range(2):
-            ps = c.get_ps_pod(i)
+            ps = c.get_typed_pod(PodType.PS, i)
             self.assertEqual(
                 ps.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
             )
@@ -140,7 +143,7 @@ class K8sClientTest(unittest.TestCase):
 
         # Start 2 ps services
         for i in range(2):
-            c.create_ps_service(i)
+            c.create_service(PodType.PS, i)
 
         # Check ps services
         for i in range(2):
@@ -158,7 +161,7 @@ class K8sClientTest(unittest.TestCase):
 
         # Start 2 worker services
         for i in range(2):
-            c.create_worker_service(i)
+            c.create_service(PodType.WORKER, i)
 
         # Check worker services
         for i in range(2):
@@ -175,7 +178,7 @@ class K8sClientTest(unittest.TestCase):
             )
 
         # patch worker service
-        c.patch_worker_service(0, 3)
+        c.patch_service(PodType.WORKER, 0, 3)
         service = c.get_worker_service(0)
         self.assertIsNotNone(service)
         self.assertEqual(
@@ -209,9 +212,10 @@ class K8sClientTest(unittest.TestCase):
 
         # Start 1 worker
         resource = "cpu=100m,memory=64M"
-        worker_name = "worker-1"
-        worker_pod = c.create_worker(
-            worker_id=worker_name,
+        worker_id = 1
+        worker_pod = c.create_typed_pod(
+            PodType.WORKER,
+            worker_id,
             resource_requests=resource,
             resource_limits=resource,
             command=["echo"],
@@ -236,7 +240,7 @@ class K8sClientTest(unittest.TestCase):
         self.assertEqual(modified_pod.metadata.labels[label_k], label_v)
 
         # Delete the worker
-        c.delete_worker(worker_name)
+        c.delete_typed_pod(PodType.WORKER, worker_id)
 
         # Wait for the worker to be deleted
         while tracker._count == 1:

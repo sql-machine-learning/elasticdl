@@ -25,7 +25,7 @@ import recordio
 import tensorflow as tf
 from odps import ODPS
 
-from elasticai_api.proto import elasticai_api_pb2
+from elasticai_api.common.constants import DefaultDatasetName
 from elasticai_api.util.grpc_utils import build_channel
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import JobType, MaxComputeConfig
@@ -109,6 +109,7 @@ class TaskManagerArgs(object):
         checkpoint_dir_for_init="",
         task_fault_tolerance=True,
         relaunch_timeout_worker=True,
+        need_elasticdl_job_service=False,
     ):
         self.training_data = training_data
         self.validation_data = validation_data
@@ -123,6 +124,7 @@ class TaskManagerArgs(object):
         self.checkpoint_dir_for_init = checkpoint_dir_for_init
         self.task_fault_tolerance = task_fault_tolerance
         self.relaunch_timeout_worker = relaunch_timeout_worker
+        self.need_elasticdl_job_service = need_elasticdl_job_service
 
 
 class DatasetName(object):
@@ -136,10 +138,14 @@ class DatasetName(object):
 def create_task_manager(training_shards, evaluation_shards, num_epochs=1):
     args = TaskManagerArgs(num_minibatches_per_task=3, num_epochs=num_epochs)
     task_manager = TaskManager(args)
-    task_manager._training_shards = training_shards
-    task_manager._evaluation_shards = evaluation_shards
-    if task_manager._training_shards:
-        task_manager.create_tasks(elasticai_api_pb2.TRAINING)
+    task_manager._create_default_dataset(
+        training_shards, DefaultDatasetName.TRAINING
+    )
+    task_manager._create_default_dataset(
+        evaluation_shards, DefaultDatasetName.EVALUATION
+    )
+    if training_shards:
+        task_manager._datasets[DefaultDatasetName.TRAINING].create_tasks()
     return task_manager
 
 
@@ -423,14 +429,13 @@ def distributed_train_and_evaluate(
     task_d = TaskManager(task_args)
 
     if training:
-        task_d._training_shards = shards
-        task_d._evaluation_shards = shards
-        task_d.create_tasks(elasticai_api_pb2.TRAINING)
-        task_d.create_tasks(elasticai_api_pb2.EVALUATION)
+        task_d._create_default_dataset(shards, DefaultDatasetName.TRAINING)
+        task_d._create_default_dataset(shards, DefaultDatasetName.EVALUATION)
+        task_d._datasets[DefaultDatasetName.TRAINING].create_tasks()
+        # task_d._dataset_shards[DefaultDatasetName.EVALUATION].create_tasks()
     else:
-        task_d._training_shards = []
-        task_d._evaluation_shards = shards
-        task_d.create_tasks(elasticai_api_pb2.TRAINING)
+        task_d._create_default_dataset(shards, DefaultDatasetName.EVALUATION)
+        task_d._datasets[DefaultDatasetName.EVALUATION].create_tasks()
 
     if training:
         evaluation_service = EvaluationService(

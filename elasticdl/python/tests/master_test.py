@@ -63,7 +63,6 @@ class MasterTest(unittest.TestCase):
             args = self._get_args()
             args = parse_master_args(args)
             master = Master(args)
-            master.task_manager._todo.clear()
             master.pod_manager = Mock()
             master.pod_manager.all_workers_exited = True
             master.pod_manager.all_workers_failed = False

@@ -196,6 +196,49 @@ def add_train_params(parser):
         "PS Strategy training",
         default=1,
     )
+    add_bool_param(
+        parser=parser,
+        name="--ps_is_critical",
+        default=True,
+        help="If true, ps pods are critical, and ps pod failure "
+        "results in job failure.",
+    )
+    parser.add_argument(
+        "--critical_worker_index",
+        default="default",
+        help="If 'default', worker0 is critical for PS strategy custom "
+        "training, none for others; "
+        "If 'none', all workers are non-critical; "
+        "Otherwise, a list of critical worker indices such as '1:0,3:1' "
+        "In each pair, the first value is the pod index and the second value "
+        "is the number of allowed relaunches before becoming critical",
+    )
+    parser.add_argument(
+        "--ps_relaunch_max_num",
+        type=int,
+        help="The max number of ps relaunches",
+        default=1,
+    )
+    parser.add_argument(
+        "--launch_worker_after_ps_running",
+        default="default",
+        help="This argument indicates if launch worker "
+        "pods (execpt worker0) after all ps pods are running. "
+        "If 'on', launch worker "
+        "pods (execpt worker0) after all ps pods are running. "
+        "If 'off', launch worker pods regardless of ps pod status "
+        "If 'default', when ps.core >= 16 with PS strategy, similar "
+        "to 'on', otherwise, similar to 'off'. ",
+    )
+    add_bool_param(
+        parser=parser,
+        name="--enable_automate_memory",
+        default=True,
+        help="If true, the master will not start non-chief workers "
+        "until the chief worker reports its memory usage. The master "
+        "may adjust non-chief workers' memory according to the "
+        "reported memory usage.",
+    )
 
 
 def add_evaluate_params(parser):
@@ -248,6 +291,13 @@ def add_common_params(parser):
         help="The docker image for workers. If not specified, "
         "it will use the value of `image_name`.",
     )
+    parser.add_argument(
+        "--ps_image",
+        type=str,
+        default="",
+        help="The docker image for parameter servers. If not specified, "
+        "it will use the value of `image_name`.",
+    )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
         "--master_resource_request",
@@ -283,9 +333,29 @@ def add_common_params(parser):
         "default to worker_resource_request",
     )
     parser.add_argument(
+        "--chief_resource_request",
+        default="cpu=1,memory=4096Mi",
+        type=str,
+        help="The minimal resource required by TensorFlow estimator, "
+        " master e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+    )
+    parser.add_argument(
+        "--chief_resource_limit",
+        type=str,
+        default="",
+        help="The maximal resource required by TensorFlow estimator, "
+        "master e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
+        "default to chief_resource_request",
+    )
+    parser.add_argument(
         "--master_pod_priority",
         default="",
         help="The requested priority of master pod",
+    )
+    parser.add_argument(
+        "--chief_pod_priority",
+        default="",
+        help="The requested priority of tensorflow estimator master",
     )
     parser.add_argument(
         "--worker_pod_priority",
@@ -317,6 +387,32 @@ def add_common_params(parser):
         "--ps_pod_priority",
         default="",
         help="The requested priority of PS pod",
+    )
+    parser.add_argument(
+        "--evaluator_resource_request",
+        default="cpu=1,memory=4096Mi",
+        type=str,
+        help="The minimal resource required by evaluator, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+    )
+    parser.add_argument(
+        "--evaluator_resource_limit",
+        default="",
+        type=str,
+        help="The maximal resource required by evaluator, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
+        "default to evaluator_resource_request",
+    )
+    parser.add_argument(
+        "--evaluator_pod_priority",
+        default="",
+        help="The requested priority of PS pod",
+    )
+    parser.add_argument(
+        "--num_evaluators",
+        type=int,
+        default=0,
+        help="The number of evaluator pods",
     )
     parser.add_argument(
         "--volume",
@@ -512,11 +608,13 @@ def add_common_args_between_master_and_worker(parser):
             DistributionStrategy.LOCAL,
             DistributionStrategy.PARAMETER_SERVER,
             DistributionStrategy.ALLREDUCE,
+            DistributionStrategy.CUSTOM,
         ],
         default=DistributionStrategy.PARAMETER_SERVER,
         help="Master will use a distribution policy on a list of devices "
         "according to the distributed strategy, "
-        'e.g. "ParameterServerStrategy" or "AllreduceStrategy" or "Local"',
+        "e.g. 'ParameterServerStrategy', 'AllreduceStrategy', "
+        "'CustomStrategy' or 'Local'",
     )
     parser.add_argument(
         "--checkpoint_steps",

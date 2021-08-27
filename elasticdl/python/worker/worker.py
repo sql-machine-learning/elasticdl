@@ -17,6 +17,7 @@ from distutils.version import LooseVersion
 
 import tensorflow as tf
 
+from elasticai_api.common.constants import DefaultDatasetName
 from elasticai_api.common.data_shard_service import DataShardService
 from elasticai_api.proto import elasticai_api_pb2
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
@@ -85,8 +86,15 @@ class Worker(object):
         self._var_created = False
         self._job_type = args.job_type
         self._minibatch_size = args.minibatch_size
-        self._data_shard_service = DataShardService(
-            self._mc, self._minibatch_size
+        self._training_shard_service = DataShardService(
+            self._mc,
+            self._minibatch_size,
+            dataset_name=DefaultDatasetName.TRAINING,
+        )
+        self._eval_shard_service = DataShardService(
+            self._mc,
+            self._minibatch_size,
+            dataset_name=DefaultDatasetName.EVALUATION,
         )
         self._init_model_from_args(args)
         self._init_task_data_service(args)
@@ -132,7 +140,8 @@ class Worker(object):
 
     def _init_task_data_service(self, args):
         self._task_data_service = TaskDataService(
-            self._data_shard_service,
+            self._training_shard_service,
+            self._eval_shard_service,
             custom_data_reader=self._custom_data_reader,
             data_reader_params=get_dict_from_params_str(
                 args.data_reader_params
@@ -257,7 +266,9 @@ class Worker(object):
                 labels=evaluation_result[MetricsDictKey.LABEL],
             )
             task_id = self._task_data_service.current_eval_task.task_id
-            self._mc.report_task_result(task_id, err_msg)
+            self._mc.report_task_result(
+                task_id, err_msg, DefaultDatasetName.EVALUATION
+            )
             self._trainer.reset_evaluation_result()
         return evaluation_exist
 
@@ -266,7 +277,9 @@ class Worker(object):
         if train_end_task:
             self._callbacks_list.on_train_end()
             self._mc.report_task_result(
-                task_id=train_end_task.task_id, err_msg=""
+                task_id=train_end_task.task_id,
+                err_msg="",
+                dataset_name=DefaultDatasetName.TRAINING,
             )
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             self._trainer.export_saved_model(self._saved_model_path)
@@ -391,7 +404,6 @@ class Worker(object):
         """
         Only evaluate the model on the worker.
         """
-        evaluation_task_executed = False
         with tf.device("/device:cpu:0"):
             dataset = self._task_data_service.get_eval_dataset()
 
@@ -408,8 +420,7 @@ class Worker(object):
             if not evaluation_exist:
                 break
         del dataset
-        evaluation_task_executed = True
-        return evaluation_task_executed
+        return True
 
     def _predict_only(self):
         """

@@ -149,10 +149,11 @@ def _check_master_args_validity(args):
         )
     if (
         args.num_ps_pods == 0
-        and args.distribution_strategy != DistributionStrategy.ALLREDUCE
+        and args.distribution_strategy == DistributionStrategy.PARAMETER_SERVER
     ):
         logger.warning(
-            "Set the distribution strategy to be AllReduce if ps number is 0."
+            "Set the distribution strategy from PS to AllReduce if ps number "
+            "is 0."
         )
         args.distribution_strategy = DistributionStrategy.ALLREDUCE
 

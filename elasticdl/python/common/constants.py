@@ -39,17 +39,9 @@ class Mode(object):
     PREDICTION = "prediction"
 
 
-class Redis(object):
-    MAX_COMMAND_RETRY_TIMES = 10
-
-
 class MetricsDictKey(object):
     MODEL_OUTPUT = "output"
     LABEL = "label"
-
-
-class SaveModelConfig(object):
-    SAVED_MODEL_PATH = "saved_model_path"
 
 
 class CollectiveCommunicatorStatus(object):
@@ -75,3 +67,12 @@ class ReaderType(object):
 
 class Initializer(object):
     UNIFORM = "uniform"
+
+
+class WorkerMemoryConfig(object):
+    MIN_MEMORY = 4096  # 4096Mi, 4Gi
+    MAX_INCREMENTAL_MEMORY = 8192  # 8Gi
+    HUGE_RESOURCE_THRESHOLD = 102400  # 100Gi
+    ADJUSTMENT_FACTOR = 1.8
+    WAIT_CHIEF_WORKER_TIMEOUT_SECS = 1800  # 30min
+    WAIT_DATA_SHARD_SERVICE_CREATION_SECS = 600  # 10min

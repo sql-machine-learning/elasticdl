@@ -31,7 +31,7 @@ from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
 from elasticdl.python.data.reader.text_reader import TextDataReader
-from elasticdl.python.master.task_manager import _Task
+from elasticdl.python.master.dataset_shard import Task
 from elasticdl.python.tests.test_utils import (
     IRIS_TABLE_COLUMN_NAMES,
     DatasetName,
@@ -57,7 +57,7 @@ class RecordIODataReaderTest(unittest.TestCase):
             # Test records reading
             records = list(
                 reader.read_records(
-                    _Task(
+                    Task(
                         shard_name, 0, num_records, elasticai_api_pb2.TRAINING
                     )
                 )
@@ -94,7 +94,7 @@ class TextDataReaderTest(unittest.TestCase):
             )
             shards = csv_data_reader.create_shards()
             self.assertEqual(len(shards), 7)
-            task = _Task(iris_file_name, 0, 20, elasticai_api_pb2.TRAINING)
+            task = Task(iris_file_name, 0, 20, elasticai_api_pb2.TRAINING)
             record_count = 0
             for record in csv_data_reader.read_records(task):
                 record_count += 1
@@ -144,7 +144,7 @@ class ODPSDataReaderTest(unittest.TestCase):
     def test_odps_data_reader_records_reading(self):
         records = list(
             self.reader.read_records(
-                _Task(self.test_table, 0, 2, elasticai_api_pb2.TRAINING,)
+                Task(self.test_table, 0, 2, elasticai_api_pb2.TRAINING,)
             )
         )
         records = np.array(records, dtype="float").tolist()
@@ -218,7 +218,7 @@ class ODPSDataReaderTest(unittest.TestCase):
 
         def _gen():
             for data in self.reader.read_records(
-                _Task(
+                Task(
                     self.test_table,
                     0,
                     num_records,

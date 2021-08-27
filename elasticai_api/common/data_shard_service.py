@@ -16,8 +16,8 @@ import time
 from collections import deque
 from multiprocessing import SimpleQueue
 
-from elasticai_api.common.constants import TaskExecCounterKey
 from elasticai_api.common.master_client import build_master_client
+from elasticai_api.common.resource_monitor import GlobalResourceMonitor
 from elasticai_api.proto import elasticai_api_pb2
 
 
@@ -29,6 +29,7 @@ def build_data_shard_service(
     shuffle_shards=False,
     task_type=elasticai_api_pb2.TRAINING,
     num_minibatches_per_shard=0,
+    dataset_name=None,
 ):
     master_client = build_master_client()
     return DataShardService(
@@ -40,6 +41,7 @@ def build_data_shard_service(
         shuffle_shards=shuffle_shards,
         task_type=task_type,
         num_minibatches_per_shard=num_minibatches_per_shard,
+        dataset_name=dataset_name,
     )
 
 
@@ -54,6 +56,7 @@ class DataShardService(object):
         shuffle_shards=False,
         task_type=elasticai_api_pb2.TRAINING,
         num_minibatches_per_shard=0,
+        dataset_name=None,
     ):
         self._mc = master_client
         self._batch_size = batch_size
@@ -64,13 +67,13 @@ class DataShardService(object):
         self._task_type = task_type
         self._num_minibatches_per_shard = num_minibatches_per_shard
         self._lock = threading.Lock()
-        self._failed_record_count = 0
         self._reported_record_count = 0
         self._current_task = None
         self._pending_tasks = deque()
-        self._report_training_params()
+        self._dataset_name = dataset_name
+        self._report_sharding_params()
 
-    def _report_training_params(self):
+    def _report_sharding_params(self):
         if self._num_epochs and self._dataset_size:
             self._mc.report_training_params(
                 batch_size=self._batch_size,
@@ -79,16 +82,24 @@ class DataShardService(object):
                 shuffle=self._shuffle,
                 shuffle_shards=self._shuffle_shards,
                 num_minibatches_per_shard=self._num_minibatches_per_shard,
+                dataset_name=self._dataset_name,
             )
 
     def get_minibatch_count_per_epoch(self):
         return self._dataset_size // self._batch_size
 
+    def reset_dataset(self):
+        # Only dataset with a name will be reset.
+        self._mc.reset_dataset(self._dataset_name)
+
     def get_current_task(self):
         return self._current_task
 
     def get_task(self, task_type=None):
-        task = self._mc.get_task(task_type)
+        if self._dataset_name:
+            task = self._mc.get_dataset_task(self._dataset_name)
+        else:
+            task = self._mc.get_task(task_type)
         if task.type == self._task_type:
             with self._lock:
                 self._pending_tasks.append(task)
@@ -98,14 +109,8 @@ class DataShardService(object):
         return task
 
     def _report_task(self, task, err_msg=""):
-        if self._failed_record_count != 0:
-            exec_counters = {
-                TaskExecCounterKey.FAIL_COUNT: self._failed_record_count
-            }
-        else:
-            exec_counters = None
         self._mc.report_task_result(
-            task.task_id, err_msg, exec_counters=exec_counters
+            task.task_id, err_msg, self._dataset_name,
         )
 
     def report_batch_done(self, batch_size=None, err_msg=""):
@@ -117,8 +122,6 @@ class DataShardService(object):
         """
         record_count = batch_size if batch_size else self._batch_size
         self._reported_record_count += record_count
-        if err_msg:
-            self._failed_record_count += record_count
 
         if not self._pending_tasks:
             return False
@@ -140,8 +143,8 @@ class DataShardService(object):
                         - self._pending_tasks[0].shard.start
                     )
                     task = self._pending_tasks.popleft()
+                    GlobalResourceMonitor.RESOURCE_MONITOR.report_resource()
                     self._report_task(task, err_msg)
-                    self._failed_record_count = 0
                 if self._pending_tasks:
                     self._current_task = self._pending_tasks[0]
             return True
@@ -157,6 +160,37 @@ class DataShardService(object):
 
         return task.shard
 
+    def get_shard_checkpoint(self):
+        """Get the data shard checkpoint of a dataset.
+        If the dataset is None, returns the checkpoint of training dataset.
+
+        Args:
+            dataset_name: string.
+
+        Returns:
+            Json String: {
+                "dataset_name": string.
+                "todo": [(start_0, end_0), (start_1, end_1)],
+                "doing": [(start_2, end_2), (start_3, end_3)],
+                "current_epoch": int64, the index of epoch,
+                "num_epochs": int64, the number of epoch,
+                "batch_size": int64, batch size,
+                "dataset_size": int64, the size of dataset,
+                "shuffle_shards": bool, true of false.
+                ""
+            }
+        """
+        shard_checkpoint = self._mc.get_shard_checkpoint(self._dataset_name)
+        return shard_checkpoint.content
+
+    def restore_shard_from_checkpoint(self, shard_checkpoint):
+        res = self._mc.report_shard_checkpoint(shard_checkpoint)
+        return res.success
+
+    def get_current_epoch(self):
+        res = self._mc.get_dataset_epoch(self._dataset_name)
+        return res.epoch
+
 
 class RecordIndexService(DataShardService):
     def __init__(
@@ -167,6 +201,7 @@ class RecordIndexService(DataShardService):
         dataset_size=None,
         task_type=elasticai_api_pb2.TRAINING,
         shuffle=False,
+        num_minibatches_per_shard=0,
     ):
         super(RecordIndexService, self).__init__(
             master_client=master_client,
@@ -175,6 +210,7 @@ class RecordIndexService(DataShardService):
             dataset_size=dataset_size,
             shuffle=shuffle,
             task_type=task_type,
+            num_minibatches_per_shard=num_minibatches_per_shard,
         )
         self._shard_queue = SimpleQueue()
         threading.Thread(
@@ -210,3 +246,29 @@ class RecordIndexService(DataShardService):
             else:
                 time.sleep(1)
         raise StopIteration
+
+    def record_index_gen(self):
+        """Generate record indices"""
+        while True:
+            yield self.fetch_record_index()
+
+    def get_tf_dataset(self, record_files=None):
+        """Create TensorFlow Dataset.
+
+        Args:
+            record_files: List of String. The value is the file path
+            of a record.
+        """
+        import tensorflow as tf
+
+        def _gen():
+            for index in self.record_index_gen():
+                if record_files:
+                    yield record_files[index]
+                else:
+                    yield index
+
+        if record_files:
+            return tf.data.Dataset.from_generator(_gen, tf.string)
+        else:
+            return tf.data.Dataset.from_generator(_gen, tf.int64)

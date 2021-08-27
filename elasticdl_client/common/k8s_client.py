@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
 import json
 import os
 import traceback
@@ -37,9 +38,11 @@ def get_master_pod_name(job_name):
 
 
 class PodType(object):
-    MASTER = "master"
+    MASTER = "edl-master"
     PS = "ps"
     WORKER = "worker"
+    EVALUATOR = "evaluator"
+    CHIEF = "chief"
 
 
 def append_pod_ip_to_env(env):
@@ -129,7 +132,13 @@ class ClusterSpec(object):
             cluster_spec_module = load_module(cluster_spec)
             self._cluster = cluster_spec_module.cluster
         if cluster_spec_json:
-            self._cluster_spec = json.loads(cluster_spec_json)
+            try:
+                self._cluster_spec = json.loads(cluster_spec_json)
+            except json.JSONDecodeError:
+                cluster_spec_json = base64.b64decode(cluster_spec_json).decode(
+                    "utf-8"
+                )
+                self._cluster_spec = json.loads(cluster_spec_json)
 
     def patch_pod(self, pod, pod_type):
         if self._cluster:
@@ -386,7 +395,7 @@ class Client(object):
             pod_type=PodType.MASTER,
         )
         # Add replica type and index
-        pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"
+        pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "edl-master"
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = "0"
         pod.api_version = "v1"
         pod.kind = "Pod"

@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
-from elasticai_api.proto import elasticai_api_pb2
+from elasticai_api.common.constants import DefaultDatasetName
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.tensor_utils import ndarray_to_pb
@@ -97,6 +97,8 @@ class EvaluationServiceTest(unittest.TestCase):
         task_d = create_task_manager(
             [("f1", 0, 10), ("f2", 0, 10)], [("f1", 0, 10), ("f2", 0, 10)]
         )
+        training_ds = task_d._datasets[DefaultDatasetName.TRAINING]
+        eval_ds = task_d._datasets[DefaultDatasetName.EVALUATION]
 
         # Evaluation metrics will not be accepted if no evaluation ongoing
         evaluation_service = EvaluationService(
@@ -114,9 +116,9 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertFalse(evaluation_service.try_to_create_new_job())
 
         # Add an evaluation task and we can start evaluation
-        self.assertEqual(8, len(task_d._todo))
+        self.assertEqual(8, len(training_ds.todo))
         evaluation_service.add_evaluation_task(False)
-        self.assertEqual(8, len(task_d._eval_todo))
+        self.assertEqual(8, len(eval_ds.todo))
         self.assertFalse(evaluation_service._eval_job.finished())
 
         for i in range(8):
@@ -127,7 +129,8 @@ class EvaluationServiceTest(unittest.TestCase):
 
     def testEvaluationOnly(self):
         task_d = create_task_manager([], [("f1", 0, 10), ("f2", 0, 10)])
-        task_d.create_tasks(elasticai_api_pb2.EVALUATION)
+        eval_ds = task_d._datasets[DefaultDatasetName.EVALUATION]
+        eval_ds.create_tasks()
 
         evaluation_service = EvaluationService(
             task_d.create_evaluation_tasks, 0, True, _eval_metrics_fn
@@ -142,7 +145,7 @@ class EvaluationServiceTest(unittest.TestCase):
             master.task_d, master.instance_manager, None, evaluation_service,
         )
 
-        self.assertEqual(8, len(task_d._eval_todo))
+        self.assertEqual(8, len(eval_ds.todo))
         for i in range(8):
             self.assertFalse(evaluation_service._eval_job.finished())
             evaluation_service.complete_task()

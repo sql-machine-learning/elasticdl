@@ -32,6 +32,7 @@ message Shard {
 // each minibatch. For now, only RecordIO file format is supported.
 message Task {
   // Unique id assigned by master.
+  // TODO: int32 -> int64
   int32 task_id = 1;
 
   Shard shard = 2;
@@ -56,7 +57,7 @@ message Task {
 message ReportTrainingParamsRequest {
   int32 batch_size = 1;
   int32 num_epochs = 2;
-  int32 dataset_size = 3;
+  int64 dataset_size = 3;
   bool shuffle = 4;
   bool shuffle_shards = 5;
   int32 num_minibatches_per_shard = 6;
@@ -69,12 +70,53 @@ message GetTaskRequest {
 
 message ReportTaskResultRequest {
   // Task id assigned by master.
+  // TODO: int32 -> int64
   int32 task_id = 1;
 
   // When error occurred, err_message contains error message in plain text.
   string err_message = 2;
   // statistics of the task being executed.
   map<string, int32> exec_counters = 3;
+}
+
+message ReportDatasetShardParamsRequest {
+  int32 batch_size = 1;
+  int32 num_epochs = 2;
+  int64 dataset_size = 3;
+  bool shuffle = 4;
+  bool shuffle_shards = 5;
+  int32 num_minibatches_per_shard = 6;
+  string dataset_name = 7;
+}
+
+message GetDatasetTaskRequest {
+  int32 worker_id = 1;
+  string dataset_name = 2;
+}
+
+message ResetDatasetRequest {
+  string dataset_name = 1;
+}
+
+message ReportDatasetTaskResultRequest {
+  // Task id assigned by master.
+  // TODO: int32 -> int64
+  int32 task_id = 1;
+
+  // When error occurred, err_message contains error message in plain text.
+  string err_message = 2;
+  // statistics of the task being executed.
+  map<string, int32> exec_counters = 3;
+
+  string dataset_name = 4;
+}
+
+message GetDatasetEpochRequest {
+  string dataset_name = 1;
+}
+
+message GetDatasetEpochResponse {
+  int32 epoch = 1;
 }
 
 message GetCommRankRequest {
@@ -93,6 +135,44 @@ message ReportTrainingLoopStatusRequest {
   int32 status = 2;
 }
 
+message GetShardCheckpointRequest {
+  string dataset_name = 1;
+}
+
+message ShardCheckpoint {
+  string content = 1;
+}
+
+message ReportShardCheckpointResponse {
+  bool success = 1;
+}
+
+message WorkerSyncRequest {
+  string sync_name = 1;
+  int32 worker_id = 2;
+}
+
+message DeleteWorkerSyncRequest {
+  string sync_name = 1;
+  bool delete_all = 2;
+}
+
+message WaitWorkerSyncRequest {
+  string sync_name = 1;
+  bool notify = 2;
+}
+
+message WorkerSyncResponse {
+  bool ready = 1;
+}
+
+message ReportUsedResourceRequest {
+  // Used memory with Byte
+  int64 memory = 1;
+  float cpu_percent = 2;
+  int32 worker_id = 3;
+}
+
 service Master {
   rpc get_task(GetTaskRequest) returns (Task);
   rpc report_task_result(ReportTaskResultRequest)
@@ -101,5 +181,30 @@ service Master {
   rpc report_training_loop_status(ReportTrainingLoopStatusRequest)
       returns (google.protobuf.Empty);
   rpc report_training_params(ReportTrainingParamsRequest)
+      returns (google.protobuf.Empty);
+
+  // TODO : Unify the above 3 PRCs with new ones.
+  rpc get_dataset_task(GetDatasetTaskRequest) returns (Task);
+  rpc report_dataset_task_result(ReportDatasetTaskResultRequest)
+      returns (google.protobuf.Empty);
+  rpc report_dataset_shard_params(ReportDatasetShardParamsRequest)
+      returns (google.protobuf.Empty);
+
+  rpc reset_dataset(ResetDatasetRequest) returns (google.protobuf.Empty);
+
+  rpc get_dataset_epoch(GetDatasetEpochRequest)
+      returns (GetDatasetEpochResponse);
+
+  // rpcs for saving and restoring data shard checkpoints
+  rpc get_shard_checkpoint(GetShardCheckpointRequest) returns (ShardCheckpoint);
+  rpc report_shard_checkpoint(ShardCheckpoint)
+      returns (ReportShardCheckpointResponse);
+
+  // rpc for worker sync
+  rpc worker_sync(WorkerSyncRequest) returns (WorkerSyncResponse);
+  rpc delete_worker_sync(DeleteWorkerSyncRequest)
+      returns (google.protobuf.Empty);
+  rpc wait_worker_sync(WaitWorkerSyncRequest) returns (WorkerSyncResponse);
+  rpc report_used_resource(ReportUsedResourceRequest)
       returns (google.protobuf.Empty);
 }

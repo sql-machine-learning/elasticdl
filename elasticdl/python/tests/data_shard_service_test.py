@@ -16,14 +16,14 @@ from unittest.mock import MagicMock, Mock
 
 from elasticai_api.common.data_shard_service import DataShardService
 from elasticai_api.proto import elasticai_api_pb2
-from elasticdl.python.master.task_manager import _Task
+from elasticdl.python.master.dataset_shard import ShardCheckpoint, Task
 
 
 class DataShardServiceTest(unittest.TestCase):
     def setUp(self):
         self._master_client = Mock()
         self._master_client.get_task = MagicMock(
-            return_value=_Task("test_file", 0, 1, elasticai_api_pb2.TRAINING)
+            return_value=Task("test_file", 0, 1, elasticai_api_pb2.TRAINING)
         )
         self._master_client.report_task_result = MagicMock(return_value=True)
 
@@ -49,3 +49,33 @@ class DataShardServiceTest(unittest.TestCase):
         reported = data_shard_service.report_batch_done()
         self.assertTrue(reported)
         self.assertEqual(len(data_shard_service._pending_tasks), 0)
+
+    def test_shard_checkpoint(self):
+        shard_checkpoint = ShardCheckpoint(
+            dataset_name="test",
+            todo=[[10, 20], [20, 30]],
+            doing=[[1, 10]],
+            current_epoch=1,
+            num_epochs=2,
+            records_per_task=5,
+            dataset_size=30,
+            shuffle_shards=False,
+            version="v1.0",
+            current_subepoch=1,
+        )
+        shard_str = shard_checkpoint.to_json()
+        expected_str = """{"dataset_name": "test", \
+"todo": [[10, 20], [20, 30]], "doing": [[1, 10]], \
+"current_epoch": 1, "num_epochs": 2, \
+"records_per_task": 5, "dataset_size": 30, \
+"shuffle_shards": false, "version": "v1.0", \
+"current_subepoch": 1}"""
+        self.assertEqual(shard_str, expected_str)
+        new_shard_checkpoint = ShardCheckpoint.from_json(expected_str)
+        self.assertDictEqual(
+            shard_checkpoint.__dict__, new_shard_checkpoint.__dict__
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
