@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import os
+import random
 
 from elasticai_api.proto import elasticai_api_pb2, elasticai_api_pb2_grpc
 from elasticai_api.util.grpc_utils import build_channel
@@ -226,7 +227,53 @@ class MasterClient(object):
         return self._stub.get_dataset_epoch(request)
 
 
-class MockedMasterClient(object):
+class LocalDataset(object):
+    def __init__(
+        self,
+        batch_size,
+        num_epochs,
+        dataset_size,
+        shuffle,
+        shuffle_shards,
+        num_minibatches_per_shard,
+    ):
+        self._batch_size = batch_size
+        self._num_epochs = num_epochs
+        self._dataset_size = dataset_size
+        self._shuffle = shuffle
+        self._shuffle_shards = shuffle_shards
+        self._records_per_shard = batch_size * num_minibatches_per_shard
+        self._todo = []
+        self._epoch = 0
+
+    def create_tasks(self):
+        start = 0
+        while start < self._dataset_size:
+            end = min(start + self._records_per_shard, self._dataset_size)
+            self._todo.append((start, end))
+            start = end
+        if self._shuffle_shards:
+            random.shuffle(self._todo)
+
+    def get_task(self):
+        start = -1
+        end = -1
+        if not self._todo and self._epoch < self._num_epochs:
+            self.create_tasks()
+            self._epoch += 1
+        if self._todo:
+            start, end = self._todo.pop(0)
+        return start, end
+
+    def get_current_epoch(self):
+        return self._epoch
+
+    def reset(self):
+        self._epoch = 0
+        self._todo = []
+
+
+class LocalMasterClient(object):
     """MockedMasterClient provides the same API as MasterClient without
     any RPC call.
     """
@@ -239,6 +286,8 @@ class MockedMasterClient(object):
             by elasticdl command-line.
         """
         self._worker_id = worker_id
+        self._num_minibatches_per_shard = 0
+        self._datasets = {}
 
     def reset_dataset(self, dataset_name):
         """ Reset a dataset
@@ -246,24 +295,8 @@ class MockedMasterClient(object):
         Args:
             dataset_name: name of the dataset, must not be None.
         """
-        pass
-
-    def get_task(self, task_type=None):
-        """Get a task from master.
-
-        Args:
-            task_type: elasticdl_pb.TaskType
-            the training phase, c.f. /elasticdl/proto/elasticdl.proto
-
-        Returns:
-            the task unit assigned by master,
-            c.f. /elasticdl/proto/elasticdl.proto
-        """
-        shard = elasticai_api_pb2.Shard()
-        res = elasticai_api_pb2.Task(shard=shard)
-        res.shard.start = 0
-        res.shard.end = 100
-        return res
+        dataset = self._datasets.get(dataset_name, None)
+        dataset.reset()
 
     def get_dataset_task(self, dataset_name):
         """Get a task from master.
@@ -279,9 +312,13 @@ class MockedMasterClient(object):
 
         shard = elasticai_api_pb2.Shard()
         res = elasticai_api_pb2.Task(shard=shard)
-        res.shard.start = 0
-        res.shard.end = 100
-        res.type = elasticai_api_pb2.TRAINING
+        dataset = self._datasets.get(dataset_name, None)
+        if dataset:
+            start, end = dataset.get_task()
+            if start != -1 and end != -1:
+                res.shard.start = start
+                res.shard.end = end
+                res.type = elasticai_api_pb2.TRAINING
         return res
 
     def report_task_result(
@@ -304,9 +341,6 @@ class MockedMasterClient(object):
     def get_comm_rank(self):
         return 0
 
-    def report_training_loop_status(self, status):
-        return True
-
     def report_training_params(
         self,
         batch_size,
@@ -317,42 +351,21 @@ class MockedMasterClient(object):
         num_minibatches_per_shard=0,
         dataset_name=None,
     ):
-        return True
-
-    def query_relaunch_ps_pod(self):
-        res = elasticai_api_pb2.QueryRelaunchPSPodResponse()
-        return res
-
-    def ready_for_ps_relaunch(self):
-        return None
-
-    def get_shard_checkpoint(self, dataset_name):
-        res = elasticai_api_pb2.ReportShardCheckpointResponse()
-        return res
-
-    def report_shard_checkpoint(self, shard_checkpoint):
-        return None
-
-    def worker_sync(self, sync_name):
-        res = elasticai_api_pb2.WorkerSyncResponse()
-        return res
-
-    def wait_worker_sync(self, sync_name, notify):
-        res = elasticai_api_pb2.WorkerSyncResponse()
-        return res
-
-    def delete_worker_sync(self, sync_name):
-        return None
-
-    def delete_all_worker_sync(self):
-        return None
-
-    def report_used_resource(self, memory, cpu_percent):
-        return None
+        dataset = LocalDataset(
+            batch_size,
+            num_epochs,
+            dataset_size,
+            shuffle,
+            shuffle_shards,
+            num_minibatches_per_shard,
+        )
+        self._datasets[dataset_name] = dataset
 
     def get_dataset_epoch(self, dataset_name):
+        dataset = self._datasets.get(dataset_name, None)
         res = elasticai_api_pb2.GetDatasetEpochResponse()
-        res.epoch = 0
+        if dataset:
+            res.epoch = dataset.get_current_epoch()
         return res
 
 
@@ -363,7 +376,7 @@ def build_master_client():
     if master_addr:
         master_client = MasterClient(build_channel(master_addr), worker_id)
     else:
-        master_client = MockedMasterClient(worker_id)
+        master_client = LocalMasterClient(worker_id)
 
     return master_client
 

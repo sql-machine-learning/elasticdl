@@ -13,15 +13,44 @@
 import unittest
 
 from elasticai_api.common.data_shard_service import build_data_shard_service
+from elasticai_api.common.master_client import LocalDataset
 
 
 class DataShardServiceTest(unittest.TestCase):
+    def test_local_dataset(self):
+        dataset = LocalDataset(
+            batch_size=16,
+            num_epochs=2,
+            dataset_size=100,
+            shuffle=False,
+            shuffle_shards=False,
+            num_minibatches_per_shard=2,
+        )
+        dataset.create_tasks()
+        self.assertEqual(len(dataset._todo), 4)
+        start, end = dataset.get_task()
+        self.assertEqual(start, 0)
+        self.assertEqual(end, 32)
+
     def test_data_shard_servie(self):
-        data_shard_service = build_data_shard_service(64, dataset_name="test")
+        data_shard_service = build_data_shard_service(
+            batch_size=16,
+            num_epochs=2,
+            dataset_size=100,
+            num_minibatches_per_shard=2,
+            dataset_name="test",
+        )
         shard = data_shard_service.fetch_shard()
         self.assertEqual(shard.start, 0)
-        self.assertEqual(shard.end, 100)
-        self.assertEqual(data_shard_service.get_current_epoch(), 0)
+        self.assertEqual(shard.end, 32)
+        self.assertEqual(data_shard_service.get_current_epoch(), 1)
+        shard_count = 1
+        while True:
+            shard = data_shard_service.fetch_shard()
+            if not shard:
+                break
+            shard_count += 1
+        self.assertEqual(shard_count, 8)
 
 
 if __name__ == "__main__":
