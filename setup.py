@@ -17,7 +17,6 @@ with open("elasticdl/requirements.txt") as f:
     required_deps = f.read().splitlines()
 required_deps.append("elasticai_api")
 required_deps.append("elasticdl_client")
-required_deps.append("elasticdl_preprocessing")
 
 extras = {}
 with open("elasticdl/requirements-dev.txt") as f:
