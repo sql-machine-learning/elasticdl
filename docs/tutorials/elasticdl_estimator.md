@@ -47,7 +47,7 @@ eval $(minikube docker-env)
 ```
 
 The command `minikube docker-env` returns a set of Bash environment variable
-exports to configure your local environment to re-use the Docker daemon inside
+to configure your local environment to re-use the Docker daemon inside
 the Minikube instance.
 
 The following command is necessary to enable
@@ -73,9 +73,8 @@ pip install elasticdl_client
 
 ## Build the Docker Image with Model Definition
 
-Kubernetes runs Docker containers, so we need to put the training system,
-consisting of user-defined models, ElasticDL the trainer, and all dependencies,
-into a Docker image.
+Kubernetes runs Docker containers, so we need to put user-defined models,
+the ElasticDL api package and all dependencies into a Docker image.
 
 In this tutorial, we use a predefined model in the ElasticDL repository.  To
 retrieve the source code, please run the following command.
@@ -84,34 +83,16 @@ retrieve the source code, please run the following command.
 git clone https://github.com/sql-machine-learning/elasticdl
 ```
 
-Model definitions are in directory `elasticdl/model_zoo/iris/`.
+The estimator model definition is in directory [elasticdl/model_zoo/iris](https://github.com/sql-machine-learning/elasticdl/tree/develop/model_zoo/iris).
 
-### Build the Docker Image for ElasticDL Master
-
-During training, ElasticDL Master launches ps and worker pods,
-partitions dataset and monitor the training status. So, we firstly
-should build the image for the master.
-
-The following commands build the Docker image `elasticdl:master`
-
-```bash
-cd elasticdl
-elasticdl zoo init --model_zoo=model_zoo
-elasticdl zoo build --image=elasticdl:master .
-```
-
-### Build the Docker Image for TensorFlow PS and Worker
-
-We build the image based on tensorflow:1.13.2 and the dockerfile
-is
+We build the image based on tensorflow:1.13.2 and the dockerfile is
 
 ```text
 FROM tensorflow/tensorflow:1.13.2-py3 as base
 
-RUN pip install elasticai_api
+RUN pip install elasticdl_api
 
 COPY ./model_zoo model_zoo
-ENV PYTHONUNBUFFERED 0
 ```
 
 Then, we use docker to build the image
@@ -149,6 +130,11 @@ elasticdl train \
   --need_tf_config=true \
   --volume="host_path={iris_data_dir},mount_path=/data" \
 ```
+
+`--image_name` is the image to launch the ElasticDL master which
+has nothing to do with the estimator model. The ElasticDL master is
+responsible for launching pod and assign data shard to workers with
+elasticity and fault-tolerance.
 
 `{iris_data_dir}` is the absolute path of the `./data` with `iris.data`.
 Here, the option `--volume="host_path={iris_data_dir},mount_path=/data"`
@@ -225,15 +211,12 @@ def train_generator(shard_service):
 3. Create a session hook to report shard
 
 ```python
-class ElasticDataShardReportHook(tf.train.SessionRunHook):
-    def __init__(self, data_shard_service) -> None:
-        self._data_shard_service = data_shard_service
+from elasticai_api.tensorflow.hooks import ElasticDataShardReportHook
 
-    def after_run(self, run_context, run_values):
-        try:
-            self._data_shard_service.report_batch_done()
-        except Exception as ex:
-            logging.info("elastic_ai: report batch done failed: %s", ex)
+hooks = [
+    ElasticDataShardReportHook(training_data_shard_svc),
+]
+train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, hooks=hooks)
 ```
 
 After 3 steps, you can train your estimator models using ElasticDL
