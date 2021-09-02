@@ -28,8 +28,8 @@ DATASET_DIR = "/data/iris.data"
 def read_csv(file_path):
     rows = []
     with open(file_path) as csvfile:
-        spamreader = csv.reader(csvfile)
-        for row in spamreader:
+        csv_reader = csv.reader(csvfile)
+        for row in csv_reader:
             rows.append(row)
     return rows
 
@@ -142,6 +142,8 @@ if __name__ == "__main__":
         dataset_name="iris_training_data",
     )
 
+    # Add a hook to report the shard done so that the data
+    # shard service will not reassign the shard to other workers.
     hooks = [ElasticDataShardReportHook(training_data_shard_svc)]
 
     def train_input_fn():
