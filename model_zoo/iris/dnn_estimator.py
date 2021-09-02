@@ -12,12 +12,12 @@
 # limitations under the License.
 
 import csv
-import logging
 import os
 
 import tensorflow as tf
 
 from elasticai_api.common.data_shard_service import build_data_shard_service
+from elasticai_api.tensorflow.hooks import ElasticDataShardReportHook
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -32,31 +32,6 @@ def read_csv(file_path):
         for row in spamreader:
             rows.append(row)
     return rows
-
-
-class ElasticDataShardReportHook(tf.train.SessionRunHook):
-    def __init__(self, data_shard_service) -> None:
-        self._data_shard_service = data_shard_service
-
-    def after_run(self, run_context, run_values):
-        try:
-            self._data_shard_service.report_batch_done()
-        except Exception as ex:
-            logging.info("elastic_ai: report batch done failed: %s", ex)
-
-
-class LocalStepHook(tf.train.SessionRunHook):
-    """Logs loss and runtime."""
-
-    def begin(self):
-        self._step = 0
-
-    def after_run(self, run_context, run_values):
-        self._step += 1
-        if self._step % 100 == 0:
-            logging.info(
-                "step = {}, value = {}".format(self._step, run_values)
-            )
 
 
 def model_fn(features, labels, mode, params):
@@ -167,10 +142,7 @@ if __name__ == "__main__":
         dataset_name="iris_training_data",
     )
 
-    hooks = [
-        LocalStepHook(),
-        ElasticDataShardReportHook(training_data_shard_svc),
-    ]
+    hooks = [ElasticDataShardReportHook(training_data_shard_svc)]
 
     def train_input_fn():
         return input_fn(
