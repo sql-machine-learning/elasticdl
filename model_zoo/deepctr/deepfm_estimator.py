@@ -13,12 +13,13 @@
 
 import argparse
 import csv
-import logging
 import os
 
 import tensorflow as tf
 from deepctr.estimator.models import DeepFMEstimator
+
 from elasticai_api.common.data_shard_service import DataShardService
+from elasticai_api.tensorflow.hooks import ElasticDataShardReportHook
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -89,17 +90,6 @@ def arg_parser():
         "--validation_data", type=str, default="", required=False
     )
     return parser
-
-
-class ElasticDataShardReportHook(tf.train.SessionRunHook):
-    def __init__(self, data_shard_service) -> None:
-        self._data_shard_service = data_shard_service
-
-    def after_run(self, run_context, run_values):
-        try:
-            self._data_shard_service.report_batch_done()
-        except Exception as ex:
-            logging.info("elastic_ai: report batch done failed: %s", ex)
 
 
 if __name__ == "__main__":
