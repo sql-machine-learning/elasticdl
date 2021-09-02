@@ -16,11 +16,11 @@ Through Kubernetes-native design, ElasticDL enables fault-tolerance and works
 with the priority-based preemption of Kubernetes to achieve elastic scheduling
 for deep learning tasks.
 
-### TensorFlow 2.0 Eager Execution
+### Support TensorFlow and PyTorch
 
-A distributed deep learning framework needs to know local gradients before the
-model update. Eager Execution allows ElasticDL to do it without hacking into the
-graph execution process.
+- TensorFlow 1.x estimator.
+- TensorFlow 2.x eager execution.
+- PyTorch
 
 ### Minimalism Interface
 
@@ -35,15 +35,6 @@ elasticdl train \
   --training_data=/data/mnist/train \
   --job_name=test-mnist \
   --volume="host_path=/data,mount_path=/data"
-```
-
-### Integration with SQLFlow
-
-ElasticDL will be integrated seamlessly with SQLFlow to connect SQL to
-distributed deep learning tasks with ElasticDL.
-
-```sql
-SELECT * FROM employee LABEL income INTO my_elasticdl_model
 ```
 
 ## Quick Start
