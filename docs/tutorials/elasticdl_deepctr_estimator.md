@@ -1,6 +1,6 @@
 # Distributed Training of DeepCTR Estimator using ElasticDL on Kubernetes
 
-This document shows how to run an distributed training job of a deepctr
+This document shows how to run a distributed training job of a deepctr
 estimator model (DeepFM) using [ElasticDL](https://github.com/sql-machine-learning/elasticdl)
 on Kubernetes.
 
@@ -141,9 +141,9 @@ elasticity and fault-tolerance.
 Here, the option `--volume="host_path={criteo_data_path},mount_path=/data"`
 bind mount it into the containers/pods.
 
-The option `--num_workers=1` tells the master container to start a worker pod.
-The option `--num_ps=1` tells the master container to start a ps pod.
-The option `--num_evaluator=1` tells the master container to start an evaluator pod.
+The option `--num_workers=1` tells the master to start a worker pod.
+The option `--num_ps=1` tells the master to start a ps pod.
+The option `--num_evaluator=1` tells the master to start an evaluator pod.
 
 And the master will start a chief worker for a TensorFlow estimator model by default.
 
