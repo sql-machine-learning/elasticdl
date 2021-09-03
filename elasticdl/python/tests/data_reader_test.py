@@ -63,12 +63,13 @@ class RecordIODataReaderTest(unittest.TestCase):
                 )
             )
             self.assertEqual(len(records), num_records)
+            fixed_len_feature = tf.io.FixedLenFeature([1], tf.float32)
             for record in records:
                 parsed_record = tf.io.parse_single_example(
                     record,
                     {
-                        "x": tf.io.FixedLenFeature([1], tf.float32),
-                        "y": tf.io.FixedLenFeature([1], tf.float32),
+                        "x": fixed_len_feature,
+                        "y": fixed_len_feature,
                     },
                 )
                 for k, v in parsed_record.items():
