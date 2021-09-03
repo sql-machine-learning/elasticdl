@@ -133,16 +133,16 @@ elasticdl train \
 
 `--image_name` is the image to launch the ElasticDL master which
 has nothing to do with the estimator model. The ElasticDL master is
-responsible for launching pod and assign data shard to workers with
+responsible for launching pod and assigning data shards to workers with
 elasticity and fault-tolerance.
 
 `{iris_data_dir}` is the absolute path of the `./data` with `iris.data`.
 Here, the option `--volume="host_path={iris_data_dir},mount_path=/data"`
 bind mount it into the containers/pods.
 
-The option `--num_workers=1` tells the master container to start a worker pod.
-The option `--num_ps=1` tells the master container to start a ps pod.
-The option `--num_evaluator` tells the master container to start an evaluator pod.
+The option `--num_workers=1` tells the master to start a worker pod.
+The option `--num_ps=1` tells the master to start a ps pod.
+The option `--num_evaluator` tells the master to start an evaluator pod.
 
 And the master will start a chief worker for a TensorFlow estiamtor model by default.
 
