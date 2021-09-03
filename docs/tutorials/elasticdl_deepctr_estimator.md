@@ -134,7 +134,7 @@ elasticdl train \
 
 `--image_name` is the image to launch the ElasticDL master which
 has nothing to do with the estimator model. The ElasticDL master is
-responsible for launching pod and assign data shard to workers with
+responsible for launching pod and assigning data shards to workers with
 elasticity and fault-tolerance.
 
 `{criteo_data_path}` is the absolute path of the `./data` with `criteo_sample.txt`.
