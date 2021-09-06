@@ -1,4 +1,4 @@
-# Train TensorFlow Estimator using ElasticDL on Personal Computer
+# Train TensorFlow Estimator Models using ElasticDL on Personal Computer
 
 This document shows how to run an ElasticDL job to train a tf.estimator
 model using iris dataset on Minikube.
@@ -160,7 +160,7 @@ test-iris-estimator-edljob-ps-0          1/1     Running   0          7s
 test-iris-estimator-edljob-worker-0      1/1     Running   0          6s
 ```
 
-## Train an Estimator Using ElasticDL with Your Dataset
+## Train an Estimator Model Using ElasticDL with Your Dataset
 
 You only need to modify your `input_fn` with ElasticDL DataShardService.
 The DataShardService will split the sample indices into ranges and assign
@@ -220,4 +220,4 @@ train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, hooks=hooks)
 ```
 
 After 3 steps, you can train your estimator models using ElasticDL
-in data-parallel.
+in data parallel mode.
