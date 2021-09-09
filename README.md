@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PyPI Status Badge](https://badge.fury.io/py/elasticdl-client.svg)](https://pypi.org/project/elasticdl-client/)
 
-ElasticDL is a Kubernetes-native deep learning framework built on top of
-TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.
+ElasticDL is a Kubernetes-native deep learning framework
+that supports fault-tolerance and elastic scheduling.
 
 ## Main Features
 
@@ -18,8 +18,8 @@ for deep learning tasks.
 
 ### Support TensorFlow and PyTorch
 
-- TensorFlow 1.x estimator.
-- TensorFlow 2.x eager execution.
+- TensorFlow Estimator.
+- TensorFlow Keras.
 - PyTorch
 
 ### Minimalism Interface
@@ -43,15 +43,21 @@ Please check out our [step-by-step tutorial](docs/tutorials/get_started.md) for
 running ElasticDL on local laptop, on-prem cluster, or on public cloud such as
 Google Kubernetes Engine.
 
+[TensorFlow Estimator on MiniKube](docs/tutorials/elasticdl_estimator.md)
+
+[TensorFlow Keras on MiniKube](docs/tutorials/elasticdl_local.md)
+
+[PyTorch on MiniKube](docs/tutorials/elasticdl_torch.md )
+
 ## Background
 
-TensorFlow has its native distributed computing feature that is
+TensorFlow/PyTorch has its native distributed computing feature that is
 fault-recoverable. In the case that some processes fail, the distributed
 computing job would fail; however, we can restart the job and recover its status
 from the most recent checkpoint files.
 
-ElasticDL, as an enhancement of TensorFlow's distributed training feature,
-supports fault-tolerance. In the case that some processes fail, the job would
+ElasticDL supports fault-tolerance during distributed training.
+In the case that some processes fail, the job would
 go on running. Therefore, ElasticDL doesn't need to save checkpoint nor recover
 from checkpoints.
 
@@ -71,11 +77,11 @@ first job completes.  In this case, the overall utilization is 100%.
 
 The feature of elastic scheduling of ElasticDL comes from its Kubernetes-native
 design -- it doesn't rely on Kubernetes extensions like Kubeflow to run
-TensorFlow programs; instead, the master process of an ElasticDL job calls
+TensorFlow/PyTorch programs; instead, the master process of an ElasticDL job calls
 Kubernetes API to start workers and parameter servers; it also watches events
 like process/pod killing and reacts to such events to realize fault-tolerance.
 
-In short, ElasticDL enhances TensorFlow with fault-tolerance and elastic
+In short, ElasticDL enhances TensorFlow/PyTorch with fault-tolerance and elastic
 scheduling in the case that you have a Kubernetes cluster. We provide a tutorial
 showing how to set up a Kubernetes cluster on Google Cloud and run ElasticDL
 jobs there.  We respect TensorFlow's native distributed computing feature, which
