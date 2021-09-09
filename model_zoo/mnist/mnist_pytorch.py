@@ -19,7 +19,7 @@ following command to submit a training job with these codes.
 
 elasticdl train \
   --image_name=elasticdl:pt_mnist_allreduce  \
-  --job_command="python -m model_zoo.mnist.mnist_pytorch_custom_dataset \
+  --job_command="python -m model_zoo.mnist.mnist_pytorch \
       --training_data=/local_data/mnist_png/training \
       --validation_data=/local_data/mnist_png/testing" \
   --num_minibatches_per_task=2 \
