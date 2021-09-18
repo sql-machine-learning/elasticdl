@@ -11,31 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Download the mnist dataset from
-https://s3.amazonaws.com/fast-ai-imageclas/mnist_png.tgz
-and then untar it into ${data_store_dir}. Using minikube, we can use the
-following command to submit a training job with these codes.
-
-elasticdl train \
-  --image_name=elasticdl:pt_mnist_allreduce  \
-  --job_command="python -m model_zoo.mnist.mnist_pytorch \
-      --training_data=/local_data/mnist_png/training \
-      --validation_data=/local_data/mnist_png/testing" \
-  --num_minibatches_per_task=2 \
-  --num_workers=2 \
-  --worker_pod_priority=0.5 \
-  --master_resource_request="cpu=0.2,memory=1024Mi" \
-  --master_resource_limit="cpu=1,memory=2048Mi" \
-  --worker_resource_request="cpu=0.3,memory=1024Mi" \
-  --worker_resource_limit="cpu=1,memory=2048Mi" \
-  --envs="USE_TORCH=true,HOROVOD_GLOO_TIMEOUT_SECONDS=60,PYTHONUNBUFFERED=0" \
-  --job_name=test-mnist-allreduce \
-  --image_pull_policy=Never \
-  --volume="host_path=${data_store_dir},mount_path=/local_data" \
-  --distribution_strategy=AllreduceStrategy \
-"""
-
 import argparse
 import sys
 
@@ -49,7 +24,8 @@ import torchvision
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, Dataset
 
-from elasticai_api.pytorch.controller import create_elastic_controller
+from elasticai_api.common.data_shard_service import RecordIndexService
+from elasticai_api.pytorch.controller import PyTorchAllReduceController
 from elasticai_api.pytorch.optimizer import DistributedOptimizer
 
 
@@ -131,15 +107,14 @@ def train(args):
     train_data = torchvision.datasets.ImageFolder(args.training_data)
     test_data = torchvision.datasets.ImageFolder(args.validation_data)
 
-    allreduce_controller = create_elastic_controller(
+    data_shard_service = RecordIndexService(
         batch_size=args.batch_size,
         dataset_size=len(train_data.imgs),
         num_epochs=args.num_epochs,
         shuffle=True,
+        dataset_name="mnist_training_data",
     )
-    train_dataset = ElasticDataset(
-        train_data.imgs, allreduce_controller.data_shard_service
-    )
+    train_dataset = ElasticDataset(train_data.imgs, data_shard_service)
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=args.batch_size, num_workers=2
     )
@@ -155,6 +130,7 @@ def train(args):
     scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
 
     # Set the model and optimizer to broadcast.
+    allreduce_controller = PyTorchAllReduceController(data_shard_service)
     allreduce_controller.set_broadcast_model(model)
     allreduce_controller.set_broadcast_optimizer(optimizer)
     epoch = 0
