@@ -116,7 +116,7 @@ The following command submits a training job:
 ```bash
 elasticdl train \
   --image_name=elasticdl/elasticdl:v1.0.0 \
-  --worker_image=elasticdl:mnsit_pytorch \
+  --worker_image=elasticdl:mnist_pytorch \
   --job_command="python -m model_zoo.mnist.mnist_pytorch --batch_size 64 --num_epochs 1 --training_data=/data/mnist_png/training --validation_data=/data/mnist_png/testing" \
   --num_minibatches_per_task=2 \
   --num_workers=2 \
