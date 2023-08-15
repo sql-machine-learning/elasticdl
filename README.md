@@ -16,8 +16,9 @@ that supports fault-tolerance and elastic scheduling.
 - In addition to the elasticity and fault-tolerance, DLRover also implements
   [auto-scaling distributed training](https://github.com/intelligent-machine-learning/dlrover#auto-scaling-to-improve-training-performance).
 
-- In addition to TensorFlow and Horovod, DLRover Supports TorchElastic and users can use the elasticity and fault-tolerance
-  without any modification of the training code.
+- In addition to TensorFlow and Horovod, DLRover Supports TorchElastic
+  and users can use the elasticity and fault-tolerance
+  without any modification of the training code like the [TorchElastic example](https://github.com/intelligent-machine-learning/dlrover/blob/master/docs/tutorial/torch_on_cloud.md).
   
 - To deploy a distributed job using `kubectl`, DLRover implements an [ElasticJob](https://github.com/intelligent-machine-learning/dlrover/tree/master/dlrover/go/operator)
   CRD.
