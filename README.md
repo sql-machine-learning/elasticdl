@@ -10,8 +10,9 @@ that supports fault-tolerance and elastic scheduling.
 
 **IMPORTANT**: This repository is deprecated.
 
-- The elasticity and fault-tolerance are no longer being actively maintained
-  in the factor of [DLRover](https://github.com/intelligent-machine-learning/dlrover).
+- The elasticity and fault-tolerance has been migrated
+  into [DLRover](https://github.com/intelligent-machine-learning/dlrover)
+  to support the distributed training on Kubernetes and Ray.
   
 - In addition to the elasticity and fault-tolerance, DLRover also implements
   [auto-scaling distributed training](https://github.com/intelligent-machine-learning/dlrover#auto-scaling-to-improve-training-performance).
@@ -22,10 +23,6 @@ that supports fault-tolerance and elastic scheduling.
   
 - To deploy a distributed job using `kubectl`, DLRover implements an [ElasticJob](https://github.com/intelligent-machine-learning/dlrover/tree/master/dlrover/go/operator)
   CRD.
-
-- In addition to Kubernetes, DLRover also supports elasticity and fault-tolerance on Ray
-  to support online learning.
-
 
 ## Main Features
 
