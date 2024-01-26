@@ -8,20 +8,6 @@
 ElasticDL is a Kubernetes-native deep learning framework
 that supports fault-tolerance and elastic scheduling.
 
-**IMPORTANT**: This repository is deprecated.
-
-1. ElasticDL repository is no longer actively maintained. Users are encouraged to switch to [DLRover](https://github.com/intelligent-machine-learning/dlrover).
-  
-1. In addition to the elasticity and fault-tolerance, DLRover also implements
-  [auto-scaling distributed training](https://github.com/intelligent-machine-learning/dlrover#auto-scaling-to-improve-training-performance).
-
-1. In addition to TensorFlow and Horovod, DLRover Supports TorchElastic
-  and users can use the elasticity and fault-tolerance
-  without any modification of the training code like the [TorchElastic example](https://github.com/intelligent-machine-learning/dlrover/blob/master/docs/tutorial/torch_on_cloud.md).
-  
-1. To deploy a distributed job using `kubectl`, DLRover implements an [ElasticJob](https://github.com/intelligent-machine-learning/dlrover/tree/master/dlrover/go/operator)
-  CRD.
-
 ## Main Features
 
 ### Elastic Scheduling and Fault-Tolerance
