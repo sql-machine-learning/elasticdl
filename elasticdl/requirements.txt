@@ -3,6 +3,6 @@ docker==4.2.1
 pyrecordio>=0.0.6
 Cython
 odps
-tensorflow==2.5.2
+tensorflow==2.11.1
 psutil
 cloudpickle
